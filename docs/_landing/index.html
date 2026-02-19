@@ -2215,7 +2215,8 @@
         </div>
         <div class="nav-links">
           <a
-            href="/introduction"
+            id="landing-docs-link"
+            href="https://mudabbir.fly.dev/introduction/"
             class="nav-a"
           >
             <svg
@@ -3182,7 +3183,8 @@
         </div>
         <div class="foot-links">
           <a
-            href="/introduction"
+            id="landing-footer-docs-link"
+            href="https://mudabbir.fly.dev/introduction/"
             class="foot-a"
             >Docs</a
           >
@@ -3202,6 +3204,49 @@
 
     <!-- ───────────── JS ───────────── -->
     <script>
+      /* ── Enforce local docs URL (defensive against stale cached link injection) ── */
+      (function enforceDocsLinks() {
+        var localDocsUrl = "https://mudabbir.fly.dev/introduction/";
+        var staleDocsPattern =
+          /github\.com\/Ahmed5754\/Mudabbir\/tree\/main\/docs/i;
+
+        function rewriteDocsLinks(root) {
+          var scope = root || document;
+          var anchors = scope.querySelectorAll("a[href]");
+          anchors.forEach(function (anchor) {
+            var href = anchor.getAttribute("href") || "";
+            if (staleDocsPattern.test(href)) {
+              anchor.setAttribute("href", localDocsUrl);
+              anchor.removeAttribute("target");
+              anchor.removeAttribute("rel");
+            }
+          });
+
+          var navDocs = document.getElementById("landing-docs-link");
+          if (navDocs) {
+            navDocs.setAttribute("href", localDocsUrl);
+            navDocs.removeAttribute("target");
+            navDocs.removeAttribute("rel");
+          }
+
+          var footerDocs = document.getElementById("landing-footer-docs-link");
+          if (footerDocs) {
+            footerDocs.setAttribute("href", localDocsUrl);
+            footerDocs.removeAttribute("target");
+            footerDocs.removeAttribute("rel");
+          }
+        }
+
+        if (document.readyState === "loading") {
+          document.addEventListener("DOMContentLoaded", function () {
+            rewriteDocsLinks(document);
+          });
+          return;
+        }
+
+        rewriteDocsLinks(document);
+      })();
+
       /* ── Nav scroll ── */
       var nav = document.getElementById("nav");
       window.addEventListener(

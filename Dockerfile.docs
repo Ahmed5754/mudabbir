@@ -4,7 +4,8 @@ WORKDIR /build
 
 # Build full docs site from docs/ (MDX -> static)
 COPY docs/ ./docs/
-RUN npx --yes @litodocs/cli build -i docs -o /out --provider static --rendering static
+RUN npx --yes @litodocs/cli build -i docs -o /out --provider static --rendering static && \
+    find /out -type f \( -name "*.html" -o -name "*.xml" \) -exec sed -i 's|https://docs.example.com|https://mudabbir.fly.dev|g' {} +
 
 FROM nginx:alpine
 

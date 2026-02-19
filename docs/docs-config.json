@@ -34,7 +34,7 @@
       "links": [
         {
           "label": "Docs",
-          "href": "/introduction"
+          "href": "/introduction/"
         },
         {
           "label": "Guides",
@@ -77,7 +77,7 @@
     "anchors": [
       {
         "label": "Documentation",
-        "href": "/introduction",
+        "href": "/introduction/",
         "icon": "lucide:book-open",
         "groups": ["Introduction", "Getting Started", "Core Concepts", "Channels", "Agent Backends", "Tools", "Integrations", "Security", "Memory", "Advanced", "Deployment"]
       },
@@ -95,7 +95,7 @@
         "items": [
           {
             "label": "Welcome",
-            "href": "/introduction",
+            "href": "/introduction/",
             "icon": "lucide:home"
           },
           {
@@ -680,7 +680,7 @@
     "organizationName": "Mudabbir",
     "organizationLogo": "/Mudabbir.webp",
     "articleType": "TechArticle",
-    "autoCanonical": true,
+    "autoCanonical": false,
     "enableBreadcrumbs": true,
     "twitterHandle": "@mudabbir_ai",
     "twitterSite": "@mudabbir_ai"
