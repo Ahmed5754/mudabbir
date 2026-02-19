@@ -287,8 +287,9 @@ def sync_skill_repositories(
                     result.installed.append(installed_name)
                     total_installed += 1
                 except Exception as e:
+                    rel_skill_path = str(skill_dir.relative_to(clone_dir)).replace("\\", "/")
                     result.errors.append(
-                        f"{str(skill_dir.relative_to(clone_dir)).replace('\\', '/')}: {e}"
+                        f"{rel_skill_path}: {e}"
                     )
 
     return {
