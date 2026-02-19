@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="Mudabbir.png" alt="Mudabbir" width="100">
+  <img src="Mudabbir.png" alt="Mudabbir" width="200">
 </p>
 
 <h1 align="center">Mudabbir</h1>
@@ -439,7 +439,7 @@ PRs welcome. Come build with us.
 MIT &copy; Ahmed Muhammad
 
 <p align="center">
-  <img src="Mudabbir.png" alt="Mudabbir" width="40">
+  <img src="Mudabbir.png" alt="Mudabbir" width="80">
   <br>
   <strong>Made with love for humans who want AI on their own terms</strong>
 </p>
