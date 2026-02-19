@@ -1,21 +1,18 @@
-# Build desktop launcher for macOS and Windows
-# Triggers on release or manual dispatch
-# Created: 2026-02-10
-
 name: Build Desktop Launcher
 
 on:
-  release:
-    types: [published]
+  push:
+    tags:
+      - "v*"
   workflow_dispatch:
     inputs:
       version:
-        description: "Version tag (e.g. v0.2.5)"
+        description: "Version label for binaries (e.g. v0.4.2)"
         required: false
         default: "dev"
 
 permissions:
-  contents: write # needed to upload release assets
+  contents: write
 
 jobs:
   build:
@@ -24,19 +21,15 @@ jobs:
         include:
           - os: macos-latest
             platform: macOS-arm64
-            artifact: Mudabbir-macOS-arm64.dmg
-          - os: macos-13 # Intel Mac
+          - os: macos-13
             platform: macOS-x64
-            artifact: Mudabbir-macOS-x64.dmg
           - os: windows-latest
             platform: Windows
-            artifact: Mudabbir-Windows-Setup.exe
 
-    name: Build — ${{ matrix.platform }}
+    name: Build ${{ matrix.platform }}
     runs-on: ${{ matrix.os }}
-
     env:
-      MUDABBIR_VERSION: ${{ github.event.inputs.version || github.ref_name || 'dev' }}
+      BUILD_VERSION: ${{ github.event.inputs.version || github.ref_name || 'dev' }}
 
     steps:
       - uses: actions/checkout@v4
@@ -49,7 +42,6 @@ jobs:
       - name: Install build dependencies
         run: pip install pyinstaller pystray Pillow
 
-      # ── macOS: import signing certificate (if available) ────────────
       - name: Import signing certificate (macOS)
         if: runner.os == 'macOS' && env.MACOS_SIGNING_CERT_BASE64 != ''
         env:
@@ -66,106 +58,88 @@ jobs:
           security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "" "$KEYCHAIN"
           rm -f "$CERT_FILE"
 
-      # ── Generate icons ──────────────────────────────────────────────
       - name: Generate platform icons
         run: python installer/launcher/build-launcher/make_icons.py
 
-      # ── Build (handles PyInstaller + DMG/Inno Setup) ────────────────
       - name: Build launcher
-        run: python installer/launcher/build-launcher/build.py --version "${{ env.MUDABBIR_VERSION }}"
+        run: python installer/launcher/build-launcher/build.py --version "${{ env.BUILD_VERSION }}"
         env:
           MACOS_SIGNING_IDENTITY: ${{ secrets.MACOS_SIGNING_IDENTITY || '-' }}
+          MUDABBIR_VERSION: ${{ env.BUILD_VERSION }}
 
-      # ── Windows: run Inno Setup if build.py didn't ─────────────────
       - name: Create installer (Windows fallback)
         if: runner.os == 'Windows'
         run: |
           if (-not (Test-Path "dist\launcher\Mudabbir-Setup.exe")) {
-            $issPath = "installer\launcher\build-launcher\pocketpaw.iss"
+            $issPath = "installer\launcher\build-launcher\mudabbir.iss"
             if (Test-Path $issPath) {
-              & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" "/DVERSION=${{ env.MUDABBIR_VERSION }}" $issPath
+              & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" "/DVERSION=${{ env.BUILD_VERSION }}" $issPath
             }
           }
         shell: pwsh
 
-      # ── Verify artifacts exist ──────────────────────────────────────
-      - name: Verify build artifacts (macOS)
+      - name: Prepare release files (macOS)
         if: runner.os == 'macOS'
         run: |
+          set -euo pipefail
+          mkdir -p release
           if [ ! -f "dist/launcher/Mudabbir.dmg" ]; then
             echo "::error::DMG not found at dist/launcher/Mudabbir.dmg"
             exit 1
           fi
-          echo "DMG size: $(du -h dist/launcher/Mudabbir.dmg | cut -f1)"
+          OUT="Mudabbir-${{ matrix.platform }}.dmg"
+          cp "dist/launcher/Mudabbir.dmg" "release/${OUT}"
+          shasum -a 256 "release/${OUT}" > "release/${OUT}.sha256"
+          ls -lh "release/${OUT}" "release/${OUT}.sha256"
 
-      - name: Verify build artifacts (Windows)
+      - name: Prepare release files (Windows)
         if: runner.os == 'Windows'
         run: |
           if (-not (Test-Path "dist\launcher\Mudabbir-Setup.exe")) {
             Write-Error "Installer not found at dist\launcher\Mudabbir-Setup.exe"
             exit 1
           }
-          $size = (Get-Item "dist\launcher\Mudabbir-Setup.exe").Length / 1MB
-          Write-Host "Installer size: $([math]::Round($size, 1)) MB"
+          New-Item -ItemType Directory -Force -Path release | Out-Null
+          Copy-Item "dist\launcher\Mudabbir-Setup.exe" "release\Mudabbir-Setup.exe"
+          $hash = Get-FileHash "release\Mudabbir-Setup.exe" -Algorithm SHA256
+          "$($hash.Hash)  Mudabbir-Setup.exe" | Out-File "release\Mudabbir-Setup.exe.sha256" -Encoding utf8
+          Get-ChildItem release
         shell: pwsh
 
-      # ── Generate checksums ─────────────────────────────────────────
-      - name: Generate checksum (macOS)
-        if: runner.os == 'macOS'
-        run: |
-          cd dist/launcher
-          shasum -a 256 Mudabbir.dmg > Mudabbir.dmg.sha256
-          cat Mudabbir.dmg.sha256
-
-      - name: Generate checksum (Windows)
-        if: runner.os == 'Windows'
-        run: |
-          cd dist\launcher
-          $hash = Get-FileHash "Mudabbir-Setup.exe" -Algorithm SHA256
-          "$($hash.Hash)  Mudabbir-Setup.exe" | Out-File "Mudabbir-Setup.exe.sha256" -Encoding utf8
-          Get-Content "Mudabbir-Setup.exe.sha256"
-        shell: pwsh
-
-      # ── Upload artifacts ────────────────────────────────────────────
-      - name: Upload macOS .dmg
-        if: runner.os == 'macOS'
+      - name: Upload workflow artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: Mudabbir-${{ matrix.platform }}
-          path: |
-            dist/launcher/Mudabbir.dmg
-            dist/launcher/Mudabbir.dmg.sha256
+          name: release-${{ matrix.platform }}
+          path: release/*
+          if-no-files-found: error
 
-      - name: Upload Windows installer
-        if: runner.os == 'Windows'
-        uses: actions/upload-artifact@v4
+  publish-release:
+    name: Publish GitHub Release Assets
+    runs-on: ubuntu-latest
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/')
+
+    steps:
+      - name: Download built artifacts
+        uses: actions/download-artifact@v4
         with:
-          name: Mudabbir-${{ matrix.platform }}
-          path: |
-            dist/launcher/Mudabbir-Setup.exe
-            dist/launcher/Mudabbir-Setup.exe.sha256
+          pattern: release-*
+          path: release-assets
+          merge-multiple: true
 
-      # ── Attach to release (if triggered by release) ─────────────────
-      - name: Upload to release (macOS)
-        if: github.event_name == 'release' && runner.os == 'macOS'
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          SUFFIX="${{ matrix.platform }}"
-          cp dist/launcher/Mudabbir.dmg "dist/launcher/Mudabbir-${SUFFIX}.dmg"
-          cp dist/launcher/Mudabbir.dmg.sha256 "dist/launcher/Mudabbir-${SUFFIX}.dmg.sha256"
-          gh release upload "${{ github.ref_name }}" \
-            "dist/launcher/Mudabbir-${SUFFIX}.dmg" \
-            "dist/launcher/Mudabbir-${SUFFIX}.dmg.sha256" \
-            --clobber
+      - name: Show files
+        run: ls -lah release-assets
 
-      - name: Upload to release (Windows)
-        if: github.event_name == 'release' && runner.os == 'Windows'
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          gh release upload "${{ github.ref_name }}" `
-            "dist/launcher/Mudabbir-Setup.exe" `
-            "dist/launcher/Mudabbir-Setup.exe.sha256" `
-            --clobber
-        shell: pwsh
+      - name: Create/Update release and upload files
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: Mudabbir ${{ github.ref_name }}
+          generate_release_notes: true
+          files: |
+            release-assets/Mudabbir-Setup.exe
+            release-assets/Mudabbir-Setup.exe.sha256
+            release-assets/Mudabbir-macOS-arm64.dmg
+            release-assets/Mudabbir-macOS-arm64.dmg.sha256
+            release-assets/Mudabbir-macOS-x64.dmg
+            release-assets/Mudabbir-macOS-x64.dmg.sha256
