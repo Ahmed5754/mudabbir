@@ -4,7 +4,7 @@ Mudabbir is an open-source AI agent that runs locally and connects to Telegram, 
 
 We welcome contributions of all kinds: bug fixes, new tools, channel adapters, docs, tests.
 
-> 👤 Developer profile: [Who Am I? | من أنا؟](WHO_AM_I.md)
+> 👤 Developer profile: [Who Am I? | من أنا؟](CODE_OF_CONDUCT.md)
 
 ## Branch strategy
 

@@ -16,7 +16,7 @@
 </p>
 
 <p align="center">
-  👤 <a href="WHO_AM_I.md"><strong>Who Am I? | من أنا؟</strong></a>
+  👤 <a href="CODE_OF_CONDUCT.md"><strong>Who Am I? | من أنا؟</strong></a>
 </p>
 
 <p align="center">
