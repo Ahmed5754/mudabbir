@@ -13,7 +13,8 @@ Personal developer profile for quick introduction in both English and Arabic.
 - **Focus Areas:** [Fill here]
 - **Currently Building:** [Fill here]
 - **Location:** Syria 🇸🇾
-- **Contact Email:** [Fill here]
+- **Contact Email:** 0a1h2m3e4d5123321@gmail.com
+
 
 ## من أنا؟
 
@@ -23,12 +24,6 @@ Personal developer profile for quick introduction in both English and Arabic.
 - **مجالات التركيز:** [اكتب هنا]
 - **أعمل حاليًا على:** [اكتب هنا]
 - **الموقع:** سوريا 🇸🇾
-- **البريد الإلكتروني:** [اكتب هنا]
+- **البريد الإلكتروني:** 0a1h2m3e4d5123321@gmail.com
 
-## Editable Fields
 
-- **Role / الدور**
-- **Focus Areas / مجالات التركيز**
-- **Currently Building / أعمل حاليًا على**
-- **Contact Email / البريد الإلكتروني**
-- **Extra links / روابط إضافية**: GitHub, LinkedIn, Portfolio
