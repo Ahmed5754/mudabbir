@@ -73,7 +73,7 @@ class AgentRouter:
                 )
 
             elif backend == "Mudabbir_native":
-                from Mudabbir.agents.Mudabbir_native import MudabbirOrchestrator
+                from Mudabbir.agents.mudabbir_native import MudabbirOrchestrator
 
                 self._agent = MudabbirOrchestrator(self.settings)
                 logger.info("🧠 [bold blue]Mudabbir Native[/] ─ Anthropic + Open Interpreter")

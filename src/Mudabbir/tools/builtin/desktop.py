@@ -1,3 +1,4 @@
+# pyright: reportMissingImports=false, reportMissingModuleSource=false
 """Desktop automation and system control helpers for Windows."""
 
 from __future__ import annotations
