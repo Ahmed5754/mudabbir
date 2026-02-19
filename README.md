@@ -427,7 +427,8 @@ Full documentation lives in [`documentation/`](documentation/README.md):
 
 - Twitter: [@MudabbirAI](https://twitter.com/Mudabbir89242)
 - Discord: Coming Soon
-- Email: mudabbirai@gmail.com
+- Email: 0a1h2m3e4d5123321@gmail.com
+- Telegram: [@K_6_3](https://t.me/K_6_3)
 
 PRs welcome. Come build with us.
 
@@ -435,7 +436,7 @@ PRs welcome. Come build with us.
 
 ## License
 
-MIT &copy; Mudabbir Team
+MIT &copy; Ahmed Muhammad
 
 <p align="center">
   <img src="Mudabbir.png" alt="Mudabbir" width="40">
