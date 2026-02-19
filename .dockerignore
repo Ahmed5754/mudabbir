@@ -38,12 +38,6 @@ htmlcov
 Thumbs.db
 
 # Docs & internal
-docs/*
-!docs/public/
-!docs/public/**
-!docs/_landing/
-!docs/_landing/index.html
-!docs/_landing/robots.txt
 idocs
 .claude
 
