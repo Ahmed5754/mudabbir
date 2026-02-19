@@ -1,6 +1,6 @@
 [project]
 name = "Mudabbir"
-version = "0.4.4"
+version = "0.4.5"
 description = "Mudabbir: the AI agent that runs on your laptop, not a datacenter."
 readme = "README.md"
 license = "MIT"
