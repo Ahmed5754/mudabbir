@@ -1,0 +1,81 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Mudabbir favicon">
+  <defs>
+    <linearGradient id="g" x1="6" y1="8" x2="58" y2="56" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#7CF9FF"/>
+      <stop offset="0.55" stop-color="#22D3EE"/>
+      <stop offset="1" stop-color="#1D4ED8"/>
+    </linearGradient>
+
+    <radialGradient id="fill" cx="40%" cy="35%" r="70%">
+      <stop offset="0" stop-color="#7CF9FF" stop-opacity="0.25"/>
+      <stop offset="1" stop-color="#0B1B2E" stop-opacity="0"/>
+    </radialGradient>
+
+    <filter id="glow" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="1.6" result="b"/>
+      <feColorMatrix in="b" type="matrix"
+        values="0 0 0 0 0.20
+                0 0 0 0 0.85
+                0 0 0 0 0.95
+                0 0 0 0.85 0" result="c"/>
+      <feMerge>
+        <feMergeNode in="c"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- soft interior fill for readability on dark/light -->
+  <path d="M26.8 16.4c-5.7 0-10.3 4.4-10.3 9.9c0 1.2.2 2.2.6 3.3c-2.3 1.8-3.7 4.6-3.7 7.7
+           c0 5.2 4.1 9.4 9.2 9.4h5.2c1.6 1.9 4 3.1 6.7 3.1c2.7 0 5.1-1.2 6.7-3.1h3.9c5.1 0 9.2-4.2 9.2-9.4
+           c0-3.1-1.4-5.9-3.7-7.7c.4-1 .6-2.1.6-3.3c0-5.5-4.6-9.9-10.3-9.9c-2.4 0-4.6.7-6.4 2
+           c-1.8-1.3-4-2-6.4-2z"
+        fill="url(#fill)"/>
+
+  <!-- brain + circuits -->
+  <g fill="none" stroke="url(#g)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" filter="url(#glow)">
+    <!-- outer brain contour -->
+    <path d="M26.8 16.4
+             c-5.7 0-10.3 4.4-10.3 9.9
+             c0 1.2.2 2.2.6 3.3
+             c-2.3 1.8-3.7 4.6-3.7 7.7
+             c0 5.2 4.1 9.4 9.2 9.4
+             h5.2
+             c1.6 1.9 4 3.1 6.7 3.1
+             c2.7 0 5.1-1.2 6.7-3.1
+             h3.9
+             c5.1 0 9.2-4.2 9.2-9.4
+             c0-3.1-1.4-5.9-3.7-7.7
+             c.4-1 .6-2.1.6-3.3
+             c0-5.5-4.6-9.9-10.3-9.9
+             c-2.4 0-4.6.7-6.4 2
+             c-1.8-1.3-4-2-6.4-2z"/>
+
+    <!-- mid split -->
+    <path d="M32 18.2v29.2"/>
+
+    <!-- folds -->
+    <path d="M22 22.5c2.8-1.4 6.5-.9 8.5 1.3"/>
+    <path d="M19.7 28.6c2.2-1.1 5.1-.8 6.8.8"/>
+    <path d="M20.2 35.1c2.3-.9 5.4-.1 6.8 1.9"/>
+    <path d="M23.1 41.3c2.2-.3 4.4.7 5.6 2.4"/>
+    <path d="M42 22.5c-2.8-1.4-6.5-.9-8.5 1.3"/>
+    <path d="M44.3 28.6c-2.2-1.1-5.1-.8-6.8.8"/>
+    <path d="M43.8 35.1c-2.3-.9-5.4-.1-6.8 1.9"/>
+    <path d="M40.9 41.3c-2.2-.3-4.4.7-5.6 2.4"/>
+
+    <!-- circuits: left -->
+    <path d="M16 26h-6"/><circle cx="7" cy="26" r="2" fill="#7CF9FF" stroke="url(#g)"/>
+    <path d="M14.3 35h-7.3"/><circle cx="7" cy="35" r="2" fill="#7CF9FF" stroke="url(#g)"/>
+    <path d="M18.5 43l-6.5 3.5"/><circle cx="10.5" cy="47.4" r="2" fill="#7CF9FF" stroke="url(#g)"/>
+
+    <!-- circuits: right -->
+    <path d="M48 26h6"/><circle cx="57" cy="26" r="2" fill="#7CF9FF" stroke="url(#g)"/>
+    <path d="M49.7 35h7.3"/><circle cx="57" cy="35" r="2" fill="#7CF9FF" stroke="url(#g)"/>
+    <path d="M45.5 43l6.5 3.5"/><circle cx="53.5" cy="47.4" r="2" fill="#7CF9FF" stroke="url(#g)"/>
+
+    <!-- top pins -->
+    <path d="M26 14V8"/><circle cx="26" cy="7" r="2" fill="#7CF9FF" stroke="url(#g)"/>
+    <path d="M38 14V8"/><circle cx="38" cy="7" r="2" fill="#7CF9FF" stroke="url(#g)"/>
+  </g>
+</svg>

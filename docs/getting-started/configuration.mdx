@@ -1,0 +1,176 @@
+---
+title: Configuration
+description: "Complete guide to configuring Mudabbir: environment variables with MUDABBIR_ prefix, JSON config file, API keys, channel tokens, tool profiles, and memory settings."
+section: Getting Started
+ogType: article
+keywords: ["environment variables", "config file", "settings", "api keys", "mudabbir prefix"]
+tags: ["configuration", "settings"]
+---
+
+# Configuration
+
+Mudabbir uses a layered configuration system built on Pydantic Settings.
+
+## Configuration Sources
+
+Configuration is loaded from these sources (in order of precedence):
+
+1. **Environment variables** — Prefixed with `MUDABBIR_`
+2. **Config file** — `~/.mudabbir/config.json`
+3. **Web dashboard** — Settings saved through the UI
+
+## Environment Variables
+
+All settings use the `MUDABBIR_` prefix:
+
+```bash
+# Core
+export MUDABBIR_ANTHROPIC_API_KEY="sk-ant-..."
+export MUDABBIR_OPENAI_API_KEY="sk-..."
+export MUDABBIR_AGENT_BACKEND="claude_agent_sdk"  # or mudabbir_native, open_interpreter
+
+# Claude SDK settings (only when agent_backend=claude_agent_sdk)
+export MUDABBIR_CLAUDE_SDK_MODEL=""               # empty = auto (recommended)
+export MUDABBIR_CLAUDE_SDK_MAX_TURNS=25           # max tool-use loops per query
+
+# Ollama (local models — no API key needed)
+export MUDABBIR_LLM_PROVIDER="ollama"             # auto, anthropic, openai, or ollama
+export MUDABBIR_OLLAMA_HOST="http://localhost:11434"
+export MUDABBIR_OLLAMA_MODEL="qwen2.5:7b"
+
+# Web Dashboard
+export MUDABBIR_WEB_PORT=8888
+export MUDABBIR_WEB_HOST="0.0.0.0"
+
+# Telegram
+export MUDABBIR_TELEGRAM_TOKEN="your-bot-token"
+export MUDABBIR_ALLOWED_TELEGRAM_IDS="123456,789012"
+
+# Discord
+export MUDABBIR_DISCORD_BOT_TOKEN="your-discord-token"
+export MUDABBIR_DISCORD_ALLOWED_GUILD_IDS="111,222"
+export MUDABBIR_DISCORD_ALLOWED_USER_IDS="333,444"
+
+# Slack
+export MUDABBIR_SLACK_BOT_TOKEN="xoxb-..."
+export MUDABBIR_SLACK_APP_TOKEN="xapp-..."
+export MUDABBIR_SLACK_ALLOWED_CHANNEL_IDS="C01,C02"
+
+# WhatsApp Business
+export MUDABBIR_WHATSAPP_ACCESS_TOKEN="your-token"
+export MUDABBIR_WHATSAPP_PHONE_NUMBER_ID="123456"
+export MUDABBIR_WHATSAPP_VERIFY_TOKEN="your-verify-token"
+export MUDABBIR_WHATSAPP_ALLOWED_PHONE_NUMBERS="+1234567890"
+
+# WhatsApp Personal
+export MUDABBIR_WHATSAPP_MODE="personal"  # or "business"
+
+# Signal
+export MUDABBIR_SIGNAL_API_URL="http://localhost:8080"
+export MUDABBIR_SIGNAL_PHONE_NUMBER="+1234567890"
+
+# Matrix
+export MUDABBIR_MATRIX_HOMESERVER="https://matrix.org"
+export MUDABBIR_MATRIX_USER_ID="@bot:matrix.org"
+export MUDABBIR_MATRIX_ACCESS_TOKEN="your-token"
+
+# Microsoft Teams
+export MUDABBIR_TEAMS_APP_ID="your-app-id"
+export MUDABBIR_TEAMS_APP_PASSWORD="your-password"
+
+# Google Chat
+export MUDABBIR_GCHAT_PROJECT_ID="your-project-id"
+export MUDABBIR_GCHAT_SERVICE_ACCOUNT_KEY="/path/to/key.json"
+```
+
+## Config File
+
+The JSON config file at `~/.mudabbir/config.json` stores all settings:
+
+```json
+{
+  "anthropic_api_key": "sk-ant-...",
+  "agent_backend": "claude_agent_sdk",
+  "claude_sdk_model": "",
+  "claude_sdk_max_turns": 25,
+  "llm_provider": "auto",
+  "ollama_host": "http://localhost:11434",
+  "ollama_model": "llama3.2",
+  "tool_profile": "coding",
+  "tools_allow": [],
+  "tools_deny": [],
+  "smart_routing_enabled": false,
+  "web_search_provider": "tavily",
+  "tavily_api_key": "tvly-...",
+  "mem0_auto_learn": true,
+  "mem0_llm_provider": "ollama",
+  "mem0_llm_model": "llama3.2"
+}
+```
+
+<Callout type="info">
+  **`claude_sdk_model`**: Leave empty (default) to let Claude Code auto-select the best model. Only set this if you want to force a specific model.
+</Callout>
+
+## Tool Policy Configuration
+
+Control which tools are available via profiles and allow/deny lists:
+
+```bash
+# Profile: minimal, coding, or full
+export MUDABBIR_TOOL_PROFILE="coding"
+
+# Allow specific tools (comma-separated)
+export MUDABBIR_TOOLS_ALLOW="web_search,image_gen"
+
+# Deny specific tools (takes precedence over allow)
+export MUDABBIR_TOOLS_DENY="shell,write_file"
+```
+
+See [Tool Policy](/tools/tool-policy) for detailed documentation.
+
+## Memory Configuration
+
+```bash
+# Mem0 semantic memory
+export MUDABBIR_MEM0_AUTO_LEARN=true
+export MUDABBIR_MEM0_LLM_PROVIDER="ollama"      # or anthropic, openai
+export MUDABBIR_MEM0_LLM_MODEL="llama3.2"
+export MUDABBIR_MEM0_EMBEDDER_PROVIDER="ollama"  # or openai
+export MUDABBIR_MEM0_EMBEDDER_MODEL="nomic-embed-text"
+export MUDABBIR_MEM0_VECTOR_STORE="qdrant"
+```
+
+## Google Integration
+
+For Gmail, Calendar, Drive, and Docs:
+
+```bash
+export MUDABBIR_GOOGLE_CLIENT_ID="your-client-id"
+export MUDABBIR_GOOGLE_CLIENT_SECRET="your-secret"
+```
+
+OAuth tokens are stored in `~/.mudabbir/tokens/`.
+
+## Spotify Integration
+
+```bash
+export MUDABBIR_SPOTIFY_CLIENT_ID="your-client-id"
+export MUDABBIR_SPOTIFY_CLIENT_SECRET="your-secret"
+```
+
+## Data Directory
+
+Mudabbir stores all data in `~/.mudabbir/`:
+
+```
+~/.mudabbir/
+├── config.json          # Configuration file
+├── memory/              # Session history and facts
+├── identity/
+│   └── USER.md          # User profile (auto-created)
+├── skills/              # Custom skill definitions
+├── tokens/              # OAuth tokens
+├── audit.jsonl          # Security audit log
+└── mcp.json             # MCP server configuration
+```

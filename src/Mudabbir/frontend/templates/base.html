@@ -1,0 +1,257 @@
+<!--
+  Mudabbir Dashboard - Base Template
+
+  Changes (2026-02-12):
+  - Added hash-router.js and project-browser.js feature module script tags
+  - Updated top bar view buttons to call navigateToView() for hash routing
+  - Hash-based URL routing: #/chat, #/activity, #/terminal, #/deep-work, #/project/{id}
+
+  Changes (2026-02-05):
+  - MAJOR REFACTOR: Componentized JS using mixin pattern
+  - Added feature module scripts: chat, file-browser, reminders, intentions,
+    skills, transparency, remote-access, mission-control
+  - Scripts load order: websocket.js -> tools.js -> features/*.js -> app.js
+  - Added "Deep Work" tab (multi-agent command center) with live indicator badge
+  - Added missions.html component include
+
+  Changes (2026-02-03):
+  - Created as part of frontend modularization
+  - Split from monolithic index.html (~1124 lines) into composable templates
+  - Added mobile sidebar overlay with backdrop
+  - Includes: sidebar, chat, activity, terminal, and modals components
+-->
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>Mudabbir (Beta)</title>
+    <link
+      rel="icon"
+      href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><defs><linearGradient id='g' x1='4' y1='4' x2='28' y2='28' gradientUnits='userSpaceOnUse'><stop offset='0' stop-color='%237CF9FF'/><stop offset='0.55' stop-color='%2322D3EE'/><stop offset='1' stop-color='%231D4ED8'/></linearGradient></defs><g fill='none' stroke='url(%23g)' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'><path d='M12.4 6.8c-3.7 0-6.8 2.9-6.8 6.5c0 .8.2 1.5.4 2.2c-1.5 1.2-2.4 3-2.4 5.1c0 3.4 2.7 6.2 6.1 6.2h3.4c1 1.2 2.6 2.1 4.4 2.1c1.8 0 3.4-.8 4.4-2.1h2.6c3.4 0 6.1-2.8 6.1-6.2c0-2.1-.9-3.9-2.4-5.1c.3-.7.4-1.4.4-2.2c0-3.6-3-6.5-6.8-6.5c-1.6 0-3 .5-4.2 1.3c-1.2-.8-2.6-1.3-4.2-1.3z'/><path d='M17.5 8v18.9'/><path d='M5.2 13.2H1.8'/><circle cx='1.2' cy='13.2' r='1.2' fill='%237CF9FF' stroke='url(%23g)'/><path d='M29.8 13.2H33.2'/><circle cx='33.8' cy='13.2' r='1.2' fill='%237CF9FF' stroke='url(%23g)'/></g></svg>"
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/static/css/styles.css?v={{ v }}" />
+
+    <!-- UnoCSS Runtime (utilities alongside custom CSS) -->
+    <script>
+      window.__unocss = {
+        theme: {
+          colors: {
+            accent: '#0A84FF',
+            success: '#30D158',
+            danger: '#FF453A',
+            warning: '#FF9F0A',
+          }
+        },
+        shortcuts: {
+          'glass': 'bg-white/10 backdrop-blur-xl border border-white/12 rounded-2xl',
+          'glass-dark': 'bg-black/30 backdrop-blur-xl border border-white/12 rounded-2xl',
+          'nav-item': 'group flex items-center gap-3.5 px-3.5 py-2.5 rounded-xl transition-all text-sm font-medium w-full text-left bg-transparent text-[var(--text-secondary)] hover:text-white hover:bg-white/10 cursor-pointer border-none',
+        }
+      }
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/@unocss/runtime"></script>
+
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <!-- Markdown rendering -->
+    <script src="https://cdn.jsdelivr.net/npm/marked@14/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dompurify@3/dist/purify.min.js"></script>
+
+    <!-- QR code generation (WhatsApp pairing) -->
+    <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
+
+    <script
+      defer
+      src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.3/dist/cdn.min.js"
+    ></script>
+  </head>
+  <body x-data="{ ...app(), sidebarOpen: false }" x-init="init()" class="flex h-screen overflow-hidden bg-[var(--bg-color)] text-[var(--text-primary)]">
+
+    <!-- Login Overlay (shown when no auth token is available) -->
+    <div x-show="showLogin" x-transition.opacity
+         class="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-md">
+      <div class="w-full max-w-sm mx-4 p-8 bg-[#1c1c1e] border border-white/10 rounded-2xl shadow-2xl text-center">
+        <div class="text-4xl mb-3">&#x1F916;</div>
+        <h2 class="text-xl font-semibold text-white mb-2">Welcome to Mudabbir</h2>
+        <p class="text-sm text-white/60 mb-6">Enter your access token to continue.</p>
+        <form @submit.prevent="submitToken()">
+          <input x-ref="tokenInput" type="password" x-model="loginToken"
+                 placeholder="Paste access token..."
+                 class="w-full px-4 py-3 bg-white/5 border border-white/15 rounded-xl text-white text-sm placeholder-white/30 outline-none focus:border-[#0A84FF] transition-colors mb-2" />
+          <p x-show="loginError" x-text="loginError" class="text-xs text-[#FF453A] mb-2"></p>
+          <button type="submit" :disabled="loginLoading"
+                  class="w-full py-3 bg-[#0A84FF] hover:bg-[#0A84FF]/90 disabled:opacity-50 text-white font-medium rounded-xl transition-colors text-sm">
+            <span x-show="!loginLoading">Connect</span>
+            <span x-show="loginLoading">Connecting...</span>
+          </button>
+        </form>
+        <p class="text-xs text-white/40 mt-4">
+          Run <code class="bg-white/10 px-1.5 py-0.5 rounded text-white/60">docker exec Mudabbir cat /home/Mudabbir/.Mudabbir/access_token</code> to get your token.
+        </p>
+      </div>
+    </div>
+
+    <!-- Mobile Sidebar Overlay -->
+    <div 
+        x-show="sidebarOpen" 
+        x-transition.opacity 
+        class="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm md:hidden"
+        @click="sidebarOpen = false"
+    ></div>
+
+    {% include "components/sidebar.html" %}
+
+    <!-- Main Content -->
+    <main class="flex-1 flex flex-col relative bg-[radial-gradient(circle_at_50%_30%,#1c1c1e_0%,#000000_100%)] overflow-hidden w-full">
+      <!-- Top Bar -->
+      <header class="absolute top-0 left-0 right-0 z-10 flex justify-between items-center px-4 md:px-8 py-4 bg-gradient-to-b from-black/40 to-transparent pointer-events-none">
+        
+        <!-- Left: Mobile Toggle & View Switcher -->
+        <div class="flex items-center gap-3 pointer-events-auto">
+            <button 
+                class="md:hidden p-2 -ml-2 rounded-lg text-white/70 hover:bg-white/10 hover:text-white transition-colors"
+                @click="sidebarOpen = true"
+            >
+                <i data-lucide="menu" class="w-6 h-6"></i>
+            </button>
+
+            <div class="flex bg-black/20 rounded-[9px] p-0.5 pointer-events-auto backdrop-blur-md border border-white/5">
+            <button
+                class="px-4 md:px-6 py-1.5 rounded-[7px] text-[13px] font-medium transition-all"
+                :class="view === 'chat' ? 'bg-[#636366]/80 text-white shadow-sm' : 'text-[var(--text-secondary)] hover:text-white'"
+                @click="navigateToView('chat')"
+            >
+                Chat
+            </button>
+            <button
+                class="px-4 md:px-6 py-1.5 rounded-[7px] text-[13px] font-medium transition-all"
+                :class="view === 'activity' ? 'bg-[#636366]/80 text-white shadow-sm' : 'text-[var(--text-secondary)] hover:text-white'"
+                @click="navigateToView('activity')"
+            >
+                Activity
+            </button>
+            <button
+                class="px-4 md:px-6 py-1.5 rounded-[7px] text-[13px] font-medium transition-all hidden sm:block"
+                :class="view === 'terminal' ? 'bg-[#636366]/80 text-white shadow-sm' : 'text-[var(--text-secondary)] hover:text-white'"
+                @click="navigateToView('terminal')"
+            >
+                Terminal
+            </button>
+            <button
+                class="relative px-4 md:px-6 py-1.5 rounded-[7px] text-[13px] font-medium transition-all flex items-center gap-1.5 hidden sm:flex"
+                :class="view === 'missions' ? 'bg-[#636366]/80 text-white shadow-sm' : 'text-[var(--text-secondary)] hover:text-white'"
+                @click="navigateToView('missions')"
+            >
+                <span class="relative flex h-2 w-2" x-show="missionControl.stats.active_tasks > 0">
+                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-accent opacity-75"></span>
+                    <span class="relative inline-flex rounded-full h-2 w-2 bg-accent"></span>
+                </span>
+                Deep Work
+                <span class="absolute -bottom-2.5 left-1/2 -translate-x-1/2 px-1.5 py-0.5 text-[7px] font-semibold uppercase tracking-wider rounded-full bg-accent/20 text-accent leading-none whitespace-nowrap">Command Center</span>
+            </button>
+            </div>
+        </div>
+
+        <!-- Right: Export + Remote -->
+        <div class="flex items-center gap-2 pointer-events-auto">
+            <!-- Export dropdown — only shown in chat view with active session -->
+            <div x-show="view === 'chat' && currentSessionId" class="relative" x-data="{ exportOpen: false }">
+                <button
+                    @click="exportOpen = !exportOpen"
+                    class="flex items-center gap-1.5 bg-white/5 hover:bg-white/10 border border-white/10 px-3 py-1.5 rounded-full transition-all hover:scale-105 active:scale-95"
+                >
+                    <i data-lucide="download" class="w-4 h-4 text-accent"></i>
+                    <span class="text-sm font-medium text-white/90 hidden md:inline">Export</span>
+                </button>
+                <div
+                    x-show="exportOpen"
+                    @click.away="exportOpen = false"
+                    x-transition
+                    class="absolute right-0 mt-2 w-36 bg-[#2c2c2e] border border-white/10 rounded-xl shadow-xl z-50 overflow-hidden"
+                >
+                    <button
+                        @click="exportSession('json'); exportOpen = false"
+                        class="w-full px-4 py-2 text-sm text-left text-white/80 hover:bg-white/10 transition-colors"
+                    >JSON</button>
+                    <button
+                        @click="exportSession('md'); exportOpen = false"
+                        class="w-full px-4 py-2 text-sm text-left text-white/80 hover:bg-white/10 transition-colors"
+                    >Markdown</button>
+                </div>
+            </div>
+            
+            <!-- Take Mudabbir With You button -->
+            <button
+                class="flex items-center gap-2 bg-white/5 hover:bg-white/10 border border-white/10 px-3 py-1.5 rounded-full transition-all hover:scale-105 active:scale-95"
+                @click="openRemote()"
+            >
+                <i data-lucide="smartphone" class="w-4 h-4 text-accent"></i>
+                <span class="text-sm font-medium text-white/90 hidden md:inline">Take Mudabbir With You</span>
+            </button>
+        </div>
+      </header>
+
+      {% include "components/chat.html" %}
+
+      {% include "components/activity.html" %}
+      {% include "components/terminal.html" %}
+      {% include "components/missions.html" %}
+    </main>
+
+    {% include "components/modals.html" %}
+
+    <!-- Toast Container -->
+    <div class="toast-container" x-ref="toasts"></div>
+
+    <!-- Scripts (cache-busted via ?v= hash) -->
+    <script src="/static/js/state.js?v={{ v }}"></script>
+    <script src="/static/js/websocket.js?v={{ v }}"></script>
+    <script src="/static/js/tools.js?v={{ v }}"></script>
+    <!-- Event bus (must load before loader and feature modules) -->
+    <script src="/static/js/event-bus.js?v={{ v }}"></script>
+    <!-- Loader (registers feature modules for app.js assembly) -->
+    <script src="/static/js/loader.js?v={{ v }}"></script>
+    <!-- Feature modules (loaded before app.js) -->
+    <script src="/static/js/features/sessions.js?v={{ v }}"></script>
+    <script src="/static/js/features/chat.js?v={{ v }}"></script>
+    <script src="/static/js/features/file-browser.js?v={{ v }}"></script>
+    <script src="/static/js/features/reminders.js?v={{ v }}"></script>
+    <script src="/static/js/features/intentions.js?v={{ v }}"></script>
+    <script src="/static/js/features/skills.js?v={{ v }}"></script>
+    <script src="/static/js/features/transparency.js?v={{ v }}"></script>
+    <script src="/static/js/features/remote-access.js?v={{ v }}"></script>
+    <script src="/static/js/features/mc-agents.js?v={{ v }}"></script>
+    <script src="/static/js/features/mc-tasks.js?v={{ v }}"></script>
+    <script src="/static/js/features/deep-work.js?v={{ v }}"></script>
+    <script src="/static/js/features/mc-events.js?v={{ v }}"></script>
+    <script src="/static/js/features/channels.js?v={{ v }}"></script>
+    <script src="/static/js/features/mcp.js?v={{ v }}"></script>
+    <script src="/static/js/features/hash-router.js?v={{ v }}"></script>
+    <script src="/static/js/features/project-browser.js?v={{ v }}"></script>
+    <script src="/static/js/features/health.js?v={{ v }}"></script>
+    <!-- Main app (assembles features) -->
+    <script src="/static/js/app.js?v={{ v }}"></script>
+
+    <!-- Initialize Lucide icons -->
+    <script>
+      // Initial render
+      document.addEventListener('DOMContentLoaded', () => {
+        lucide.createIcons();
+      });
+
+      // Debounced refresh for dynamic content
+      let iconTimeout;
+      window.refreshIcons = () => {
+        clearTimeout(iconTimeout);
+        iconTimeout = setTimeout(() => lucide.createIcons(), 50);
+      };
+    </script>
+  </body>
+</html>

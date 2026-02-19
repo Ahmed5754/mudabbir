@@ -1,0 +1,151 @@
+---
+title: Claude Agent SDK
+description: "The Claude Agent SDK backend is the recommended choice: official Anthropic SDK with built-in Bash, Read, Write, and Edit tools, PreToolUse safety hooks, and MCP server integration."
+section: Agent Backends
+ogType: article
+keywords: ["claude agent sdk", "anthropic sdk", "pretooluse hooks", "mcp integration", "recommended"]
+tags: ["backends", "claude"]
+---
+
+# Claude Agent SDK
+
+The Claude Agent SDK backend is the **recommended** choice for Mudabbir. It uses Anthropic's official SDK with built-in tools and native MCP support.
+
+## Overview
+
+This backend leverages the `claude-agent-sdk` package, which provides:
+
+- **Built-in tools**: Bash, Read, Write, Edit — managed by the SDK
+- **Tool execution hooks**: `PreToolUse` hooks for dangerous command blocking
+- **MCP integration**: Native Model Context Protocol server support
+- **Streaming**: Real-time token-by-token response streaming
+
+## Configuration
+
+```bash
+export MUDABBIR_AGENT_BACKEND="claude_agent_sdk"
+export MUDABBIR_ANTHROPIC_API_KEY="sk-ant-..."
+```
+
+### Claude SDK Settings
+
+These settings apply specifically to the Claude Agent SDK backend:
+
+| Setting | Env Variable | Default | Description |
+|---------|-------------|---------|-------------|
+| `claude_sdk_model` | `MUDABBIR_CLAUDE_SDK_MODEL` | `""` (auto) | Model override. Leave empty to let Claude Code auto-select the best model (recommended). |
+| `claude_sdk_max_turns` | `MUDABBIR_CLAUDE_SDK_MAX_TURNS` | `25` | Maximum tool-use turns per query. Safety net against runaway tool loops. |
+
+```bash
+# Let Claude Code auto-select the model (recommended — no override needed)
+export MUDABBIR_CLAUDE_SDK_MODEL=""
+
+# Or force a specific model
+export MUDABBIR_CLAUDE_SDK_MODEL="claude-sonnet-4-5-20250929"
+
+# Increase max turns for complex multi-step tasks
+export MUDABBIR_CLAUDE_SDK_MAX_TURNS=50
+```
+
+<Callout type="info">
+  **Why let Claude Code auto-select?** Claude Code has its own sophisticated model routing that picks the best model for each task. Setting an explicit model override disables this. Only override if you have a specific reason (e.g., cost control or testing).
+</Callout>
+
+<Callout type="warning">
+  **Smart Model Routing conflict:** Mudabbir's Smart Model Router (in Settings → Behavior) is disabled by default because it conflicts with Claude Code's built-in routing. Enabling it will override Claude Code's model selection, which may produce worse results.
+</Callout>
+
+### Using with Ollama
+
+The Claude Agent SDK also works with local models via Ollama:
+
+```bash
+export MUDABBIR_AGENT_BACKEND="claude_agent_sdk"
+export MUDABBIR_LLM_PROVIDER="ollama"
+export MUDABBIR_OLLAMA_MODEL="qwen2.5:7b"
+```
+
+See [Ollama (Local LLMs)](/backends/ollama) for full setup instructions.
+
+## Built-in Tools
+
+The Claude Agent SDK provides these tools natively:
+
+| SDK Tool | Description |
+|----------|-------------|
+| `Bash` | Execute shell commands |
+| `Read` | Read files from the filesystem |
+| `Write` | Write/create files |
+| `Edit` | Edit existing files with search/replace |
+| `Skill` | Execute skills from SKILL.md files |
+
+### Tool Name Mapping
+
+The SDK uses capitalized tool names internally. Mudabbir maps these to the policy system's snake_case names:
+
+| SDK Name | Policy Name |
+|----------|------------|
+| `Bash` | `shell` |
+| `Read` | `read_file` |
+| `Write` | `write_file` |
+| `Edit` | `edit_file` |
+| `Skill` | `skill` |
+
+This mapping is handled by `_SDK_TO_POLICY` in `claude_sdk.py`.
+
+## Safety Hooks
+
+The backend uses `PreToolUse` hooks to intercept and block dangerous commands before execution:
+
+```python
+# Example: Blocking destructive shell commands
+async def pre_tool_use(tool_name, tool_input):
+    if tool_name == "Bash":
+        command = tool_input.get("command", "")
+        if is_dangerous_command(command):
+            return BlockedResponse("This command has been blocked for safety.")
+```
+
+## MCP Server Integration
+
+The Claude Agent SDK has native MCP support. Mudabbir's `_get_mcp_servers()` function translates MCP server configurations into the SDK's expected format:
+
+```python
+# MCP servers are loaded from ~/.mudabbir/mcp.json
+# and passed to the SDK during initialization
+servers = _get_mcp_servers()
+```
+
+MCP tools are subject to the tool policy system. Use `mcp:<server>:*` patterns in allow/deny lists:
+
+```bash
+# Allow all tools from a specific MCP server
+export MUDABBIR_TOOLS_ALLOW="mcp:filesystem:*"
+
+# Deny all MCP tools
+export MUDABBIR_TOOLS_DENY="group:mcp"
+```
+
+## Custom Tools
+
+In addition to the SDK's built-in tools, Mudabbir registers its own tools (web_search, image_gen, etc.) as custom tool definitions passed to the SDK.
+
+## Skill Auto-Discovery
+
+The backend passes `setting_sources=["user", "project"]` to the SDK, enabling automatic discovery of SKILL.md files from:
+
+- `~/.claude/skills/` — User-level skills
+- `.claude/skills/` — Project-level skills
+
+This means skills created by the `skill_gen` tool (which writes to `~/.claude/skills/`) are automatically available to the SDK without additional configuration.
+
+## Response Format
+
+The backend yields standardized response chunks:
+
+```python
+{"type": "message", "content": "Here's the result..."}
+{"type": "tool_use", "content": "", "metadata": {"tool": "Bash", "input": {"command": "ls"}}}
+{"type": "tool_result", "content": "file1.txt\nfile2.txt", "metadata": {"tool": "Bash"}}
+{"type": "done", "content": ""}
+```

@@ -1,0 +1,87 @@
+---
+title: Mudabbir Native
+description: "Mudabbir Native is a custom orchestrator that pairs Anthropic's SDK for reasoning with Open Interpreter for code execution. Offers fine-grained control over the agent pipeline."
+section: Agent Backends
+ogType: article
+keywords: ["mudabbir native", "custom orchestrator", "anthropic sdk", "code execution", "hybrid"]
+tags: ["backends", "native"]
+---
+
+# Mudabbir Native
+
+The Mudabbir Native backend is a custom orchestrator that combines Anthropic's SDK for reasoning with Open Interpreter for code execution.
+
+## Overview
+
+This backend provides a balanced approach:
+
+- **Anthropic SDK** handles conversation, reasoning, and tool selection
+- **Open Interpreter** handles actual code execution
+- **Custom tools** are registered through Mudabbir's tool registry
+- **MCP tools** are loaded via `_get_mcp_tools()` and registered with the tool registry
+
+## Configuration
+
+```bash
+export MUDABBIR_AGENT_BACKEND="mudabbir_native"
+export MUDABBIR_ANTHROPIC_API_KEY="sk-ant-..."
+```
+
+### Using with Ollama
+
+Mudabbir Native also works with local models via Ollama:
+
+```bash
+export MUDABBIR_AGENT_BACKEND="mudabbir_native"
+export MUDABBIR_LLM_PROVIDER="ollama"
+export MUDABBIR_OLLAMA_MODEL="qwen2.5:7b"
+```
+
+See [Ollama (Local LLMs)](/backends/ollama) for full setup instructions.
+
+## How It Works
+
+1. The user message is sent to Claude via the Anthropic SDK
+2. Claude decides which tools to call based on the available tool definitions
+3. Tool calls are routed through Mudabbir's `ToolRegistry`
+4. Code execution tools are delegated to Open Interpreter
+5. Results are sent back to Claude for the next reasoning step
+6. The cycle continues until Claude produces a final response
+
+## Tool Registration
+
+The native backend registers all tools from Mudabbir's tool registry:
+
+```python
+# Built-in tools (web_search, image_gen, etc.)
+tools = registry.get_tool_definitions(format="anthropic")
+
+# MCP tools (loaded from configured MCP servers)
+mcp_tools = await _get_mcp_tools()
+tools.extend(mcp_tools)
+```
+
+MCP tools are named with the pattern `mcp_<server>__<tool>` to avoid naming conflicts.
+
+## Tool Policy
+
+The tool policy system filters available tools. The native backend respects the same profiles and allow/deny lists as the Claude Agent SDK backend.
+
+## When to Use
+
+Choose Mudabbir Native when:
+
+- You want more control over the tool execution pipeline
+- You need to customize how tools are registered and executed
+- You want to combine Anthropic's reasoning with Open Interpreter's execution capabilities
+
+## Installation
+
+```bash
+curl -fsSL https://mudabbir.xyz/install.sh | sh
+
+# Or add the native extra manually
+pip install mudabbir[native]
+```
+
+This installs Open Interpreter as an optional dependency.
