@@ -366,14 +366,3 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-## 9) Notes
-
-- This repository tracks local customized code intended for fast iteration.
-- If you publish a formal Mudabbir package, update package metadata and entrypoints accordingly.
-- This document replaces and consolidates:
-  - `CLAUDE.md`
-  - `README.md`
-  - `QUICK_START_CHECKLIST.md`
-  - `PROJECT_STATUS_MUDABBIR.md`
-  - `LICENSE`
-  - `CONTRIBUTING.md`
