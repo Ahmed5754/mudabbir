@@ -16,6 +16,10 @@
 </p>
 
 <p align="center">
+  👤 <a href="WHO_AM_I.md"><strong>Who Am I? | من أنا؟</strong></a>
+</p>
+
+<p align="center">
   <a href="https://github.com/Ahmed5754/mudabbir/releases/latest/download/Mudabbir-macOS-arm64.dmg"><img src="https://img.shields.io/badge/macOS-Download_.dmg-000000?style=for-the-badge&logo=apple&logoColor=white" alt="Download for macOS"></a>
   &nbsp;
   <a href="https://github.com/Ahmed5754/mudabbir/releases/latest/download/Mudabbir-Setup.exe"><img src="https://img.shields.io/badge/Windows-Download_.exe-0078D4?style=for-the-badge&logo=windows&logoColor=white" alt="Download for Windows"></a>
