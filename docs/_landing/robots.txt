@@ -1,4 +1,4 @@
-# robots.txt — Mudabbir landing page (mudabbir.xyz)
+# robots.txt — Mudabbir landing page (mudabbir.fly.dev)
 # Allow legitimate crawlers, block common scanner paths
 
 User-agent: *
@@ -11,4 +11,4 @@ Disallow: /admin/
 Disallow: /cmd_sco
 Disallow: /serverConfig.json
 
-Sitemap: https://mudabbir.xyz/sitemap.xml
+Sitemap: https://mudabbir.fly.dev/sitemap.xml

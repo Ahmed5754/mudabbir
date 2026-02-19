@@ -1990,9 +1990,19 @@ async def get_qr_code(request: Request):
     if status.get("active") and status.get("url"):
         login_url = f"{status['url']}/?token={qr_token}"
     else:
-        # Fallback to current request host (localhost or network IP)
-        protocol = "https" if "trycloudflare" in str(host) else "http"
-        login_url = f"{protocol}://{host}/?token={qr_token}"
+        # Prefer proxy-provided protocol (Fly, reverse proxies) when present.
+        raw_proto = request.headers.get("x-forwarded-proto", "")
+        forwarded_proto = raw_proto.split(",")[0].strip().lower()
+        resolved_host = (host or "").strip() or request.url.netloc or "localhost:8888"
+
+        if forwarded_proto in {"http", "https"}:
+            protocol = forwarded_proto
+        elif resolved_host.startswith(("localhost", "127.0.0.1", "[::1]", "::1")):
+            protocol = "http"
+        else:
+            protocol = "https"
+
+        login_url = f"{protocol}://{resolved_host}/?token={qr_token}"
 
     img = qrcode.make(login_url)
     buf = io.BytesIO()

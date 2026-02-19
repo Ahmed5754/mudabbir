@@ -2,7 +2,7 @@
 
 The official documentation for [Mudabbir](https://github.com/Ahmed5754/Mudabbir) — a self-hosted AI agent controlled via Telegram, Discord, Slack, WhatsApp, Signal, Matrix, Teams, Google Chat, or a web dashboard.
 
-**Live site:** [docs.mudabbir.xyz](https://docs.mudabbir.xyz)
+**Live site:** [docs.mudabbir.fly.dev](https://docs.mudabbir.fly.dev)
 
 ## Stack
 

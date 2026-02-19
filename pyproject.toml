@@ -52,6 +52,8 @@ dependencies = [
     "python-multipart>=0.0.22",
     # Logging & CLI
     "rich>=13.0.0",
+    "InquirerPy>=0.3.4",
+    "pystray>=0.19.5",
     # Scheduling
     "apscheduler>=3.10.0",
     "python-dateutil>=2.8.0",
