@@ -52,8 +52,8 @@ def _sanitize_sys_path() -> None:
 
 _sanitize_sys_path()
 
-from Mudabbir.config import Settings, get_settings
-from Mudabbir.logging_setup import setup_logging
+from Mudabbir.config import Settings, get_settings  # noqa: E402
+from Mudabbir.logging_setup import setup_logging  # noqa: E402
 
 
 def _runtime_version() -> str:
@@ -476,7 +476,7 @@ async def check_openai_compatible(settings: Settings) -> int:
                 }
             ],
         )
-        has_tool_use = bool(response.choices[0].message.tool_calls)
+        has_tool_use = bool(tool_response.choices[0].message.tool_calls)
         if has_tool_use:
             console.print("  [green]\\[OK][/]  Tool calling works")
         else:

@@ -17,7 +17,7 @@ try:
     import qrcode
     import qrcode.image.svg
     import uvicorn
-    from fastapi import FastAPI, Form, Request
+    from fastapi import FastAPI, Form
     from fastapi.responses import HTMLResponse
 except ImportError as _exc:
     raise ImportError(
