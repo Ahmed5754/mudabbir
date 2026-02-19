@@ -4438,7 +4438,7 @@ Required JSON schema:
 
                 def execute_structured_python(code: str, *, source: str) -> tuple[bool, bool]:
                     """Run one constrained Python desktop snippet from structured payload."""
-                    nonlocal structured_execute_done, last_command_fingerprints
+                    nonlocal structured_execute_done
                     nonlocal execute_payload_buffer, execute_capture_open
 
                     if structured_execute_done:

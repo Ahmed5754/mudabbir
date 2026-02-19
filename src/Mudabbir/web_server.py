@@ -80,7 +80,6 @@ def generate_qr_svg(deep_link: str) -> str:
 
 async def _handle_pairing_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle /start <secret> during pairing."""
-    global _settings, _pairing_complete
 
     if not update.message or not update.effective_user:
         return
@@ -353,7 +352,6 @@ def create_app(settings: Settings) -> FastAPI:
         anthropic_key: Optional[str] = Form(None),
     ):
         """Handle setup form submission."""
-        global _settings, _temp_bot_app
 
         # Save the bot token
         _settings.telegram_bot_token = bot_token
@@ -399,7 +397,6 @@ def create_app(settings: Settings) -> FastAPI:
     @app.post("/complete")
     async def complete(user_id: int):
         """Called internally when pairing is complete."""
-        global _settings
         _settings.allowed_user_id = user_id
         _settings.save()
         _pairing_complete.set()
@@ -440,7 +437,6 @@ async def run_pairing_server(settings: Settings) -> int:
 
     finally:
         # Shutdown temporary bot
-        global _temp_bot_app
         if _temp_bot_app:
             if _temp_bot_app.updater.running:
                 await _temp_bot_app.updater.stop()
