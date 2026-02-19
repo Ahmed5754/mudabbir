@@ -28,10 +28,6 @@
 
 > **🚧 Beta:** This project is under active development. Expect breaking changes between versions.
 
-<p align="center">
-  <video src="https://github.com/user-attachments/assets/a15bb8c7-6897-40d2-8111-aa905fe3fdfe" width="700" controls></video>
-</p>
-
 ---
 
 ## Quick Start
