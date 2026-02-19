@@ -421,7 +421,7 @@ Full documentation lives in [`documentation/`](documentation/README.md):
 <!-- TODO: Add Product Hunt badge once page is live -->
 <!-- [![Product Hunt](https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=XXXXX)](https://www.producthunt.com/posts/mudabbir) -->
 
-- Twitter: [@MudabbirAI](https://twitter.com/Mudabbir89242)
+- Twitter: Coming Soon
 - Discord: Coming Soon
 - Email: 0a1h2m3e4d5123321@gmail.com
 - Telegram: [@K_6_3](https://t.me/K_6_3)
