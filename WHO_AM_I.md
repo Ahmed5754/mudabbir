@@ -9,21 +9,18 @@ Personal developer profile for quick introduction in both English and Arabic.
 
 - **Name:** Ahmed Muhammad
 - **Telegram:** [@K_6_3](https://t.me/K_6_3)
-- **Role:** [Fill here]
-- **Focus Areas:** [Fill here]
-- **Currently Building:** [Fill here]
+- **Role:** Student / Programming Hobbyist
+- **Focus Areas:** I am passionate about technology in general, with a strong interest in AI news and programming.
+- **Currently Building:** I am currently a high school student and learning by building small projects.
 - **Location:** Syria 🇸🇾
 - **Contact Email:** 0a1h2m3e4d5123321@gmail.com
-
 
 ## من أنا؟
 
 - **الاسم:** أحمد محمد
 - **التليجرام:** [@K_6_3](https://t.me/K_6_3)
-- **الدور:** [اكتب هنا]
-- **مجالات التركيز:** [اكتب هنا]
-- **أعمل حاليًا على:** [اكتب هنا]
+- **الدور:** طالب / هاوي برمجة
+- **مجالات التركيز:** لدي حب للتقنية بشكل عام، وأهتم بأخبار الذكاء الاصطناعي والبرمجة.
+- **أعمل حاليًا على:** طالب ثانوي
 - **الموقع:** سوريا 🇸🇾
 - **البريد الإلكتروني:** 0a1h2m3e4d5123321@gmail.com
-
-
