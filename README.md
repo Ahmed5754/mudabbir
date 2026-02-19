@@ -1,18 +1,29 @@
-![Mudabbir](Mudabbir.png)
+<p align="center">
+  <img src="Mudabbir.png" alt="Mudabbir" width="200">
+</p>
 
-# Mudabbir
+<h1 align="center">Mudabbir</h1>
 
-**Your AI agent. Modular. Secure. Everywhere.**
+<p align="center">
+  <strong>Your AI agent. Modular. Secure. Everywhere.</strong>
+</p>
 
-[![PyPI version](https://img.shields.io/pypi/v/Mudabbir.svg)](https://pypi.org/project/mudabbir/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
-[![GitHub downloads](https://img.shields.io/github/downloads/Ahmed5754/mudabbir/total?label=downloads)](https://github.com/Ahmed5754/mudabbir/releases)
+<p align="center">
+  <a href="https://pypi.org/project/mudabbir/"><img src="https://img.shields.io/pypi/v/mudabbir.svg?cacheSeconds=3600" alt="PyPI version"></a>
+  <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT"></a>
+  <a href="https://www.python.org/downloads/"><img src="https://img.shields.io/badge/python-3.11+-blue.svg" alt="Python 3.11+"></a>
+  <a href="https://github.com/Ahmed5754/mudabbir/releases"><img src="https://img.shields.io/github/downloads/Ahmed5754/mudabbir/total.svg" alt="Downloads"></a>
+</p>
 
-👤 **[Who Am I? | من أنا؟](CODE_OF_CONDUCT.md)**
+<p align="center">
+  👤 <a href="CODE_OF_CONDUCT.md"><strong>Who Am I? | من أنا؟</strong></a>
+</p>
 
-[![Download for macOS](https://img.shields.io/badge/macOS-Download_.dmg-000000?style=for-the-badge&logo=apple&logoColor=white)](https://github.com/Ahmed5754/mudabbir/releases/latest/download/Mudabbir-macOS-arm64.dmg)
-[![Download for Windows](https://img.shields.io/badge/Windows-Download_.exe-0078D4?style=for-the-badge&logo=windows&logoColor=white)](https://github.com/Ahmed5754/mudabbir/releases/latest/download/Mudabbir-Setup.exe)
+<p align="center">
+  <a href="https://github.com/Ahmed5754/mudabbir/releases/latest/download/Mudabbir-macOS-arm64.dmg"><img src="https://img.shields.io/badge/macOS-Download_.dmg-000000?style=for-the-badge&logo=apple&logoColor=white" alt="Download for macOS"></a>
+  &nbsp;
+  <a href="https://github.com/Ahmed5754/mudabbir/releases/latest/download/Mudabbir-Setup.exe"><img src="https://img.shields.io/badge/Windows-Download_.exe-0078D4?style=for-the-badge&logo=windows&logoColor=white" alt="Download for Windows"></a>
+</p>
 
 <p align="center">
   Self-hosted, multi-agent AI platform. Web dashboard + <strong>Discord</strong>, <strong>Slack</strong>, <strong>WhatsApp</strong>, <strong>Telegram</strong>, and more.<br>
