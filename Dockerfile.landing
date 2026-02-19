@@ -1,0 +1,17 @@
+FROM nginx:alpine
+
+WORKDIR /usr/share/nginx/html
+
+# Landing page + static assets
+COPY docs/_landing/index.html ./index.html
+COPY docs/_landing/robots.txt ./robots.txt
+COPY docs/public/ ./
+
+# Install helper scripts served directly from the root domain
+COPY installer/install.sh ./install.sh
+COPY installer/install.ps1 ./install.ps1
+
+EXPOSE 80
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+    CMD wget -q -O /dev/null http://127.0.0.1/ || exit 1
