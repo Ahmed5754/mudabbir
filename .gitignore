@@ -49,6 +49,10 @@ htmlcov/
 # Internal drafts
 idocs/
 .claude 
+CLAUDE.md
+docs/CLAUDE.md
+MASTER_DOC_AR.md
+MASTER_DOC_EN.md
 
 # Config (contains secrets)
 .env
