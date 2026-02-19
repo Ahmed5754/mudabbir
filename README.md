@@ -4,10 +4,10 @@
 
 **Your AI agent. Modular. Secure. Everywhere.**
 
-[![PyPI version](https://img.shields.io/pypi/v/mudabbir.svg)](https://pypi.org/project/mudabbir/)
+[![PyPI version](https://img.shields.io/pypi/v/Mudabbir.svg)](https://pypi.org/project/mudabbir/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
-[![Downloads](https://img.shields.io/pypi/dm/mudabbir.svg)](https://pypi.org/project/mudabbir/)
+[![GitHub downloads](https://img.shields.io/github/downloads/Ahmed5754/mudabbir/total?label=downloads)](https://github.com/Ahmed5754/mudabbir/releases)
 
 👤 **[Who Am I? | من أنا؟](CODE_OF_CONDUCT.md)**
 
