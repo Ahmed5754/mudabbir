@@ -2762,6 +2762,13 @@ $obj | ConvertTo-Json -Compress
         if mode_norm in {"nbtstat_cache"}:
             ok, out = _run_powershell("nbtstat -c", timeout=12)
             return _json({"ok": True, "mode": "nbtstat_cache", "output": out[:2000]}) if ok else self._error(out or "nbtstat cache failed")
+        if mode_norm in {"nbtstat_host"}:
+            target = (host or "").strip() or "127.0.0.1"
+            ok, out = _run_powershell(f"nbtstat -a {target}", timeout=15)
+            return _json({"ok": True, "mode": "nbtstat_host", "host": target, "output": out[:2500]}) if ok else self._error(out or "nbtstat host failed")
+        if mode_norm in {"net_view"}:
+            ok, out = _run_powershell("net view", timeout=12)
+            return _json({"ok": True, "mode": "net_view", "output": out[:2000]}) if ok else self._error(out or "net view failed")
         if mode_norm in {"net_scan", "arp_scan"}:
             ok, out = _run_powershell("arp -a", timeout=10)
             return _json({"ok": True, "mode": "net_scan", "output": out[:2000]}) if ok else self._error(out or "net scan failed")

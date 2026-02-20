@@ -372,6 +372,8 @@ def test_resolve_registry_set_value_extracts_fields() -> None:
         ("getmac", "network_tools", "getmac"),
         ("جدول arp", "network_tools", "arp_table"),
         ("nbtstat -c", "network_tools", "nbtstat_cache"),
+        ("nbtstat -a FILESRV", "network_tools", "nbtstat_host"),
+        ("net view", "network_tools", "net_view"),
         ("الاجهزة المتصلة بالشبكة", "network_tools", "net_scan"),
         ("تشغيل مشاركة الملفات", "network_tools", "file_sharing_on"),
         ("المجلدات المشاركة", "network_tools", "shared_folders"),
@@ -405,6 +407,14 @@ def test_resolve_port_owner_extracts_port() -> None:
     assert result.action == "network_tools"
     assert result.params.get("mode") == "port_owner"
     assert result.params.get("port") == 3389
+
+
+def test_resolve_nbtstat_host_extracts_host() -> None:
+    result = resolve_windows_intent("nbtstat -a FILESRV")
+    assert result.matched is True
+    assert result.action == "network_tools"
+    assert result.params.get("mode") == "nbtstat_host"
+    assert result.params.get("host") == "FILESRV"
 
 
 @pytest.mark.parametrize(

@@ -311,6 +311,8 @@ RULES: tuple[IntentRule, ...] = (
     IntentRule("network.getmac", "network_tools", "getmac", "safe", ("getmac", "mac address", "عنوان mac", "عنوان الماك")),
     IntentRule("network.arp_table", "network_tools", "arp_table", "safe", ("arp -a", "arp table", "جدول arp")),
     IntentRule("network.nbtstat_cache", "network_tools", "nbtstat_cache", "safe", ("nbtstat -c", "netbios cache", "كاش netbios")),
+    IntentRule("network.nbtstat_host", "network_tools", "nbtstat_host", "safe", ("nbtstat -a", "netbios host query", "استعلام netbios"), params=("host",)),
+    IntentRule("network.net_view", "network_tools", "net_view", "safe", ("net view", "network computers", "اجهزة الشبكة", "الأجهزة على الشبكة")),
     IntentRule("network.net_scan", "network_tools", "net_scan", "safe", ("net scan", "الاجهزة المتصلة بالشبكة", "الاجهزة المتصله بالشبكه")),
     IntentRule("network.file_sharing_on", "network_tools", "file_sharing_on", "elevated", ("file sharing on", "تشغيل مشاركة الملفات")),
     IntentRule("network.file_sharing_off", "network_tools", "file_sharing_off", "elevated", ("file sharing off", "ايقاف مشاركة الملفات")),
@@ -986,6 +988,25 @@ def resolve_windows_intent(message: str) -> IntentResolution:
         return IntentResolution(
             matched=True,
             capability_id="network.pathping",
+            action="network_tools",
+            params=params,
+            risk_level="safe",
+        )
+    if _contains_any(normalized, ("nbtstat -a", "استعلام netbios")):
+        params = {
+            "mode": "nbtstat_host",
+        }
+        host = _extract_named_value(
+            raw,
+            (
+                r"(?:nbtstat\s+-a|استعلام netbios)\s+(.+)$",
+            ),
+        ) or _extract_app_query(raw)
+        if host:
+            params["host"] = host
+        return IntentResolution(
+            matched=True,
+            capability_id="network.nbtstat_host",
             action="network_tools",
             params=params,
             risk_level="safe",
