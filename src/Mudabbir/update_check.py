@@ -28,7 +28,12 @@ def _parse_version(v: str) -> tuple[int, ...]:
     return tuple(int(x) for x in v.strip().split("."))
 
 
-def check_for_updates(current_version: str, config_dir: Path) -> dict | None:
+def check_for_updates(
+    current_version: str,
+    config_dir: Path,
+    *,
+    use_cache: bool = True,
+) -> dict | None:
     """Check PyPI for a newer version. Returns version info dict or None on error.
 
     Uses a daily cache file to avoid hitting PyPI on every launch.
@@ -39,7 +44,7 @@ def check_for_updates(current_version: str, config_dir: Path) -> dict | None:
         now = time.time()
 
         # Try cache first
-        if cache_file.exists():
+        if use_cache and cache_file.exists():
             try:
                 cache = json.loads(cache_file.read_text())
                 if now - cache.get("ts", 0) < CACHE_TTL:

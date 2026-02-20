@@ -16,6 +16,8 @@ import argparse
 import asyncio
 import importlib.util
 import logging
+import os
+import subprocess
 import sys
 import webbrowser
 from importlib.metadata import version as get_version
@@ -86,6 +88,105 @@ def _print_mem0_config_error(errors: list[str]) -> None:
 # Setup beautiful logging with Rich
 setup_logging(level="INFO")
 logger = logging.getLogger(__name__)
+
+_AUTO_UPDATE_GUARD_ENV = "MUDABBIR_AUTO_UPDATE_DONE"
+_AUTO_UPDATE_DISABLE_ENV = "MUDABBIR_DISABLE_AUTO_UPDATE"
+
+
+def _should_auto_update_on_boot(argv: list[str]) -> bool:
+    """Auto-update only for plain terminal launch: `Mudabbir`."""
+    if len(argv) != 1:
+        return False
+    if os.environ.get(_AUTO_UPDATE_GUARD_ENV) == "1":
+        return False
+    if os.environ.get(_AUTO_UPDATE_DISABLE_ENV) == "1":
+        return False
+    return True
+
+
+def _bootstrap_latest_and_restart(argv: list[str]) -> None:
+    """Update to latest published version (if needed) then restart once."""
+    from Mudabbir.config import get_config_dir
+    from Mudabbir.update_check import check_for_updates
+
+    info = check_for_updates(_runtime_version(), get_config_dir(), use_cache=False)
+    if not info or not info.get("update_available"):
+        return
+
+    current = info.get("current", _runtime_version())
+    latest = info.get("latest", "?")
+    logger.info("🔄 Updating Mudabbir %s -> %s", current, latest)
+
+    # Never run pip upgrade in-process on Windows; mudabbir.exe is locked while running.
+    if os.name == "nt":
+        logger.info("🔁 Switching to Windows handoff updater...")
+        _handoff_windows_update_and_restart(argv)
+        raise SystemExit(0)
+
+    install_cmd = [
+        sys.executable,
+        "-m",
+        "pip",
+        "install",
+        "--upgrade",
+        "Mudabbir",
+        "--disable-pip-version-check",
+        "--no-input",
+        "--quiet",
+    ]
+    install = subprocess.run(install_cmd, capture_output=True, text=True)
+    if install.returncode != 0:
+        last_error_line = (
+            (install.stderr or install.stdout or "").strip().splitlines()[-1:]
+        )
+        compact_error = last_error_line[0] if last_error_line else "pip install failed"
+        logger.error(
+            "Auto-update failed: %s. Launching current installed version.",
+            compact_error,
+        )
+        return
+
+    env = os.environ.copy()
+    env[_AUTO_UPDATE_GUARD_ENV] = "1"
+    restart_cmd = [sys.executable, "-m", "Mudabbir", *argv[1:]]
+    logger.info("✅ Update complete. Restarting Mudabbir...")
+    restarted = subprocess.run(restart_cmd, env=env)
+    raise SystemExit(restarted.returncode)
+
+
+def _handoff_windows_update_and_restart(argv: list[str]) -> None:
+    """On Windows, finish update in a child process after current process exits."""
+    helper = r"""
+import os
+import subprocess
+import sys
+import time
+
+args = sys.argv[1:]
+time.sleep(0.8)
+
+install_cmd = [
+    sys.executable,
+    "-m",
+    "pip",
+    "install",
+    "--upgrade",
+    "Mudabbir",
+    "--disable-pip-version-check",
+    "--no-input",
+    "--quiet",
+]
+res = subprocess.run(install_cmd, capture_output=True, text=True)
+if res.returncode == 0:
+    print("[Mudabbir] Update complete. Starting Mudabbir...")
+else:
+    print("[Mudabbir] Auto-update failed in handoff mode. Starting current version...")
+
+env = os.environ.copy()
+env["MUDABBIR_AUTO_UPDATE_DONE"] = "1"
+subprocess.run([sys.executable, "-m", "Mudabbir", *args], env=env)
+"""
+    subprocess.Popen([sys.executable, "-c", helper, *argv[1:]], close_fds=True)
 
 
 async def run_telegram_mode(settings: Settings) -> None:
@@ -619,6 +720,9 @@ def _check_extras_installed(args: argparse.Namespace) -> None:
 
 def main() -> None:
     """Main entry point."""
+    if _should_auto_update_on_boot(sys.argv):
+        _bootstrap_latest_and_restart(sys.argv)
+
     parser = argparse.ArgumentParser(
         description="Mudabbir (Beta) - The AI agent that runs on your laptop",
         formatter_class=argparse.RawDescriptionHelpFormatter,
