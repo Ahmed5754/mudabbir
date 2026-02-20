@@ -94,3 +94,37 @@ async def test_global_fastpath_battery_get(monkeypatch: pytest.MonkeyPatch) -> N
     )
     assert handled is True
     assert "81" in str(reply)
+
+
+@pytest.mark.asyncio
+async def test_global_fastpath_app_tools_human_reply(monkeypatch: pytest.MonkeyPatch) -> None:
+    class DummyDesktopTool:
+        async def execute(self, action: str, **kwargs):
+            assert action == "app_tools"
+            assert kwargs.get("mode") == "open_task_manager"
+            return '{"ok": true}'
+
+    monkeypatch.setattr("Mudabbir.tools.builtin.desktop.DesktopTool", DummyDesktopTool)
+    loop = AgentLoop()
+    handled, reply = await loop._try_global_windows_fastpath(
+        text="افتح مدير المهام", session_key="s5"
+    )
+    assert handled is True
+    assert "مدير المهام" in str(reply)
+
+
+@pytest.mark.asyncio
+async def test_global_fastpath_shell_tools_human_reply(monkeypatch: pytest.MonkeyPatch) -> None:
+    class DummyDesktopTool:
+        async def execute(self, action: str, **kwargs):
+            assert action == "shell_tools"
+            assert kwargs.get("mode") == "quick_settings"
+            return '{"ok": true}'
+
+    monkeypatch.setattr("Mudabbir.tools.builtin.desktop.DesktopTool", DummyDesktopTool)
+    loop = AgentLoop()
+    handled, reply = await loop._try_global_windows_fastpath(
+        text="افتح الاعدادات السريعة", session_key="s6"
+    )
+    assert handled is True
+    assert "السريعة" in str(reply)

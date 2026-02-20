@@ -130,3 +130,20 @@ def test_resolve_arabic_brightness_and_battery_questions() -> None:
     assert battery.matched is True
     assert battery.action == "system_info"
     assert battery.params.get("mode") == "battery"
+
+
+@pytest.mark.parametrize(
+    ("message", "action", "mode"),
+    [
+        ("مدير المهام", "app_tools", "open_task_manager"),
+        ("لوحة التحكم", "app_tools", "open_control_panel"),
+        ("متجر ميكروسوفت", "app_tools", "open_store"),
+        ("الاعدادات السريعة", "shell_tools", "quick_settings"),
+        ("مركز الاشعارات", "shell_tools", "notifications"),
+    ],
+)
+def test_resolve_more_daily_arabic_aliases(message: str, action: str, mode: str) -> None:
+    result = resolve_windows_intent(message)
+    assert result.matched is True
+    assert result.action == action
+    assert result.params.get("mode") == mode

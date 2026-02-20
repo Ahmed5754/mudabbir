@@ -423,6 +423,64 @@ class AgentLoop:
         if action == "network_tools" and str(params.get("mode", "")).lower() in {"open_network_settings", "settings"}:
             return True, ("تم فتح إعدادات الشبكة." if arabic else "Opened network settings.")
 
+        if action == "app_tools":
+            mode = str(params.get("mode", "")).lower()
+            app_msgs_ar = {
+                "open_task_manager": "تم فتح مدير المهام.",
+                "open_notepad": "تم فتح المفكرة.",
+                "open_calc": "تم فتح الآلة الحاسبة.",
+                "open_paint": "تم فتح الرسام.",
+                "open_default_browser": "تم فتح المتصفح الافتراضي.",
+                "open_chrome": "تم فتح Chrome.",
+                "open_control_panel": "تم فتح لوحة التحكم.",
+                "open_store": "تم فتح متجر Microsoft.",
+                "open_camera": "تم فتح الكاميرا.",
+                "open_calendar": "تم فتح التقويم.",
+                "open_mail": "تم فتح البريد.",
+            }
+            app_msgs_en = {
+                "open_task_manager": "Opened Task Manager.",
+                "open_notepad": "Opened Notepad.",
+                "open_calc": "Opened Calculator.",
+                "open_paint": "Opened Paint.",
+                "open_default_browser": "Opened default browser.",
+                "open_chrome": "Opened Chrome.",
+                "open_control_panel": "Opened Control Panel.",
+                "open_store": "Opened Microsoft Store.",
+                "open_camera": "Opened Camera.",
+                "open_calendar": "Opened Calendar.",
+                "open_mail": "Opened Mail.",
+            }
+            if mode:
+                msg = app_msgs_ar.get(mode) if arabic else app_msgs_en.get(mode)
+                if msg:
+                    return True, msg
+
+        if action == "shell_tools":
+            mode = str(params.get("mode", "")).lower()
+            shell_msgs_ar = {
+                "quick_settings": "تم فتح الإعدادات السريعة.",
+                "notifications": "تم فتح مركز الإشعارات.",
+                "search": "تم فتح بحث ويندوز.",
+                "run": "تم فتح نافذة Run.",
+                "file_explorer": "تم فتح مستكشف الملفات.",
+                "quick_link_menu": "تم فتح قائمة الارتباط السريع (Win+X).",
+                "task_view": "تم فتح عرض المهام.",
+            }
+            shell_msgs_en = {
+                "quick_settings": "Opened Quick Settings.",
+                "notifications": "Opened Notification Center.",
+                "search": "Opened Windows Search.",
+                "run": "Opened Run dialog.",
+                "file_explorer": "Opened File Explorer.",
+                "quick_link_menu": "Opened Quick Link menu (Win+X).",
+                "task_view": "Opened Task View.",
+            }
+            if mode:
+                msg = shell_msgs_ar.get(mode) if arabic else shell_msgs_en.get(mode)
+                if msg:
+                    return True, msg
+
         if isinstance(parsed, dict) and "ok" in parsed and "message" in parsed:
             return True, str(parsed.get("message") or "")
 
