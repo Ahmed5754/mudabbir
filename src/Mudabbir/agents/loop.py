@@ -1074,6 +1074,8 @@ class AgentLoop:
                 "open_desktop_cpl": "تم فتح إعدادات سطح المكتب.",
                 "open_printers_cpl": "تم فتح لوحة الطابعات.",
                 "open_user_accounts_cpl": "تم فتح إدارة حسابات المستخدمين.",
+                "open_bluetooth_cpl": "تم فتح إعدادات البلوتوث الكلاسيكية.",
+                "open_accessibility_cpl": "تم فتح خيارات سهولة الوصول.",
             }
             app_msgs_en = {
                 "open_task_manager": "Opened Task Manager.",
@@ -1110,6 +1112,8 @@ class AgentLoop:
                 "open_desktop_cpl": "Opened classic Desktop settings.",
                 "open_printers_cpl": "Opened Printers control panel.",
                 "open_user_accounts_cpl": "Opened classic User Accounts settings.",
+                "open_bluetooth_cpl": "Opened classic Bluetooth settings.",
+                "open_accessibility_cpl": "Opened classic Ease of Access settings.",
             }
             if mode:
                 msg = app_msgs_ar.get(mode) if arabic else app_msgs_en.get(mode)

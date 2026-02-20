@@ -783,6 +783,24 @@ async def test_global_fastpath_app_tools_extra_replies(
     assert handled_users is True
     assert "user" in str(reply_users).lower() or "حساب" in str(reply_users)
 
+    handled_users2, reply_users2 = await loop._try_global_windows_fastpath(
+        text="control userpasswords", session_key="s36u2"
+    )
+    assert handled_users2 is True
+    assert "user" in str(reply_users2).lower() or "حساب" in str(reply_users2)
+
+    handled_bt, reply_bt = await loop._try_global_windows_fastpath(
+        text="bthprops.cpl", session_key="s36bt"
+    )
+    assert handled_bt is True
+    assert "bluetooth" in str(reply_bt).lower() or "بلوتوث" in str(reply_bt)
+
+    handled_access, reply_access = await loop._try_global_windows_fastpath(
+        text="access.cpl", session_key="s36ac"
+    )
+    assert handled_access is True
+    assert "access" in str(reply_access).lower() or "الوصول" in str(reply_access)
+
     handled_admintools, reply_admintools = await loop._try_global_windows_fastpath(
         text="control admintools", session_key="s36a"
     )

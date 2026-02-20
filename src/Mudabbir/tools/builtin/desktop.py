@@ -5455,6 +5455,8 @@ $obj | ConvertTo-Json -Compress
             "open_desktop_cpl": "control desktop",
             "open_printers_cpl": "control printers",
             "open_user_accounts_cpl": "control userpasswords2",
+            "open_bluetooth_cpl": "bthprops.cpl",
+            "open_accessibility_cpl": "access.cpl",
         }
         if mode_norm in mapping:
             target = mapping[mode_norm]

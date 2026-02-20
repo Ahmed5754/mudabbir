@@ -367,7 +367,9 @@ RULES: tuple[IntentRule, ...] = (
     IntentRule("apps.open_color_cpl", "app_tools", "open_color_cpl", "safe", ("control color", "color settings classic", "إعدادات الألوان", "اعدادات الالوان")),
     IntentRule("apps.open_desktop_cpl", "app_tools", "open_desktop_cpl", "safe", ("control desktop", "desktop settings classic", "إعدادات سطح المكتب", "اعدادات سطح المكتب")),
     IntentRule("apps.open_printers_cpl", "app_tools", "open_printers_cpl", "safe", ("control printers", "printers control panel", "الطابعات", "لوحة الطابعات")),
-    IntentRule("apps.open_user_accounts_cpl", "app_tools", "open_user_accounts_cpl", "safe", ("control userpasswords2", "user accounts classic", "حسابات المستخدمين الكلاسيكية", "إدارة حسابات المستخدمين")),
+    IntentRule("apps.open_user_accounts_cpl", "app_tools", "open_user_accounts_cpl", "safe", ("control userpasswords2", "control userpasswords", "user accounts classic", "حسابات المستخدمين الكلاسيكية", "إدارة حسابات المستخدمين")),
+    IntentRule("apps.open_bluetooth_cpl", "app_tools", "open_bluetooth_cpl", "safe", ("bthprops.cpl", "bluetooth control panel", "اعدادات البلوتوث الكلاسيكية", "إعدادات البلوتوث الكلاسيكية")),
+    IntentRule("apps.open_accessibility_cpl", "app_tools", "open_accessibility_cpl", "safe", ("access.cpl", "ease of access classic", "خيارات سهولة الوصول الكلاسيكية")),
     IntentRule("apps.open_camera", "app_tools", "open_camera", "safe", ("open camera", "تشغيل الكاميرا")),
     IntentRule("apps.open_calendar", "app_tools", "open_calendar", "safe", ("open calendar", "فتح التقويم")),
     IntentRule("apps.open_mail", "app_tools", "open_mail", "safe", ("open mail", "فتح البريد")),
@@ -1026,7 +1028,7 @@ def resolve_windows_intent(message: str) -> IntentResolution:
             params={"mode": "open_keyboard_cpl"},
             risk_level="safe",
         )
-    if _contains_any(normalized, ("control userpasswords2", "user accounts classic", "حسابات المستخدمين الكلاسيكية", "ادارة حسابات المستخدمين", "إدارة حسابات المستخدمين")):
+    if _contains_any(normalized, ("control userpasswords2", "control userpasswords", "user accounts classic", "حسابات المستخدمين الكلاسيكية", "ادارة حسابات المستخدمين", "إدارة حسابات المستخدمين")):
         return IntentResolution(
             matched=True,
             capability_id="apps.open_user_accounts_cpl",
