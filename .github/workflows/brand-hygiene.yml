@@ -18,7 +18,7 @@ jobs:
         run: |
           set -euo pipefail
 
-          forbidden_pattern='Mudabbir|MUDABBIR_|src/Mudabbir|github\.com/pocketpaw/pocketpaw'
+          forbidden_pattern='PocketPaw|POCKETPAW_|src/pocketpaw|github\.com/pocketpaw/pocketpaw'
           excluded_path=':(exclude).github/workflows/brand-hygiene.yml'
 
           if git grep -nI -E "$forbidden_pattern" -- . "$excluded_path"; then
