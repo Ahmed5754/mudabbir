@@ -127,6 +127,9 @@ def _build_mem0_config(
             "collection_name": "Mudabbir_memory",
             "path": str(data_path / "qdrant"),
             "embedding_model_dims": embedding_dims,
+            # Keep local Qdrant on-disk to avoid mem0 attempting to wipe the
+            # collection directory on init (problematic on Windows file locks).
+            "on_disk": True,
         }
     elif vector_store == "chroma":
         vs_config["config"] = {
@@ -195,6 +198,7 @@ class Mem0MemoryStore:
         # Lazy initialization
         self._memory = None
         self._initialized = False
+        self._degraded_to_file = False
 
     def _ensure_initialized(self) -> None:
         """Lazily initialize Mem0 client using Memory.from_config()."""
@@ -228,6 +232,18 @@ class Mem0MemoryStore:
                 self._data_path,
             )
 
+        except PermissionError as e:
+            # Windows may keep qdrant sqlite locked if another process holds it.
+            if getattr(e, "winerror", None) == 32 or "storage.sqlite" in str(e):
+                self._initialized = True
+                self._degraded_to_file = True
+                logger.warning(
+                    "Mem0/Qdrant path is locked; falling back to file memory backend for this process: %s",
+                    e,
+                )
+                return
+            logger.error(f"Failed to initialize Mem0: {e}")
+            raise
         except ImportError:
             raise ImportError(
                 "mem0ai package not installed. Install with: pip install Mudabbir[memory]"
@@ -248,6 +264,8 @@ class Mem0MemoryStore:
     async def save(self, entry: MemoryEntry) -> str:
         """Save a memory entry using Mem0."""
         self._ensure_initialized()
+        if self._degraded_to_file:
+            return await self._session_store.save(entry)
 
         # Build metadata
         metadata = {
@@ -317,6 +335,8 @@ class Mem0MemoryStore:
     async def get(self, entry_id: str) -> MemoryEntry | None:
         """Get a memory entry by ID."""
         self._ensure_initialized()
+        if self._degraded_to_file:
+            return await self._session_store.get(entry_id)
 
         try:
             result = await self._run_sync(self._memory.get, entry_id)
@@ -330,6 +350,8 @@ class Mem0MemoryStore:
     async def delete(self, entry_id: str) -> bool:
         """Delete a memory entry."""
         self._ensure_initialized()
+        if self._degraded_to_file:
+            return await self._session_store.delete(entry_id)
 
         try:
             await self._run_sync(self._memory.delete, entry_id)
@@ -347,6 +369,13 @@ class Mem0MemoryStore:
     ) -> list[MemoryEntry]:
         """Search memories using semantic search."""
         self._ensure_initialized()
+        if self._degraded_to_file:
+            return await self._session_store.search(
+                query=query,
+                memory_type=memory_type,
+                tags=tags,
+                limit=limit,
+            )
 
         if not query:
             # Without a query, fall back to get_all with filters
@@ -424,6 +453,8 @@ class Mem0MemoryStore:
 
         Accepts optional user_id kwarg for scoped retrieval.
         """
+        if self._degraded_to_file:
+            return await self._session_store.get_by_type(memory_type, limit=limit, **kwargs)
         user_id = kwargs.get("user_id")
         if user_id and user_id != "default":
             # Override user_id for scoped retrieval
@@ -437,6 +468,8 @@ class Mem0MemoryStore:
 
     async def get_session(self, session_key: str) -> list[MemoryEntry]:
         """Get session history for a specific session."""
+        if self._degraded_to_file:
+            return await self._session_store.get_session(session_key)
         # Prefer mirrored file journal for stable ordering/roles and dashboard parity.
         try:
             mirrored = await self._session_store.get_session(session_key)
@@ -470,6 +503,8 @@ class Mem0MemoryStore:
 
     async def clear_session(self, session_key: str) -> int:
         """Clear session history."""
+        if self._degraded_to_file:
+            return await self._session_store.clear_session(session_key)
         mirror_count = 0
         try:
             mirror_count = await self._session_store.clear_session(session_key)
@@ -509,6 +544,8 @@ class Mem0MemoryStore:
 
     async def delete_session(self, session_key: str) -> bool:
         """Delete a session from both mem0 run history and mirrored file journal."""
+        if self._degraded_to_file:
+            return await self._session_store.delete_session(session_key)
         self._ensure_initialized()
         had_mem0_history = False
         try:
@@ -562,6 +599,8 @@ class Mem0MemoryStore:
             Mem0 add result dict with extracted/updated memory IDs.
         """
         self._ensure_initialized()
+        if self._degraded_to_file:
+            return {"results": [], "warning": "mem0_unavailable_file_fallback"}
 
         if not messages:
             return {"results": []}
@@ -600,6 +639,8 @@ class Mem0MemoryStore:
             List of mem0 result dicts with 'memory', 'id', 'score' keys.
         """
         self._ensure_initialized()
+        if self._degraded_to_file:
+            return []
 
         try:
             result = await self._run_sync(
@@ -694,6 +735,12 @@ class Mem0MemoryStore:
     async def get_memory_stats(self) -> dict[str, Any]:
         """Get statistics about stored memories."""
         self._ensure_initialized()
+        if self._degraded_to_file:
+            return {
+                "backend": "file_fallback",
+                "reason": "mem0_qdrant_locked",
+                "data_path": str(self._data_path),
+            }
 
         try:
             all_memories = await self._run_sync(
