@@ -307,3 +307,52 @@ async def test_global_fastpath_browser_task_user_replies(
     )
     assert handled_user_confirm is True
     assert "TestUser" in str(reply_user_confirm)
+
+
+@pytest.mark.asyncio
+async def test_global_fastpath_update_remote_disk_registry_replies(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class DummyDesktopTool:
+        async def execute(self, action: str, **kwargs):
+            if action == "update_tools":
+                assert kwargs.get("mode") == "check_updates"
+                return '{"ok": true, "mode": "check_updates"}'
+            if action == "remote_tools":
+                assert kwargs.get("mode") == "vpn_connect"
+                assert kwargs.get("host") == "OfficeVPN"
+                return '{"ok": true, "mode": "vpn_connect"}'
+            if action == "disk_tools":
+                assert kwargs.get("mode") == "temp_files_clean"
+                return '{"ok": true, "mode": "temp_files_clean"}'
+            if action == "registry_tools":
+                assert kwargs.get("mode") == "backup"
+                return '{"ok": true, "mode": "backup"}'
+            return '{"ok": true}'
+
+    monkeypatch.setattr("Mudabbir.tools.builtin.desktop.DesktopTool", DummyDesktopTool)
+    loop = AgentLoop()
+
+    handled_update, reply_update = await loop._try_global_windows_fastpath(
+        text="فحص التحديثات", session_key="s19"
+    )
+    assert handled_update is True
+    assert "تحديث" in str(reply_update)
+
+    handled_remote, reply_remote = await loop._try_global_windows_fastpath(
+        text="تشغيل vpn OfficeVPN", session_key="s20"
+    )
+    assert handled_remote is True
+    assert "OfficeVPN" in str(reply_remote)
+
+    handled_disk, reply_disk = await loop._try_global_windows_fastpath(
+        text="تنظيف الملفات المؤقتة", session_key="s21"
+    )
+    assert handled_disk is True
+    assert "المؤقتة" in str(reply_disk) or "temp" in str(reply_disk).lower()
+
+    handled_reg, reply_reg = await loop._try_global_windows_fastpath(
+        text="registry backup HKCU\\Software", session_key="s22"
+    )
+    assert handled_reg is True
+    assert "سجل" in str(reply_reg) or "registry" in str(reply_reg).lower()

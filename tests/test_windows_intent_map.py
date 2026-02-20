@@ -256,3 +256,47 @@ def test_resolve_user_set_type_extracts_username_and_group() -> None:
     assert result.params.get("mode") == "set_type"
     assert result.params.get("username") == "Ahmed"
     assert result.params.get("group") == "admin"
+
+
+@pytest.mark.parametrize(
+    ("message", "action", "mode"),
+    [
+        ("فحص التحديثات", "update_tools", "check_updates"),
+        ("قائمة التحديثات", "update_tools", "list_updates"),
+        ("تنظيف ملفات التحديثات القديمة", "update_tools", "winsxs_cleanup"),
+        ("قطع اتصال vpn", "remote_tools", "vpn_disconnect"),
+        ("تشغيل vpn OfficeVPN", "remote_tools", "vpn_connect"),
+        ("تنظيف الملفات المؤقتة", "disk_tools", "temp_files_clean"),
+        ("مسح prefetch", "disk_tools", "prefetch_clean"),
+        ("استخدام القرص", "disk_tools", "disk_usage"),
+        ("registry backup HKCU\\Software", "registry_tools", "backup"),
+    ],
+)
+def test_resolve_update_remote_disk_registry_aliases(
+    message: str, action: str, mode: str
+) -> None:
+    result = resolve_windows_intent(message)
+    assert result.matched is True
+    assert result.action == action
+    assert result.params.get("mode") == mode
+
+
+def test_resolve_install_kb_extracts_target() -> None:
+    result = resolve_windows_intent("install kb KB5034123")
+    assert result.matched is True
+    assert result.action == "update_tools"
+    assert result.params.get("mode") == "install_kb"
+    assert result.params.get("target") == "KB5034123"
+
+
+def test_resolve_registry_set_value_extracts_fields() -> None:
+    result = resolve_windows_intent(
+        'registry set value "HKCU\\Software\\MyApp" name Theme data Dark dword'
+    )
+    assert result.matched is True
+    assert result.action == "registry_tools"
+    assert result.params.get("mode") == "set_value"
+    assert "HKCU\\Software\\MyApp" in str(result.params.get("key"))
+    assert result.params.get("value_name") == "Theme"
+    assert result.params.get("value_data") == "Dark"
+    assert result.params.get("value_type") == "REG_DWORD"

@@ -458,6 +458,26 @@ RULES: tuple[IntentRule, ...] = (
     IntentRule("users.delete", "user_tools", "delete", "destructive", ("delete user", "حذف مستخدم"), params=("username",)),
     IntentRule("users.set_password", "user_tools", "set_password", "destructive", ("change user password", "تغيير كلمة سر مستخدم"), params=("username", "password")),
     IntentRule("users.set_type", "user_tools", "set_type", "elevated", ("set user type", "تغيير نوع المستخدم", "admin standard"), params=("username", "group")),
+    IntentRule("updates.list", "update_tools", "list_updates", "safe", ("list updates", "قائمة التحديثات", "التحديثات المثبتة")),
+    IntentRule("updates.last_time", "update_tools", "last_update_time", "safe", ("last update time", "اخر تحديث للنظام", "آخر تحديث للنظام")),
+    IntentRule("updates.check", "update_tools", "check_updates", "safe", ("check updates", "فحص التحديثات", "تحقق من التحديثات", "التحقق من وجود تحديثات لويندوز")),
+    IntentRule("updates.install_kb", "update_tools", "install_kb", "destructive", ("install kb", "تثبيت تحديث kb"), params=("target",)),
+    IntentRule("updates.cleanup_winsxs", "update_tools", "winsxs_cleanup", "elevated", ("winsxs cleanup", "تنظيف winsxs", "تنظيف ملفات التحديثات القديمة")),
+    IntentRule("updates.stop_background", "update_tools", "stop_background_updates", "destructive", ("stop windows updates", "ايقاف تحديثات ويندوز", "إيقاف تحديثات ويندوز الجارية")),
+    IntentRule("remote.vpn_connect", "remote_tools", "vpn_connect", "elevated", ("vpn connect", "تفعيل vpn", "تشغيل vpn"), params=("host",)),
+    IntentRule("remote.vpn_disconnect", "remote_tools", "vpn_disconnect", "safe", ("vpn disconnect", "قطع اتصال vpn", "ايقاف vpn")),
+    IntentRule("disk.clean_temp", "disk_tools", "temp_files_clean", "safe", ("clean temp files", "تنظيف الملفات المؤقتة", "مسح temp")),
+    IntentRule("disk.clean_prefetch", "disk_tools", "prefetch_clean", "elevated", ("clean prefetch", "مسح prefetch")),
+    IntentRule("disk.clean_logs", "disk_tools", "logs_clean", "elevated", ("clean windows logs", "مسح ملفات سجلات الويندوز", "تنظيف سجل النظام")),
+    IntentRule("disk.usage", "disk_tools", "disk_usage", "safe", ("disk usage", "مساحة الاقراص", "استخدام القرص")),
+    IntentRule("disk.defrag", "disk_tools", "defrag", "elevated", ("defrag", "الغاء تجزئة", "إلغاء تجزئة"), params=("drive",)),
+    IntentRule("disk.chkdsk_scan", "disk_tools", "chkdsk_scan", "elevated", ("chkdsk scan", "فحص الباد سيكتور", "فحص القرص"), params=("drive",)),
+    IntentRule("registry.query", "registry_tools", "query", "safe", ("registry query", "استعلام السجل"), params=("key",)),
+    IntentRule("registry.add_key", "registry_tools", "add_key", "destructive", ("registry add key", "اضافة مفتاح للسجل", "إضافة مفتاح للسجل"), params=("key",)),
+    IntentRule("registry.delete_key", "registry_tools", "delete_key", "destructive", ("registry delete key", "حذف مفتاح من السجل"), params=("key",)),
+    IntentRule("registry.set_value", "registry_tools", "set_value", "destructive", ("registry set value", "تعديل قيمة في السجل", "registry dword"), params=("key", "value_name", "value_data", "value_type")),
+    IntentRule("registry.backup", "registry_tools", "backup", "safe", ("registry backup", "نسخة احتياطية للسجل"), params=("key",)),
+    IntentRule("registry.restore", "registry_tools", "restore", "destructive", ("registry restore", "استعادة نسخة السجل"), params=("key", "value_data")),
 )
 
 
@@ -572,8 +592,16 @@ def _build_params(rule: IntentRule, raw_text: str, normalized: str) -> dict[str,
         found_paths = _extract_paths(raw_text)
         if "path" in rule.params and found_paths:
             params["path"] = found_paths[0]
-        if "target" in rule.params and len(found_paths) >= 2:
+    if "target" in rule.params and len(found_paths) >= 2:
             params["target"] = found_paths[1]
+    if "target" in rule.params and "target" not in params:
+        kb_match = re.search(r"\bKB\d{4,8}\b", raw_text or "", re.IGNORECASE)
+        if kb_match:
+            params["target"] = kb_match.group(0).upper()
+        else:
+            q = _extract_named_value(raw_text, (r"(?:target|kb)\s*[:=]?\s*([^\s]+)",))
+            if q:
+                params["target"] = q
     if "ext" in rule.params:
         ext = _extract_extension(raw_text)
         if ext:
@@ -593,7 +621,9 @@ def _build_params(rule: IntentRule, raw_text: str, normalized: str) -> dict[str,
             )
             if q:
                 params["text"] = q
-    if "key" in rule.params:
+    if "key" in rule.params and (
+        rule.capability_id.startswith("keyboard.") or rule.capability_id.startswith("mouse.")
+    ):
         k = _extract_key_name(raw_text)
         if k:
             params["key"] = k
@@ -676,6 +706,11 @@ def _build_params(rule: IntentRule, raw_text: str, normalized: str) -> dict[str,
         named = _extract_app_query(raw_text)
         if named and not params.get("host"):
             params["host"] = named
+    if rule.capability_id == "remote.vpn_connect" and params.get("host"):
+        host = str(params.get("host") or "")
+        host = re.sub(r"(?i)^\s*(?:vpn|تشغيل\s+vpn|تفعيل\s+vpn)\s+", "", host).strip()
+        if host:
+            params["host"] = host
     if rule.capability_id == "web.open_url":
         url = _extract_url(raw_text)
         if url:
@@ -687,6 +722,44 @@ def _build_params(rule: IntentRule, raw_text: str, normalized: str) -> dict[str,
             if chunk.lower().endswith(".txt"):
                 params["path"] = chunk
                 break
+    if rule.capability_id.startswith("registry."):
+        if "key" in rule.params and not params.get("key"):
+            q = _extract_named_value(
+                raw_text,
+                (
+                    r"((?:HKLM|HKCU|HKCR|HKU|HKCC):?\\[^\s]+)",
+                    r"(HKEY_[A-Z_]+\\[^\s]+)",
+                ),
+            )
+            if q:
+                params["key"] = q
+        if "value_name" in rule.params and not params.get("value_name"):
+            m = re.search(r"(?:name|value[_ ]name|اسم القيمه|اسم القيمة)\s*[:=]?\s*([^\s]+)", raw_text or "", re.IGNORECASE)
+            q = (m.group(1).strip() if m else "")
+            if q:
+                params["value_name"] = q
+        if "value_data" in rule.params and not params.get("value_data"):
+            m = re.search(r"(?:data|value[_ ]data|القيمه|القيمة)\s*[:=]?\s*([^\s]+)", raw_text or "", re.IGNORECASE)
+            q = (m.group(1).strip() if m else "")
+            if q:
+                params["value_data"] = q
+        if "value_type" in rule.params and not params.get("value_type"):
+            if _contains_any(normalized, ("dword", "reg_dword")):
+                params["value_type"] = "REG_DWORD"
+            elif _contains_any(normalized, ("qword", "reg_qword")):
+                params["value_type"] = "REG_QWORD"
+            else:
+                params["value_type"] = "REG_SZ"
+    if "drive" in rule.params and not params.get("drive"):
+        m = re.search(r"\b([A-Za-z]:)\b", raw_text or "")
+        if m:
+            params["drive"] = m.group(1).upper()
+    if "rule_name" in rule.params and not params.get("rule_name"):
+        q = _extract_named_value(raw_text, (r"(?:rule|rule_name|اسم القاعده|اسم القاعدة)\s*[:=]?\s*(.+)$",))
+        if q:
+            params["rule_name"] = q
+    if "port" in rule.params and "port" not in params and value is not None:
+        params["port"] = max(1, min(65535, abs(value)))
     if rule.capability_id == "services.stop" and not params.get("name"):
         q = _extract_named_value(raw_text, (r"(?:stop service|ايقاف خدمه|إيقاف خدمة)\s+(.+)$",))
         if q:

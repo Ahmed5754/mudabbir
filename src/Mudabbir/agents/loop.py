@@ -696,6 +696,94 @@ class AgentLoop:
             if msg:
                 return True, msg
 
+        if action == "update_tools":
+            mode = str(params.get("mode", "")).lower()
+            kb = str(params.get("target", "") or "").strip()
+            update_msgs_ar = {
+                "list_updates": "تم جلب قائمة تحديثات ويندوز.",
+                "last_update_time": "تم جلب وقت آخر تحديث للنظام.",
+                "check_updates": "تم بدء فحص تحديثات ويندوز.",
+                "winsxs_cleanup": "تم تشغيل تنظيف ملفات WinSxS.",
+                "stop_background_updates": "تم إيقاف خدمات تحديثات ويندوز في الخلفية.",
+                "install_kb": f"تم إرسال طلب تثبيت التحديث: {kb or 'KB المطلوب'}.",
+            }
+            update_msgs_en = {
+                "list_updates": "Fetched Windows updates list.",
+                "last_update_time": "Fetched last system update time.",
+                "check_updates": "Started Windows Update scan.",
+                "winsxs_cleanup": "Started WinSxS cleanup.",
+                "stop_background_updates": "Stopped background Windows Update services.",
+                "install_kb": f"Sent install request for update: {kb or 'target KB'}.",
+            }
+            msg = update_msgs_ar.get(mode) if arabic else update_msgs_en.get(mode)
+            if msg:
+                return True, msg
+
+        if action == "remote_tools":
+            mode = str(params.get("mode", "")).lower()
+            host = str(params.get("host", "") or "").strip()
+            remote_msgs_ar = {
+                "rdp_open": "تم فتح Remote Desktop.",
+                "vpn_connect": f"تمت محاولة الاتصال بـ VPN: {host or 'المحدد'}.",
+                "vpn_disconnect": "تم تنفيذ قطع اتصال VPN.",
+            }
+            remote_msgs_en = {
+                "rdp_open": "Opened Remote Desktop.",
+                "vpn_connect": f"Attempted VPN connect: {host or 'target connection'}.",
+                "vpn_disconnect": "Executed VPN disconnect.",
+            }
+            msg = remote_msgs_ar.get(mode) if arabic else remote_msgs_en.get(mode)
+            if msg:
+                return True, msg
+
+        if action == "disk_tools":
+            mode = str(params.get("mode", "")).lower()
+            drv = str(params.get("drive", "") or "").strip()
+            disk_msgs_ar = {
+                "smart_status": "تم جلب حالة صحة الأقراص (SMART).",
+                "temp_files_clean": "تم تنظيف الملفات المؤقتة.",
+                "prefetch_clean": "تم تنظيف ملفات Prefetch.",
+                "logs_clean": "تم تنظيف سجلات ويندوز.",
+                "disk_usage": "تم جلب استهلاك ومساحة الأقراص.",
+                "defrag": f"تم بدء إلغاء التجزئة للقرص: {drv or 'C:'}.",
+                "chkdsk_scan": f"تم بدء فحص القرص: {drv or 'C:'}.",
+            }
+            disk_msgs_en = {
+                "smart_status": "Fetched disk SMART/health status.",
+                "temp_files_clean": "Cleaned temp files.",
+                "prefetch_clean": "Cleaned Prefetch files.",
+                "logs_clean": "Cleaned Windows logs.",
+                "disk_usage": "Fetched disk usage and free space.",
+                "defrag": f"Started defrag on drive: {drv or 'C:'}.",
+                "chkdsk_scan": f"Started disk check on drive: {drv or 'C:'}.",
+            }
+            msg = disk_msgs_ar.get(mode) if arabic else disk_msgs_en.get(mode)
+            if msg:
+                return True, msg
+
+        if action == "registry_tools":
+            mode = str(params.get("mode", "")).lower()
+            key = str(params.get("key", "") or "").strip()
+            reg_msgs_ar = {
+                "query": f"تم الاستعلام عن السجل: {key or 'المفتاح المحدد'}.",
+                "add_key": f"تمت إضافة مفتاح سجل: {key or 'المفتاح المحدد'}.",
+                "delete_key": f"تم حذف مفتاح سجل: {key or 'المفتاح المحدد'}.",
+                "set_value": f"تم تحديث قيمة في السجل: {key or 'المفتاح المحدد'}.",
+                "backup": "تم إنشاء نسخة احتياطية للسجل.",
+                "restore": "تم تنفيذ استعادة نسخة السجل.",
+            }
+            reg_msgs_en = {
+                "query": f"Queried registry key: {key or 'target key'}.",
+                "add_key": f"Added registry key: {key or 'target key'}.",
+                "delete_key": f"Deleted registry key: {key or 'target key'}.",
+                "set_value": f"Updated registry value under: {key or 'target key'}.",
+                "backup": "Created registry backup.",
+                "restore": "Executed registry restore.",
+            }
+            msg = reg_msgs_ar.get(mode) if arabic else reg_msgs_en.get(mode)
+            if msg:
+                return True, msg
+
         if action == "window_control":
             mode = str(params.get("mode", "")).lower()
             window_msgs_ar = {
