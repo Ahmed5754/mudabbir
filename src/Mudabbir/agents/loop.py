@@ -722,6 +722,8 @@ class AgentLoop:
             name = str(params.get("name", "") or "").strip()
             task_msgs_ar = {
                 "list": "تم جلب قائمة المهام المجدولة.",
+                "running": "تم جلب المهام المجدولة الجارية.",
+                "last_run": "تم جلب آخر وقت تشغيل للمهام المجدولة.",
                 "run": f"تم تشغيل المهمة المجدولة: {name or 'المحددة'}.",
                 "end": f"تم إنهاء المهمة المجدولة: {name or 'المحددة'}.",
                 "enable": f"تم تمكين المهمة المجدولة: {name or 'المحددة'}.",
@@ -731,6 +733,8 @@ class AgentLoop:
             }
             task_msgs_en = {
                 "list": "Fetched scheduled tasks list.",
+                "running": "Fetched running scheduled tasks.",
+                "last_run": "Fetched scheduled tasks last run times.",
                 "run": f"Ran scheduled task: {name or 'target task'}.",
                 "end": f"Stopped scheduled task: {name or 'target task'}.",
                 "enable": f"Enabled scheduled task: {name or 'target task'}.",

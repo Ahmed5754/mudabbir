@@ -4498,6 +4498,25 @@ $obj | ConvertTo-Json -Compress
             if ok and out:
                 return _json({"ok": True, "mode": "list", "data": json.loads(out)})
             return self._error(out or "list tasks failed")
+        if mode_norm == "running":
+            ok, out = _run_powershell(
+                "Get-ScheduledTask | Where-Object {$_.State -eq 'Running'} | "
+                "Select-Object -First 120 TaskName,TaskPath,State | ConvertTo-Json -Compress",
+                timeout=20,
+            )
+            if ok and out:
+                return _json({"ok": True, "mode": "running", "data": json.loads(out)})
+            return self._error(out or "running tasks query failed")
+        if mode_norm == "last_run":
+            ok, out = _run_powershell(
+                "Get-ScheduledTask | Select-Object -First 120 TaskName,TaskPath,@{Name='LastRunTime';Expression={"
+                "(Get-ScheduledTaskInfo -TaskName $_.TaskName -TaskPath $_.TaskPath -ErrorAction SilentlyContinue).LastRunTime"
+                "}} | ConvertTo-Json -Compress",
+                timeout=25,
+            )
+            if ok and out:
+                return _json({"ok": True, "mode": "last_run", "data": json.loads(out)})
+            return self._error(out or "last run tasks query failed")
         if not task_name:
             return self._error("task name is required")
         if mode_norm == "run":

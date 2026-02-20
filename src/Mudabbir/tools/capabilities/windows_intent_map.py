@@ -505,6 +505,8 @@ RULES: tuple[IntentRule, ...] = (
     IntentRule("browser.zoom_reset", "browser_control", "zoom_reset", "safe", ("zoom 100", "الحجم الطبيعي", "ارجاع الزوم 100")),
     IntentRule("browser.save_pdf", "browser_control", "save_pdf", "safe", ("save page pdf", "حفظ الصفحة pdf")),
     IntentRule("tasks.list", "task_tools", "list", "safe", ("task scheduler list", "قائمة المهام المجدولة")),
+    IntentRule("tasks.running", "task_tools", "running", "safe", ("running scheduled tasks", "المهام المجدولة الجارية", "المهام الجارية")),
+    IntentRule("tasks.last_run", "task_tools", "last_run", "safe", ("scheduled tasks last run", "اخر تشغيل للمهام", "آخر تشغيل للمهام")),
     IntentRule("tasks.run", "task_tools", "run", "safe", ("run scheduled task", "تشغيل مهمة مجدولة"), params=("name",)),
     IntentRule("tasks.end", "task_tools", "end", "safe", ("end scheduled task", "انهاء مهمة مجدولة", "إنهاء مهمة مجدولة"), params=("name",)),
     IntentRule("tasks.enable", "task_tools", "enable", "safe", ("enable scheduled task", "تمكين مهمة مجدولة"), params=("name",)),

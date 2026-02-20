@@ -304,8 +304,9 @@ async def test_global_fastpath_browser_task_user_replies(
                 assert kwargs.get("mode") == "new_tab"
                 return '{"ok": true}'
             if action == "task_tools":
-                assert kwargs.get("mode") in {"run", "end", "enable", "disable"}
-                assert kwargs.get("name") == "BackupTask"
+                assert kwargs.get("mode") in {"running", "last_run", "run", "end", "enable", "disable"}
+                if kwargs.get("mode") in {"run", "end", "enable", "disable"}:
+                    assert kwargs.get("name") == "BackupTask"
                 return '{"ok": true}'
             if action == "user_tools":
                 assert kwargs.get("mode") == "delete"
@@ -327,6 +328,18 @@ async def test_global_fastpath_browser_task_user_replies(
     )
     assert handled_task is True
     assert "BackupTask" in str(reply_task)
+
+    handled_task_running, reply_task_running = await loop._try_global_windows_fastpath(
+        text="المهام المجدولة الجارية", session_key="s17r"
+    )
+    assert handled_task_running is True
+    assert "المهام" in str(reply_task_running) or "tasks" in str(reply_task_running).lower()
+
+    handled_task_last_run, reply_task_last_run = await loop._try_global_windows_fastpath(
+        text="آخر تشغيل للمهام", session_key="s17lr"
+    )
+    assert handled_task_last_run is True
+    assert "تشغيل" in str(reply_task_last_run) or "last run" in str(reply_task_last_run).lower()
 
     handled_task_end, reply_task_end = await loop._try_global_windows_fastpath(
         text="إنهاء مهمة مجدولة BackupTask", session_key="s17e"

@@ -267,6 +267,8 @@ def test_resolve_startup_disable_extracts_name() -> None:
         ("اغلاق التبويب الحالي", "browser_control", "close_tab"),
         ("تحديث الصفحة", "browser_control", "reload"),
         ("قائمة المهام المجدولة", "task_tools", "list"),
+        ("المهام المجدولة الجارية", "task_tools", "running"),
+        ("آخر تشغيل للمهام", "task_tools", "last_run"),
         ("تشغيل مهمة مجدولة BackupTask", "task_tools", "run"),
         ("إنهاء مهمة مجدولة BackupTask", "task_tools", "end"),
         ("تمكين مهمة مجدولة BackupTask", "task_tools", "enable"),
