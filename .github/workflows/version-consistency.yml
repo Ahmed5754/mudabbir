@@ -1,0 +1,53 @@
+name: Version Consistency
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+    tags:
+      - "v*"
+
+jobs:
+  check-version-consistency:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate version alignment
+        run: |
+          python - <<'PY'
+          import os
+          import pathlib
+          import re
+          import tomllib
+
+          pyproject = pathlib.Path("pyproject.toml")
+          init_file = pathlib.Path("src/Mudabbir/__init__.py")
+
+          data = tomllib.loads(pyproject.read_text(encoding="utf-8"))
+          project_version = data["project"]["version"]
+
+          init_text = init_file.read_text(encoding="utf-8")
+          m = re.search(r'^__version__\s*=\s*"([^"]+)"', init_text, re.MULTILINE)
+          if not m:
+              raise SystemExit("Could not find __version__ in src/Mudabbir/__init__.py")
+          runtime_version = m.group(1)
+
+          if project_version != runtime_version:
+              raise SystemExit(
+                  f"Version mismatch: pyproject={project_version}, __init__={runtime_version}"
+              )
+
+          ref = os.getenv("GITHUB_REF", "")
+          ref_name = os.getenv("GITHUB_REF_NAME", "")
+          if ref.startswith("refs/tags/v"):
+              tag_version = ref_name.lstrip("v")
+              if tag_version != project_version:
+                  raise SystemExit(
+                      f"Tag/version mismatch: tag={tag_version}, project={project_version}"
+                  )
+
+          print(f"Version consistency check passed: {project_version}")
+          PY
