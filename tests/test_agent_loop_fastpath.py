@@ -369,7 +369,16 @@ async def test_global_fastpath_browser_task_user_replies(
     class DummyDesktopTool:
         async def execute(self, action: str, **kwargs):
             if action == "browser_control":
-                assert kwargs.get("mode") == "new_tab"
+                assert kwargs.get("mode") in {
+                    "new_tab",
+                    "reopen_tab",
+                    "history",
+                    "downloads",
+                    "zoom_in",
+                    "zoom_out",
+                    "zoom_reset",
+                    "save_pdf",
+                }
                 return '{"ok": true}'
             if action == "task_tools":
                 assert kwargs.get("mode") in {"running", "last_run", "run", "end", "enable", "disable"}
@@ -390,6 +399,48 @@ async def test_global_fastpath_browser_task_user_replies(
     )
     assert handled_browser is True
     assert "تبويب" in str(reply_browser)
+
+    handled_reopen, reply_reopen = await loop._try_global_windows_fastpath(
+        text="إعادة فتح التبويب المغلق", session_key="s16r"
+    )
+    assert handled_reopen is True
+    assert "تبويب" in str(reply_reopen) or "tab" in str(reply_reopen).lower()
+
+    handled_history, reply_history = await loop._try_global_windows_fastpath(
+        text="سجل التصفح", session_key="s16h"
+    )
+    assert handled_history is True
+    assert "سجل" in str(reply_history) or "history" in str(reply_history).lower()
+
+    handled_downloads, reply_downloads = await loop._try_global_windows_fastpath(
+        text="تنزيلات المتصفح", session_key="s16d"
+    )
+    assert handled_downloads is True
+    assert "تنزيل" in str(reply_downloads) or "download" in str(reply_downloads).lower()
+
+    handled_zoom_in, reply_zoom_in = await loop._try_global_windows_fastpath(
+        text="تكبير الصفحة", session_key="s16zi"
+    )
+    assert handled_zoom_in is True
+    assert "تكبير" in str(reply_zoom_in) or "zoom" in str(reply_zoom_in).lower()
+
+    handled_zoom_out, reply_zoom_out = await loop._try_global_windows_fastpath(
+        text="تصغير الصفحة", session_key="s16zo"
+    )
+    assert handled_zoom_out is True
+    assert "تصغير" in str(reply_zoom_out) or "zoom" in str(reply_zoom_out).lower()
+
+    handled_zoom_reset, reply_zoom_reset = await loop._try_global_windows_fastpath(
+        text="ارجاع الزوم 100", session_key="s16zr"
+    )
+    assert handled_zoom_reset is True
+    assert "100" in str(reply_zoom_reset) or "zoom" in str(reply_zoom_reset).lower()
+
+    handled_save_pdf, reply_save_pdf = await loop._try_global_windows_fastpath(
+        text="حفظ الصفحة pdf", session_key="s16p"
+    )
+    assert handled_save_pdf is True
+    assert "pdf" in str(reply_save_pdf).lower() or "صفحة" in str(reply_save_pdf)
 
     handled_task, reply_task = await loop._try_global_windows_fastpath(
         text="تشغيل مهمة مجدولة BackupTask", session_key="s17"

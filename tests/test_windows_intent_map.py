@@ -265,6 +265,13 @@ def test_resolve_startup_disable_extracts_name() -> None:
     [
         ("فتح تبويب جديد", "browser_control", "new_tab"),
         ("اغلاق التبويب الحالي", "browser_control", "close_tab"),
+        ("إعادة فتح التبويب المغلق", "browser_control", "reopen_tab"),
+        ("سجل التصفح", "browser_control", "history"),
+        ("تنزيلات المتصفح", "browser_control", "downloads"),
+        ("تكبير الصفحة", "browser_control", "zoom_in"),
+        ("تصغير الصفحة", "browser_control", "zoom_out"),
+        ("ارجاع الزوم 100", "browser_control", "zoom_reset"),
+        ("حفظ الصفحة pdf", "browser_control", "save_pdf"),
         ("تحديث الصفحة", "browser_control", "reload"),
         ("قائمة المهام المجدولة", "task_tools", "list"),
         ("المهام المجدولة الجارية", "task_tools", "running"),
