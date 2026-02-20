@@ -60,3 +60,37 @@ async def test_global_fastpath_destructive_confirmation_flow(
     assert second_handled is True
     assert calls
     assert isinstance(second_reply, str)
+
+
+@pytest.mark.asyncio
+async def test_global_fastpath_brightness_get(monkeypatch: pytest.MonkeyPatch) -> None:
+    class DummyDesktopTool:
+        async def execute(self, action: str, **kwargs):
+            assert action == "brightness"
+            assert kwargs.get("mode") == "get"
+            return '{"brightness_percent": 62}'
+
+    monkeypatch.setattr("Mudabbir.tools.builtin.desktop.DesktopTool", DummyDesktopTool)
+    loop = AgentLoop()
+    handled, reply = await loop._try_global_windows_fastpath(
+        text="كم نسبة الاضاءة", session_key="s3"
+    )
+    assert handled is True
+    assert "62" in str(reply)
+
+
+@pytest.mark.asyncio
+async def test_global_fastpath_battery_get(monkeypatch: pytest.MonkeyPatch) -> None:
+    class DummyDesktopTool:
+        async def execute(self, action: str, **kwargs):
+            assert action == "system_info"
+            assert kwargs.get("mode") == "battery"
+            return '{"available": true, "percent": 81, "plugged": false}'
+
+    monkeypatch.setattr("Mudabbir.tools.builtin.desktop.DesktopTool", DummyDesktopTool)
+    loop = AgentLoop()
+    handled, reply = await loop._try_global_windows_fastpath(
+        text="كم نسبة البطارية", session_key="s4"
+    )
+    assert handled is True
+    assert "81" in str(reply)

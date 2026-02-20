@@ -396,6 +396,26 @@ class AgentLoop:
                 if arabic:
                     return True, f"مستوى الصوت الحالي: {int(level)}% {'(مكتوم)' if muted else ''}".strip()
                 return True, f"Current volume is {int(level)}%{' (muted)' if muted else ''}."
+        if action == "brightness" and str(params.get("mode", "")).lower() == "get" and isinstance(parsed, dict):
+            level = parsed.get("brightness_percent")
+            if level is not None:
+                if arabic:
+                    return True, f"مستوى السطوع الحالي: {int(level)}%."
+                return True, f"Current brightness is {int(level)}%."
+
+        if action == "system_info" and str(params.get("mode", "")).lower() == "battery" and isinstance(parsed, dict):
+            available = bool(parsed.get("available", False))
+            percent = parsed.get("percent")
+            plugged = parsed.get("plugged")
+            if available and percent is not None:
+                if arabic:
+                    state = "موصول بالشاحن" if plugged else "على البطارية"
+                    return True, f"نسبة البطارية الحالية: {int(float(percent))}% ({state})."
+                state = "plugged in" if plugged else "on battery"
+                return True, f"Current battery is {int(float(percent))}% ({state})."
+            if arabic:
+                return True, "لا يمكن قراءة معلومات البطارية على هذا الجهاز حالياً."
+            return True, "Battery information is not available on this machine right now."
 
         if action == "clipboard_tools" and str(params.get("mode", "")).lower() in {"history", "clipboard_history"}:
             return True, ("تم فتح سجل الحافظة (Win+V)." if arabic else "Opened Clipboard History (Win+V).")

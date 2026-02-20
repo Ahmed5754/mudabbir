@@ -119,3 +119,14 @@ def test_resolve_unsupported_display_resolution() -> None:
     assert result.matched is True
     assert result.unsupported is True
     assert "not implemented" in result.unsupported_reason.lower()
+
+
+def test_resolve_arabic_brightness_and_battery_questions() -> None:
+    bright = resolve_windows_intent("كم نسبة الاضاءة")
+    battery = resolve_windows_intent("كم نسبة البطارية")
+    assert bright.matched is True
+    assert bright.action == "brightness"
+    assert bright.params.get("mode") == "get"
+    assert battery.matched is True
+    assert battery.action == "system_info"
+    assert battery.params.get("mode") == "battery"
