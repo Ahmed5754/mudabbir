@@ -371,12 +371,17 @@ def test_resolve_browserdeep_office_driver_info_aliases(
 @pytest.mark.parametrize(
     ("message", "action", "mode"),
     [
+        ("appwiz.cpl", "app_tools", "open_add_remove_programs"),
         ("افتح mmsys.cpl", "app_tools", "open_sound_cpl"),
         ("اتصالات الشبكة", "app_tools", "open_network_connections"),
         ("الوقت والتاريخ", "app_tools", "open_time_date"),
         ("خصائص النظام", "app_tools", "open_system_properties"),
         ("powercfg.cpl", "app_tools", "open_power_options"),
         ("firewall.cpl", "app_tools", "open_firewall_cpl"),
+        ("devmgmt.msc", "dev_tools", "open_device_manager"),
+        ("diskmgmt.msc", "dev_tools", "open_disk_management"),
+        ("eventvwr.msc", "dev_tools", "open_event_viewer"),
+        ("services.msc", "dev_tools", "open_services"),
         ("taskschd.msc", "dev_tools", "open_task_scheduler"),
         ("compmgmt.msc", "dev_tools", "open_computer_management"),
         ("lusrmgr.msc", "dev_tools", "open_local_users_groups"),
