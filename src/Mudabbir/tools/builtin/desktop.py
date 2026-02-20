@@ -279,6 +279,8 @@ class DesktopTool(BaseTool):
                 "process_name": {"type": "string"},
                 "x": {"type": "number"},
                 "y": {"type": "number"},
+                "x2": {"type": "number"},
+                "y2": {"type": "number"},
                 "button": {"type": "string"},
                 "clicks": {"type": "integer"},
                 "keys": {"type": "array", "items": {"type": "string"}},
@@ -534,12 +536,14 @@ class DesktopTool(BaseTool):
             if action_normalized == "window_control":
                 return self._window_control(
                     mode=str(params.get("mode", "show_desktop") or "show_desktop"),
-                    app=str(params.get("app", "") or ""),
+                    app=str(params.get("app", "") or params.get("query", "") or ""),
                     x=params.get("x"),
                     y=params.get("y"),
                     width=params.get("width"),
                     height=params.get("height"),
                     opacity=params.get("opacity"),
+                    name=str(params.get("name", "") or ""),
+                    text=str(params.get("text", "") or ""),
                 )
             if action_normalized == "process_tools":
                 return self._process_tools(
@@ -634,6 +638,8 @@ class DesktopTool(BaseTool):
                     repeat_count=params.get("repeat_count"),
                     x=params.get("x"),
                     y=params.get("y"),
+                    x2=params.get("x2"),
+                    y2=params.get("y2"),
                     width=params.get("width"),
                     height=params.get("height"),
                 )
@@ -3209,6 +3215,19 @@ $obj | ConvertTo-Json -Compress
             if ok:
                 return _json({"ok": True, "mode": "empty_recycle_bin"})
             return self._error(out or "empty recycle bin failed")
+        if mode_norm in {"show_hidden", "hide_hidden"}:
+            hidden_value = 1 if mode_norm == "show_hidden" else 2
+            super_hidden = 1 if mode_norm == "show_hidden" else 0
+            ps = (
+                "$k='HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced'; "
+                f"Set-ItemProperty -Path $k -Name Hidden -Value {hidden_value}; "
+                f"Set-ItemProperty -Path $k -Name ShowSuperHidden -Value {super_hidden}; "
+                "Stop-Process -Name explorer -Force -ErrorAction SilentlyContinue; "
+                "Start-Process explorer.exe; "
+                f"@{{ok=$true; mode='{mode_norm}'}} | ConvertTo-Json -Compress"
+            )
+            ok, out = _run_powershell(ps, timeout=20)
+            return out if ok and out else self._error(out or f"{mode_norm} failed")
 
         return self._error(f"unsupported file_tools mode: {mode_norm}")
 
@@ -3221,6 +3240,8 @@ $obj | ConvertTo-Json -Compress
         width: Any = None,
         height: Any = None,
         opacity: Any = None,
+        name: str = "",
+        text: str = "",
     ) -> str:
         mode_norm = (mode or "").strip().lower()
         try:
@@ -3256,6 +3277,22 @@ $obj | ConvertTo-Json -Compress
             if mode_norm == "split_right":
                 pyautogui.hotkey("win", "right")
                 return _json({"ok": True, "mode": mode_norm})
+            if mode_norm == "project_panel":
+                pyautogui.hotkey("win", "p")
+                return _json({"ok": True, "mode": mode_norm})
+            if mode_norm in {"display_duplicate", "display_extend", "display_internal", "display_external"}:
+                arg_map = {
+                    "display_duplicate": "/clone",
+                    "display_extend": "/extend",
+                    "display_internal": "/internal",
+                    "display_external": "/external",
+                }
+                arg = arg_map[mode_norm]
+                ok, out = _run_powershell(f"Start-Process DisplaySwitch.exe -ArgumentList '{arg}'", timeout=10)
+                return _json({"ok": True, "mode": mode_norm, "arg": arg}) if ok else self._error(out or f"{mode_norm} failed")
+            if mode_norm == "aero_shake":
+                pyautogui.hotkey("win", "home")
+                return _json({"ok": True, "mode": mode_norm})
             if mode_norm in {"always_on_top_on", "always_on_top_off"}:
                 flag = "-1" if mode_norm.endswith("_on") else "-2"
                 ps = (
@@ -3286,6 +3323,7 @@ $obj | ConvertTo-Json -Compress
                 "span_all_screens",
                 "minimize_to_tray",
                 "restore_from_tray",
+                "rename_title",
             }:
                 import pygetwindow as gw
 
@@ -3342,6 +3380,23 @@ $obj | ConvertTo-Json -Compress
                             "height": int(getattr(target, "height", 0) or 0),
                         }
                     )
+                elif mode_norm == "rename_title":
+                    new_title = (text or name or "").strip()
+                    if not new_title:
+                        return self._error("text or name is required for rename_title")
+                    hwnd_val = int(getattr(target, "_hWnd", 0) or 0)
+                    if hwnd_val <= 0:
+                        return self._error("window handle unavailable for rename_title")
+                    esc_title = new_title.replace("'", "''")
+                    ps = (
+                        "$sig='[DllImport(\"user32.dll\", CharSet = CharSet.Unicode)]public static extern bool SetWindowText(IntPtr hWnd,string lpString);'; "
+                        "Add-Type -Name NativeMethods -Namespace Win32 -MemberDefinition $sig; "
+                        f"$h=[intptr]{hwnd_val}; "
+                        f"[void][Win32.NativeMethods]::SetWindowText($h,'{esc_title}'); "
+                        f"@{{ok=$true; mode='rename_title'; title='{esc_title}'}} | ConvertTo-Json -Compress"
+                    )
+                    ok, out = _run_powershell(ps, timeout=10)
+                    return out if ok and out else self._error(out or "rename title failed")
                 elif mode_norm == "move_resize":
                     if x is None or y is None:
                         return self._error("x and y are required for move_resize")
@@ -4984,6 +5039,8 @@ $obj | ConvertTo-Json -Compress
         repeat_count: Any = None,
         x: Any = None,
         y: Any = None,
+        x2: Any = None,
+        y2: Any = None,
         width: Any = None,
         height: Any = None,
     ) -> str:
@@ -5031,6 +5088,108 @@ $obj | ConvertTo-Json -Compress
                 return _json({"ok": True, "mode": mode_norm, "key": k, "count": count})
             except Exception as exc:
                 return self._error(f"repeat_key failed: {exc}")
+        if mode_norm in {"mouse_down", "mouse_up"}:
+            btn = (key or "left").strip().lower()
+            if btn not in {"left", "right", "middle"}:
+                btn = "left"
+            try:
+                import pyautogui
+
+                pyautogui.FAILSAFE = False
+                if mode_norm == "mouse_down":
+                    pyautogui.mouseDown(button=btn)
+                else:
+                    pyautogui.mouseUp(button=btn)
+                return _json({"ok": True, "mode": mode_norm, "button": btn})
+            except Exception as exc:
+                return self._error(f"{mode_norm} failed: {exc}")
+        if mode_norm == "drag_drop":
+            try:
+                sx = int(x if x is not None else 0)
+                sy = int(y if y is not None else 0)
+                tx = int(x2 if x2 is not None else (width if width is not None else 0))
+                ty = int(y2 if y2 is not None else (height if height is not None else 0))
+            except Exception:
+                return self._error("x,y,x2,y2 must be integers for drag_drop")
+            try:
+                import pyautogui
+
+                pyautogui.FAILSAFE = False
+                pyautogui.moveTo(sx, sy, duration=0.15)
+                pyautogui.dragTo(tx, ty, duration=0.35, button="left")
+                return _json({"ok": True, "mode": mode_norm, "from": {"x": sx, "y": sy}, "to": {"x": tx, "y": ty}})
+            except Exception as exc:
+                return self._error(f"drag_drop failed: {exc}")
+        if mode_norm in {"scroll_up", "scroll_down"}:
+            try:
+                amount = int(repeat_count if repeat_count is not None else 4)
+            except Exception:
+                amount = 4
+            amount = max(1, min(60, amount))
+            wheel = amount * 120
+            if mode_norm == "scroll_down":
+                wheel *= -1
+            try:
+                import pyautogui
+
+                pyautogui.FAILSAFE = False
+                pyautogui.scroll(wheel)
+                return _json({"ok": True, "mode": mode_norm, "amount": amount})
+            except Exception as exc:
+                return self._error(f"{mode_norm} failed: {exc}")
+        if mode_norm == "move_corner":
+            corner = (key or text or "top_left").strip().casefold()
+            try:
+                import pyautogui
+
+                pyautogui.FAILSAFE = False
+                sw, sh = pyautogui.size()
+                mapping = {
+                    "top_left": (0, 0),
+                    "left_top": (0, 0),
+                    "top_right": (max(0, sw - 1), 0),
+                    "right_top": (max(0, sw - 1), 0),
+                    "bottom_left": (0, max(0, sh - 1)),
+                    "left_bottom": (0, max(0, sh - 1)),
+                    "bottom_right": (max(0, sw - 1), max(0, sh - 1)),
+                    "right_bottom": (max(0, sw - 1), max(0, sh - 1)),
+                }
+                px, py = mapping.get(corner, (0, 0))
+                pyautogui.moveTo(px, py, duration=0.2)
+                return _json({"ok": True, "mode": mode_norm, "corner": corner, "x": px, "y": py})
+            except Exception as exc:
+                return self._error(f"move_corner failed: {exc}")
+        if mode_norm == "click_center":
+            try:
+                import pyautogui
+
+                pyautogui.FAILSAFE = False
+                sw, sh = pyautogui.size()
+                px = int(sw // 2)
+                py = int(sh // 2)
+                pyautogui.click(px, py)
+                return _json({"ok": True, "mode": mode_norm, "x": px, "y": py})
+            except Exception as exc:
+                return self._error(f"click_center failed: {exc}")
+        if mode_norm == "mouse_speed_up":
+            ps = (
+                "$k='HKCU:\\Control Panel\\Mouse'; "
+                "Set-ItemProperty -Path $k -Name MouseSensitivity -Value '20'; "
+                "rundll32.exe user32.dll,UpdatePerUserSystemParameters; "
+                "@{ok=$true; mode='mouse_speed_up'; value=20} | ConvertTo-Json -Compress"
+            )
+            ok, out = _run_powershell(ps, timeout=12)
+            return out if ok and out else self._error(out or "mouse speed update failed")
+        if mode_norm in {"mouse_sonar_on", "mouse_sonar_off"}:
+            sonar_value = 1 if mode_norm.endswith("_on") else 0
+            ps = (
+                "$k='HKCU:\\Control Panel\\Mouse'; "
+                f"Set-ItemProperty -Path $k -Name Sonar -Value '{sonar_value}'; "
+                "rundll32.exe user32.dll,UpdatePerUserSystemParameters; "
+                f"@{{ok=$true; mode='{mode_norm}'; value={sonar_value}}} | ConvertTo-Json -Compress"
+            )
+            ok, out = _run_powershell(ps, timeout=12)
+            return out if ok and out else self._error(out or "mouse sonar update failed")
         if mode_norm == "mouse_keys_toggle":
             try:
                 import pyautogui
@@ -5554,9 +5713,13 @@ $obj | ConvertTo-Json -Compress
             "start_menu": ("win",),
             "refresh": ("f5",),
             "magnifier_open": ("win", "+"),
+            "magnifier_zoom_out": ("win", "-"),
             "magnifier_close": ("win", "esc"),
             "narrator_toggle": ("win", "ctrl", "enter"),
+            "clipboard_history": ("win", "v"),
         }
+        if mode_norm in {"list_shortcuts", "shortcuts", "hotkeys"}:
+            return _json({"ok": True, "mode": mode_norm, "shortcuts": {k: list(v) for k, v in mapping.items()}})
         hotkey = mapping.get(mode_norm)
         if not hotkey:
             return self._error(f"unsupported shell_tools mode: {mode_norm}")

@@ -1,3 +1,5 @@
+import pytest
+
 from Mudabbir.tools.capabilities.windows_intent_map import (
     is_confirmation_message,
     resolve_windows_intent,
@@ -31,3 +33,89 @@ def test_confirmation_message_detection() -> None:
     assert is_confirmation_message("yes") is True
     assert is_confirmation_message("نعم نفذ") is True
     assert is_confirmation_message("cancel") is False
+
+
+@pytest.mark.parametrize(
+    ("message", "action", "mode"),
+    [
+        ("تفعيل وضع الطيران", "power_user_tools", "airplane_on"),
+        ("تعطيل وضع الطيران", "power_user_tools", "airplane_off"),
+        ("اعطني نسبة البطارية", "system_info", "battery"),
+        ("خلي خطة الطاقة أداء عالي", "system_power", "power_plan_high"),
+        ("افتح البيوس", "system_power", "reboot_bios"),
+        ("وضع توسيع الشاشة", "window_control", "display_extend"),
+        ("وضع تكرار الشاشة", "window_control", "display_duplicate"),
+        ("افتح سجل الحافظة", "clipboard_tools", "history"),
+        ("اظهار الملفات المخفية", "file_tools", "show_hidden"),
+        ("اخفاء الملفات المخفية", "file_tools", "hide_hidden"),
+        ("افتح اعدادات الشبكه", "open_settings_page", None),
+        ("اغلاق كل البرامج المفتوحة", "app_tools", "close_all_apps"),
+        ("فحص حالة القرص الصلب", "disk_tools", "smart_status"),
+        ("مفاتيح الاختصار المتاحة", "shell_tools", "list_shortcuts"),
+        ("افراغ الرام", "maintenance_tools", "empty_ram"),
+    ],
+)
+def test_resolve_new_capabilities(message: str, action: str, mode: str | None) -> None:
+    result = resolve_windows_intent(message)
+    assert result.matched is True
+    assert result.action == action
+    if mode is not None:
+        assert result.params.get("mode") == mode
+    else:
+        assert result.params.get("page") == "network"
+
+
+def test_resolve_rename_pc_extracts_name() -> None:
+    result = resolve_windows_intent("تغيير اسم الكمبيوتر إلى OFFICE-DEV")
+    assert result.matched is True
+    assert result.action == "system_power"
+    assert result.params.get("mode") == "rename_pc"
+    assert result.params.get("name") == "OFFICE-DEV"
+
+
+def test_resolve_drag_drop_extracts_coordinates() -> None:
+    result = resolve_windows_intent("drag and drop from 100 200 to 400 500")
+    assert result.matched is True
+    assert result.action == "automation_tools"
+    assert result.params.get("mode") == "drag_drop"
+    assert result.params.get("x") == 100
+    assert result.params.get("y") == 200
+    assert result.params.get("x2") == 400
+    assert result.params.get("y2") == 500
+
+
+def test_resolve_window_rename_title() -> None:
+    result = resolve_windows_intent("rename window title to 'Focus Session'")
+    assert result.matched is True
+    assert result.action == "window_control"
+    assert result.params.get("mode") == "rename_title"
+    assert result.params.get("text") == "Focus Session"
+
+
+def test_resolve_repeat_key_with_count() -> None:
+    result = resolve_windows_intent("repeat key enter 7 times")
+    assert result.matched is True
+    assert result.action == "automation_tools"
+    assert result.params.get("mode") == "repeat_key"
+    assert result.params.get("key") == "enter"
+    assert result.params.get("repeat_count") == 7
+
+
+def test_resolve_type_current_date_and_time() -> None:
+    date_result = resolve_windows_intent("type current date")
+    time_result = resolve_windows_intent("type current time")
+    assert date_result.matched is True
+    assert time_result.matched is True
+    assert date_result.action == "type_text"
+    assert time_result.action == "type_text"
+    assert isinstance(date_result.params.get("text"), str)
+    assert isinstance(time_result.params.get("text"), str)
+    assert len(date_result.params.get("text") or "") >= 8
+    assert len(time_result.params.get("text") or "") >= 5
+
+
+def test_resolve_unsupported_display_resolution() -> None:
+    result = resolve_windows_intent("تغيير دقة الشاشة 1920x1080")
+    assert result.matched is True
+    assert result.unsupported is True
+    assert "not implemented" in result.unsupported_reason.lower()
