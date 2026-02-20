@@ -17,6 +17,7 @@ from functools import partial
 from pathlib import Path
 from typing import Any
 
+from Mudabbir.memory.file_store import FileMemoryStore
 from Mudabbir.memory.protocol import MemoryEntry, MemoryType
 
 logger = logging.getLogger(__name__)
@@ -175,6 +176,10 @@ class Mem0MemoryStore:
         self.use_inference = use_inference
         self._data_path = data_path or (Path.home() / ".Mudabbir" / "mem0_data")
         self._data_path.mkdir(parents=True, exist_ok=True)
+        # Keep a file-backed session journal for chat history/sidebar UX.
+        # This preserves sessions across reconnects while mem0 handles semantic memory.
+        self._session_store = FileMemoryStore(base_path=self._data_path.parent / "memory")
+        self.sessions_path = self._session_store.sessions_path
 
         # Provider configuration
         self._llm_provider = llm_provider
@@ -253,6 +258,8 @@ class Mem0MemoryStore:
 
         # Determine scoping based on memory type
         if entry.type == MemoryType.SESSION:
+            metadata["role"] = entry.role
+            metadata["session_key"] = entry.session_key
             # Session memories use run_id for conversation isolation
             result = await self._run_sync(
                 self._memory.add,
@@ -261,6 +268,22 @@ class Mem0MemoryStore:
                 metadata=metadata,
                 infer=False,  # Don't extract facts from conversation - store raw
             )
+            # Mirror session entries to file store so dashboard sessions persist/list reliably.
+            try:
+                await self._session_store.save(
+                    MemoryEntry(
+                        id="",
+                        type=MemoryType.SESSION,
+                        content=entry.content,
+                        role=entry.role,
+                        session_key=entry.session_key,
+                        metadata=entry.metadata,
+                        created_at=entry.created_at,
+                        updated_at=entry.updated_at,
+                    )
+                )
+            except Exception as e:
+                logger.warning("Failed to mirror session entry to file store: %s", e)
         elif entry.type == MemoryType.DAILY:
             # Daily notes scoped to user with date
             metadata["date"] = datetime.now(tz=UTC).date().isoformat()
@@ -413,6 +436,14 @@ class Mem0MemoryStore:
 
     async def get_session(self, session_key: str) -> list[MemoryEntry]:
         """Get session history for a specific session."""
+        # Prefer mirrored file journal for stable ordering/roles and dashboard parity.
+        try:
+            mirrored = await self._session_store.get_session(session_key)
+            if mirrored:
+                return mirrored
+        except Exception as e:
+            logger.debug("Session journal read failed for %s: %s", session_key, e)
+
         self._ensure_initialized()
 
         try:
@@ -438,6 +469,12 @@ class Mem0MemoryStore:
 
     async def clear_session(self, session_key: str) -> int:
         """Clear session history."""
+        mirror_count = 0
+        try:
+            mirror_count = await self._session_store.clear_session(session_key)
+        except Exception as e:
+            logger.warning("Failed to clear mirrored session %s: %s", session_key, e)
+
         self._ensure_initialized()
 
         try:
@@ -455,11 +492,53 @@ class Mem0MemoryStore:
                 run_id=session_key,
             )
 
-            return count
+            return max(count, mirror_count)
 
         except Exception as e:
             logger.error(f"Clear session failed: {e}")
-            return 0
+            return mirror_count
+
+    # =========================================================================
+    # Session Sidebar/Metadata Compatibility (File Session Journal)
+    # =========================================================================
+
+    def _load_session_index(self) -> dict:
+        """Expose file-based session index for dashboard session listing."""
+        return self._session_store._load_session_index()
+
+    async def delete_session(self, session_key: str) -> bool:
+        """Delete a session from both mem0 run history and mirrored file journal."""
+        self._ensure_initialized()
+        had_mem0_history = False
+        try:
+            existing = await self._run_sync(self._memory.get_all, run_id=session_key, limit=1)
+            had_mem0_history = bool(existing.get("results"))
+            await self._run_sync(self._memory.delete_all, run_id=session_key)
+        except Exception as e:
+            logger.warning("Failed deleting mem0 session %s: %s", session_key, e)
+
+        file_deleted = await self._session_store.delete_session(session_key)
+        return had_mem0_history or file_deleted
+
+    async def update_session_title(self, session_key: str, title: str) -> bool:
+        """Update mirrored session title (used by dashboard sidebar)."""
+        return await self._session_store.update_session_title(session_key, title)
+
+    async def resolve_session_alias(self, session_key: str) -> str:
+        """Resolve session alias via mirrored file store."""
+        return await self._session_store.resolve_session_alias(session_key)
+
+    async def set_session_alias(self, source_key: str, target_key: str) -> None:
+        """Set session alias via mirrored file store."""
+        await self._session_store.set_session_alias(source_key, target_key)
+
+    async def remove_session_alias(self, source_key: str) -> bool:
+        """Remove session alias via mirrored file store."""
+        return await self._session_store.remove_session_alias(source_key)
+
+    async def get_session_keys_for_chat(self, source_key: str) -> list[str]:
+        """List chat session keys via mirrored file store."""
+        return await self._session_store.get_session_keys_for_chat(source_key)
 
     # =========================================================================
     # Auto-Learn: Extract facts from conversations
