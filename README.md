@@ -421,7 +421,7 @@ Full documentation lives in [`documentation/`](documentation/README.md):
 
 ---
 
-## Join the Pack
+## Follow us
 
 <!-- TODO: Add Product Hunt badge once page is live -->
 <!-- [![Product Hunt](https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=XXXXX)](https://www.producthunt.com/posts/mudabbir) -->
