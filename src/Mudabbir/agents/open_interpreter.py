@@ -8,6 +8,7 @@ Changes:
 
 import asyncio
 import ast
+import importlib
 import json
 import logging
 import os
@@ -967,6 +968,16 @@ class OpenInterpreterAgent:
                 message="pkg_resources is deprecated as an API.*",
                 category=UserWarning,
             )
+            warnings.filterwarnings(
+                "ignore",
+                message=r".*asyncio\.iscoroutinefunction.*deprecated.*",
+                category=DeprecationWarning,
+            )
+            warnings.filterwarnings(
+                "ignore",
+                message=r"remove second argument of ws_handler",
+                category=DeprecationWarning,
+            )
             from interpreter import interpreter
 
             from Mudabbir.llm.client import resolve_llm_client
@@ -981,6 +992,27 @@ class OpenInterpreterAgent:
                 interpreter.display_message = lambda *args, **kwargs: None
             except Exception:
                 pass
+            # Compatibility shim for Open Interpreter builds where
+            # interpreter.core.respond references display_markdown_message
+            # without importing it, causing NameError at runtime.
+            try:
+                respond_mod = importlib.import_module("interpreter.core.respond")
+                if not hasattr(respond_mod, "display_markdown_message"):
+                    try:
+                        from interpreter.terminal_interface.utils.display_markdown_message import (
+                            display_markdown_message as _display_markdown_message,
+                        )
+                    except Exception:
+
+                        def _display_markdown_message(msg):
+                            interpreter.display_message(str(msg))
+
+                    respond_mod.display_markdown_message = _display_markdown_message
+            except Exception as patch_err:
+                logger.debug(
+                    "Open Interpreter compatibility shim skipped: %s",
+                    patch_err,
+                )
 
             # Set LLM based on resolved provider
             llm = resolve_llm_client(self.settings)
