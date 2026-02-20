@@ -64,8 +64,9 @@ jobs:
     name: Publish to PyPI
     needs: build
     runs-on: ubuntu-latest
-    continue-on-error: true
     if: startsWith(github.ref, 'refs/tags/v')
+    outputs:
+      trusted_ok: ${{ steps.trusted_result.outputs.trusted_ok }}
     environment:
       name: pypi
       url: https://pypi.org/p/mudabbir
@@ -80,7 +81,20 @@ jobs:
           path: dist/
 
       - name: Publish to PyPI
+        id: trusted_publish
+        continue-on-error: true
         uses: pypa/gh-action-pypi-publish@release/v1
+
+      - name: Record trusted publish status
+        id: trusted_result
+        if: always()
+        shell: bash
+        run: |
+          if [ "${{ steps.trusted_publish.outcome }}" = "success" ]; then
+            echo "trusted_ok=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "trusted_ok=false" >> "$GITHUB_OUTPUT"
+          fi
 
   publish-to-pypi-token-on-failure:
     name: Publish to PyPI (Token Fallback on Trusted Failure)
@@ -88,7 +102,9 @@ jobs:
       - build
       - publish-to-pypi
     runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/v') && needs.publish-to-pypi.result == 'failure'
+    if: startsWith(github.ref, 'refs/tags/v') && needs.publish-to-pypi.outputs.trusted_ok != 'true'
+    outputs:
+      fallback_ok: ${{ steps.fallback_result.outputs.fallback_ok }}
     permissions:
       contents: read
     env:
@@ -117,17 +133,23 @@ jobs:
 
       - name: Publish to PyPI via API token
         if: steps.token.outputs.has_token == 'true'
+        id: fallback_publish
+        continue-on-error: true
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           user: __token__
           password: ${{ steps.token.outputs.token }}
 
-      - name: Fail when no fallback token is configured
-        if: steps.token.outputs.has_token != 'true'
+      - name: Record fallback publish status
+        id: fallback_result
+        if: always()
+        shell: bash
         run: |
-          echo "Trusted publishing failed and no fallback token is configured."
-          echo "Set repository secret PYPI_API_TOKEN (or PYPI_TOKEN), or fix PyPI Trusted Publisher."
-          exit 1
+          if [ "${{ steps.token.outputs.has_token }}" = "true" ] && [ "${{ steps.fallback_publish.outcome }}" = "success" ]; then
+            echo "fallback_ok=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "fallback_ok=false" >> "$GITHUB_OUTPUT"
+          fi
 
   publish-status:
     name: Publish Status Gate
@@ -135,18 +157,20 @@ jobs:
       - publish-to-pypi
       - publish-to-pypi-token-on-failure
     runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: always() && startsWith(github.ref, 'refs/tags/v')
     steps:
       - name: Ensure at least one publish path succeeded
         shell: bash
         run: |
-          TRUSTED='${{ needs.publish-to-pypi.result }}'
-          FALLBACK='${{ needs.publish-to-pypi-token-on-failure.result }}'
-          if [ "$TRUSTED" = "success" ] || [ "$FALLBACK" = "success" ] || [ "$FALLBACK" = "skipped" -a "$TRUSTED" = "success" ]; then
-            echo "Publish path succeeded. trusted=$TRUSTED fallback=$FALLBACK"
+          TRUSTED_OK='${{ needs.publish-to-pypi.outputs.trusted_ok }}'
+          FALLBACK_OK='${{ needs.publish-to-pypi-token-on-failure.outputs.fallback_ok }}'
+          if [ "$TRUSTED_OK" = "true" ] || [ "$FALLBACK_OK" = "true" ]; then
+            echo "Publish path succeeded. trusted_ok=$TRUSTED_OK fallback_ok=$FALLBACK_OK"
             exit 0
           fi
-          echo "No successful PyPI publish path. trusted=$TRUSTED fallback=$FALLBACK"
+          echo "No successful PyPI publish path."
+          echo "trusted_ok=$TRUSTED_OK fallback_ok=$FALLBACK_OK"
+          echo "Fix PyPI Trusted Publisher OR set secret PYPI_API_TOKEN/PYPI_TOKEN."
           exit 1
 
   publish-to-testpypi:
