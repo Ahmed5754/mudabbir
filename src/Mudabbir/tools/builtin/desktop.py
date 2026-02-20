@@ -2753,6 +2753,15 @@ $obj | ConvertTo-Json -Compress
         if mode_norm in {"display_dns", "dns_cache"}:
             ok, out = _run_powershell("ipconfig /displaydns", timeout=15)
             return _json({"ok": True, "mode": "display_dns", "output": out[:3000]}) if ok else self._error(out or "display dns failed")
+        if mode_norm in {"getmac"}:
+            ok, out = _run_powershell("getmac", timeout=12)
+            return _json({"ok": True, "mode": "getmac", "output": out[:2000]}) if ok else self._error(out or "getmac failed")
+        if mode_norm in {"arp_table"}:
+            ok, out = _run_powershell("arp -a", timeout=12)
+            return _json({"ok": True, "mode": "arp_table", "output": out[:2000]}) if ok else self._error(out or "arp table failed")
+        if mode_norm in {"nbtstat_cache"}:
+            ok, out = _run_powershell("nbtstat -c", timeout=12)
+            return _json({"ok": True, "mode": "nbtstat_cache", "output": out[:2000]}) if ok else self._error(out or "nbtstat cache failed")
         if mode_norm in {"net_scan", "arp_scan"}:
             ok, out = _run_powershell("arp -a", timeout=10)
             return _json({"ok": True, "mode": "net_scan", "output": out[:2000]}) if ok else self._error(out or "net scan failed")

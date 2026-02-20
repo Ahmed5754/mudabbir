@@ -154,7 +154,7 @@ async def test_global_fastpath_network_diagnostics_replies(
     class DummyDesktopTool:
         async def execute(self, action: str, **kwargs):
             assert action == "network_tools"
-            assert kwargs.get("mode") in {"ipconfig_all", "tracert", "pathping", "nslookup", "netstat_active", "display_dns"}
+            assert kwargs.get("mode") in {"ipconfig_all", "tracert", "pathping", "nslookup", "netstat_active", "display_dns", "getmac", "arp_table", "nbtstat_cache"}
             return '{"ok": true}'
 
     monkeypatch.setattr("Mudabbir.tools.builtin.desktop.DesktopTool", DummyDesktopTool)
@@ -195,6 +195,24 @@ async def test_global_fastpath_network_diagnostics_replies(
     )
     assert handled_dns is True
     assert "dns" in str(reply_dns).lower()
+
+    handled_getmac, reply_getmac = await loop._try_global_windows_fastpath(
+        text="getmac", session_key="s7m"
+    )
+    assert handled_getmac is True
+    assert "mac" in str(reply_getmac).lower()
+
+    handled_arp, reply_arp = await loop._try_global_windows_fastpath(
+        text="جدول arp", session_key="s7a"
+    )
+    assert handled_arp is True
+    assert "arp" in str(reply_arp).lower()
+
+    handled_nbt, reply_nbt = await loop._try_global_windows_fastpath(
+        text="nbtstat -c", session_key="s7b"
+    )
+    assert handled_nbt is True
+    assert "netbios" in str(reply_nbt).lower() or "bios" in str(reply_nbt).lower()
 
 
 @pytest.mark.asyncio
