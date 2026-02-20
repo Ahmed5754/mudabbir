@@ -88,9 +88,11 @@ jobs:
       - build
       - publish-to-pypi
     runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/v') && needs.publish-to-pypi.result == 'failure' && secrets.PYPI_API_TOKEN != ''
+    if: startsWith(github.ref, 'refs/tags/v') && needs.publish-to-pypi.result == 'failure'
     permissions:
       contents: read
+    env:
+      PYPI_API_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
 
     steps:
       - name: Download distributions
@@ -100,10 +102,11 @@ jobs:
           path: dist/
 
       - name: Publish to PyPI via API token
+        if: env.PYPI_API_TOKEN != ''
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           user: __token__
-          password: ${{ secrets.PYPI_API_TOKEN }}
+          password: ${{ env.PYPI_API_TOKEN }}
 
   publish-to-testpypi:
     name: Publish to TestPyPI
