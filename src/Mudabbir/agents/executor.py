@@ -1,21 +1,93 @@
-"""
-Open Interpreter Executor - The "Hands" layer for OS control.
+"""Open Interpreter Executor - The "Hands" layer for OS control."""
 
-Created: 2026-02-02
-Changes:
-  - 2026-02-02: Initial implementation of ExecutorProtocol using Open Interpreter.
-  - 2026-02-02: SPEED FIX - Direct subprocess for shell commands instead of OI chat.
-                Shell commands now 10x faster. OI reserved for complex multi-step tasks.
-"""
+from __future__ import annotations
 
 import asyncio
+import importlib
 import logging
 import os
+import re
+from dataclasses import dataclass
 from pathlib import Path
 
 from Mudabbir.config import Settings
 
 logger = logging.getLogger(__name__)
+
+_MAX_COMPLEX_CHUNKS = 220
+_MAX_COMPLEX_TEXT_CHARS = 6000
+_EXECUTOR_GUARDRAILS = """
+Execution output policy:
+- Do not include markdown code fences or planning prose.
+- Do not include JSON execute payload fragments in user-facing text.
+- Return concise execution result only.
+- If action fails, return one short error line with the root cause.
+"""
+_PERCENT_RE = re.compile(r"(\d{1,3})\s*%")
+
+
+@dataclass
+class ExecutionResult:
+    """Structured result contract for computer execution."""
+
+    status: str
+    action: str
+    evidence: str = ""
+    final_value: str = ""
+    error: str = ""
+    error_code: str = ""
+
+
+def _looks_like_planning_text(text: str) -> bool:
+    lowered = (text or "").strip().lower()
+    if not lowered:
+        return False
+    patterns = (
+        "here's my plan",
+        "here is my plan",
+        "let's start by",
+        "step 1",
+        "step 2",
+        "my apologies",
+        "single block",
+        "please copy",
+        "خطة",
+        "لنبدأ",
+        "الخطوة 1",
+        "سأقوم",
+        "اعتذر",
+    )
+    if any(p in lowered for p in patterns):
+        return True
+    if re.match(r"^\d+\.\s+\*\*?.+\*\*?:", lowered):
+        return True
+    return False
+
+
+def _extract_percent_value(text: str) -> str:
+    if not text:
+        return ""
+    match = _PERCENT_RE.search(text)
+    if not match:
+        return ""
+    try:
+        value = int(match.group(1))
+    except Exception:
+        return ""
+    if 0 <= value <= 100:
+        return f"{value}%"
+    return ""
+
+
+def _format_execution_summary(result: ExecutionResult) -> str:
+    """Backward-compatible text summary for existing callers."""
+    if result.status == "ok":
+        suffix = f" (final: {result.final_value})" if result.final_value else ""
+        evidence = f" | {result.evidence}" if result.evidence else ""
+        return f"✅ {result.action} succeeded{suffix}{evidence}"
+    if result.error_code:
+        return f"❌ {result.action} failed [{result.error_code}]: {result.error or 'unknown error'}"
+    return f"❌ {result.action} failed: {result.error or 'unknown error'}"
 
 
 class OpenInterpreterExecutor:
@@ -44,6 +116,29 @@ class OpenInterpreterExecutor:
             # Configure for execution mode (minimal LLM usage)
             interpreter.auto_run = True
             interpreter.loop = False  # Single command execution
+            interpreter.system_message = (
+                f"{getattr(interpreter, 'system_message', '')}\n{_EXECUTOR_GUARDRAILS}".strip()
+            )
+            try:
+                interpreter.display_message = lambda *args, **kwargs: None
+            except Exception:
+                pass
+            # Compatibility shim for OI builds where respond references display_markdown_message.
+            try:
+                respond_mod = importlib.import_module("interpreter.core.respond")
+                if not hasattr(respond_mod, "display_markdown_message"):
+                    try:
+                        from interpreter.terminal_interface.utils.display_markdown_message import (
+                            display_markdown_message as _display_markdown_message,
+                        )
+                    except Exception:
+
+                        def _display_markdown_message(msg):
+                            interpreter.display_message(str(msg))
+
+                    respond_mod.display_markdown_message = _display_markdown_message
+            except Exception as patch_err:
+                logger.debug("Open Interpreter compatibility shim skipped: %s", patch_err)
 
             # Set LLM for any reasoning needed
             llm = resolve_llm_client(self.settings)
@@ -131,32 +226,106 @@ class OpenInterpreterExecutor:
 
         For simple shell commands, use run_shell() instead.
         """
+        result = await self.run_complex_task_struct(task)
+        return _format_execution_summary(result)
+
+    async def run_complex_task_struct(self, task: str) -> ExecutionResult:
+        """Execute a complex task and return a structured summary."""
         if not self._interpreter:
-            return "Error: Open Interpreter not available"
+            return ExecutionResult(
+                status="error",
+                action="computer task",
+                error="Open Interpreter not available",
+                error_code="oi_unavailable",
+            )
 
-        logger.info(f"🤖 EXECUTOR: run_complex_task({task[:80]}...)")
-
+        logger.info("🤖 EXECUTOR: run_complex_task(%s...)", task[:80])
         try:
             loop = asyncio.get_event_loop()
             result = await loop.run_in_executor(None, self._run_interpreter_sync, task)
             return result
         except Exception as e:
-            logger.error(f"Complex task error: {e}")
-            return f"Error: {str(e)}"
+            logger.error("Complex task error: %s", e)
+            return ExecutionResult(
+                status="error",
+                action="computer task",
+                error=str(e),
+                error_code="executor_exception",
+            )
 
-    def _run_interpreter_sync(self, task: str) -> str:
+    def _run_interpreter_sync(self, task: str) -> ExecutionResult:
         """Synchronous Open Interpreter execution for complex tasks."""
-        output_parts = []
+        from Mudabbir.agents.open_interpreter import (
+            _is_quota_or_rate_limit_message,
+            is_noisy_execution_text,
+        )
+
+        output_parts: list[str] = []
+        raw_error = ""
+        chunks_seen = 0
 
         for chunk in self._interpreter.chat(task, stream=True):
-            if isinstance(chunk, dict):
-                content = chunk.get("content", "")
-                if content:
-                    output_parts.append(str(content))
-            elif isinstance(chunk, str):
-                output_parts.append(chunk)
+            chunks_seen += 1
+            if chunks_seen > _MAX_COMPLEX_CHUNKS:
+                raw_error = "execution stream exceeded safety chunk limit"
+                break
 
-        return "".join(output_parts) or "(no output)"
+            if isinstance(chunk, dict):
+                content = str(chunk.get("content", "") or "")
+            else:
+                content = str(chunk or "")
+
+            if not content.strip():
+                continue
+            if is_noisy_execution_text(content) or _looks_like_planning_text(content):
+                continue
+            if "```" in content:
+                continue
+
+            output_parts.append(content.strip())
+            merged = " ".join(output_parts)
+            if len(merged) > _MAX_COMPLEX_TEXT_CHARS:
+                output_parts = [merged[-_MAX_COMPLEX_TEXT_CHARS:]]
+
+            lowered = content.lower()
+            if "error" in lowered or "traceback" in lowered:
+                raw_error = content.strip()
+
+        merged_output = " ".join(output_parts).strip()
+        if _is_quota_or_rate_limit_message(merged_output) or _is_quota_or_rate_limit_message(raw_error):
+            return ExecutionResult(
+                status="error",
+                action="computer task",
+                evidence="",
+                error="quota/rate limit reached",
+                error_code="quota_exhausted",
+            )
+
+        if raw_error and not merged_output:
+            return ExecutionResult(
+                status="error",
+                action="computer task",
+                evidence="",
+                error=raw_error[:220],
+                error_code="execution_error",
+            )
+
+        if not merged_output:
+            return ExecutionResult(
+                status="error",
+                action="computer task",
+                evidence="",
+                error="no reliable execution output",
+                error_code="no_output",
+            )
+
+        final_value = _extract_percent_value(merged_output)
+        return ExecutionResult(
+            status="ok",
+            action="computer task",
+            evidence=merged_output[:220],
+            final_value=final_value,
+        )
 
     async def read_file(self, path: str) -> str:
         """Read file contents."""

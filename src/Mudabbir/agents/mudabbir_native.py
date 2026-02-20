@@ -720,8 +720,39 @@ class MudabbirOrchestrator:
 
                 # Use executor's run_complex_task method (cleaner interface)
                 if self._executor and hasattr(self._executor, "run_complex_task"):
+                    # Prefer structured path for concise/safe output if available.
+                    if hasattr(self._executor, "run_complex_task_struct"):
+                        structured = await self._executor.run_complex_task_struct(task)
+                        status = getattr(structured, "status", "error")
+                        final_value = str(getattr(structured, "final_value", "") or "")
+                        evidence = str(getattr(structured, "evidence", "") or "")
+                        error = str(getattr(structured, "error", "") or "")
+                        error_code = str(getattr(structured, "error_code", "") or "")
+
+                        if status == "ok":
+                            if final_value:
+                                return self._redact_secrets(
+                                    f"✅ تم التنفيذ بنجاح. القيمة النهائية: {final_value}"
+                                )
+                            return self._redact_secrets(
+                                f"✅ تم التنفيذ بنجاح.{f' {evidence}' if evidence else ''}"
+                            )
+
+                        if error_code == "quota_exhausted":
+                            return (
+                                "❌ فشل التنفيذ بسبب تجاوز حد المزود (quota/rate limit). "
+                                "أعد المحاولة بعد دقيقة أو غيّر الموديل."
+                            )
+
+                        return self._redact_secrets(
+                            f"❌ فشل التنفيذ: {error or 'لا يوجد خرج موثوق من المنفذ.'}"
+                        )
+
+                    # Backward-compatible fallback.
                     result = await self._executor.run_complex_task(task)
-                    return self._redact_secrets(result or "(no output)")
+                    if not result or str(result).strip() in {"(no output)", ""}:
+                        return "❌ فشل التنفيذ: لا يوجد خرج موثوق من المنفذ."
+                    return self._redact_secrets(result)
                 else:
                     return "Error: Open Interpreter not available. Install with: pip install open-interpreter"
 

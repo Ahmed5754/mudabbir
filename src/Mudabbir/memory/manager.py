@@ -5,6 +5,7 @@
 # Updated: 2026-02-11 - Sender-scoped memory isolation
 
 import hashlib
+import inspect
 import logging
 from datetime import UTC, datetime
 from pathlib import Path
@@ -618,6 +619,15 @@ class MemoryManager:
         # Fall back to standard context
         return await self.get_context_for_agent(sender_id=sender_id)
 
+    async def close(self) -> None:
+        """Close underlying memory backend if it exposes a close hook."""
+        closer = getattr(self._store, "close", None)
+        if not callable(closer):
+            return
+        result = closer()
+        if inspect.isawaitable(result):
+            await result
+
     async def clear_session(self, session_key: str) -> int:
         """Clear session history."""
         return await self._store.clear_session(session_key)
@@ -738,6 +748,6 @@ def get_memory_manager(force_reload: bool = False) -> MemoryManager:
             global _manager
             _manager = None
 
-        register("memory_manager", reset=_reset)
+        register("memory_manager", shutdown=_manager.close, reset=_reset)
 
     return _manager

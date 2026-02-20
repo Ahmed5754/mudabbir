@@ -15,6 +15,7 @@ import logging
 from datetime import UTC, datetime
 from functools import partial
 from pathlib import Path
+import inspect
 from typing import Any
 
 from Mudabbir.memory.file_store import FileMemoryStore
@@ -611,6 +612,35 @@ class Mem0MemoryStore:
         except Exception as e:
             logger.warning("Semantic search failed: %s", e)
             return []
+
+    async def close(self) -> None:
+        """Release Mem0/Qdrant resources explicitly for clean shutdown."""
+        # Close mirrored file store if it supports close.
+        session_close = getattr(self._session_store, "close", None)
+        if callable(session_close):
+            try:
+                result = session_close()
+                if inspect.isawaitable(result):
+                    await result
+            except Exception as e:
+                logger.debug("Failed to close file session store: %s", e)
+
+        # Close mem0 backend/client if available.
+        mem = self._memory
+        if mem is None:
+            return
+
+        for attr in ("close", "aclose"):
+            closer = getattr(mem, attr, None)
+            if callable(closer):
+                try:
+                    result = closer()
+                    if inspect.isawaitable(result):
+                        await result
+                except Exception as e:
+                    logger.debug("Failed to close mem0 client via %s: %s", attr, e)
+                else:
+                    break
 
     # =========================================================================
     # Helper Methods

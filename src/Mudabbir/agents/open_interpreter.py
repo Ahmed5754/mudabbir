@@ -573,6 +573,17 @@ def _looks_like_execute_payload_fragment(text: str) -> bool:
     return False
 
 
+def is_noisy_execution_text(text: str) -> bool:
+    """Shared adapter-safe guard: true when text should be hidden from user output."""
+    if not text:
+        return False
+    return (
+        _looks_like_execute_noise(text)
+        or _looks_like_execute_payload_fragment(text)
+        or _looks_like_raw_command_leak(text)
+    )
+
+
 def _extract_first_error_line(output: str) -> str:
     """Return the first meaningful error line from command output."""
     for line in (output or "").splitlines():
