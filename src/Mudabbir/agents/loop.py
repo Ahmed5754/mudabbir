@@ -422,6 +422,28 @@ class AgentLoop:
 
         if action == "network_tools" and str(params.get("mode", "")).lower() in {"open_network_settings", "settings"}:
             return True, ("تم فتح إعدادات الشبكة." if arabic else "Opened network settings.")
+        if action == "open_settings_page":
+            page = str(params.get("page", "")).strip().lower()
+            page_msgs_ar = {
+                "network": "تم فتح إعدادات الشبكة.",
+                "privacy": "تم فتح إعدادات الخصوصية.",
+                "sound": "تم فتح إعدادات الصوت.",
+                "windowsupdate": "تم فتح إعدادات تحديثات ويندوز.",
+                "update": "تم فتح إعدادات تحديثات ويندوز.",
+                "appsfeatures": "تم فتح إعدادات التطبيقات.",
+            }
+            page_msgs_en = {
+                "network": "Opened network settings.",
+                "privacy": "Opened privacy settings.",
+                "sound": "Opened sound settings.",
+                "windowsupdate": "Opened Windows Update settings.",
+                "update": "Opened Windows Update settings.",
+                "appsfeatures": "Opened apps settings.",
+            }
+            msg = page_msgs_ar.get(page) if arabic else page_msgs_en.get(page)
+            if msg:
+                return True, msg
+            return True, ("تم فتح صفحة الإعدادات." if arabic else "Opened Settings page.")
         if action == "network_tools":
             mode = str(params.get("mode", "")).lower()
             network_msgs_ar = {

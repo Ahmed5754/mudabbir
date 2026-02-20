@@ -527,3 +527,22 @@ async def test_global_fastpath_app_tools_extra_replies(
     )
     assert handled_appwiz is True
     assert "programs" in str(reply_appwiz).lower() or "البرامج" in str(reply_appwiz)
+
+
+@pytest.mark.asyncio
+async def test_global_fastpath_open_settings_page_reply(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class DummyDesktopTool:
+        async def execute(self, action: str, **kwargs):
+            assert action == "open_settings_page"
+            assert kwargs.get("page") == "privacy"
+            return '{"ok": true}'
+
+    monkeypatch.setattr("Mudabbir.tools.builtin.desktop.DesktopTool", DummyDesktopTool)
+    loop = AgentLoop()
+    handled, reply = await loop._try_global_windows_fastpath(
+        text="افتح إعدادات الخصوصية", session_key="s37"
+    )
+    assert handled is True
+    assert "الخصوصية" in str(reply) or "privacy" in str(reply).lower()

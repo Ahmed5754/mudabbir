@@ -144,6 +144,10 @@ def test_resolve_arabic_brightness_and_battery_questions() -> None:
         ("متجر ميكروسوفت", "app_tools", "open_store"),
         ("الاعدادات السريعة", "shell_tools", "quick_settings"),
         ("مركز الاشعارات", "shell_tools", "notifications"),
+        ("win+a", "shell_tools", "quick_settings"),
+        ("win+n", "shell_tools", "notifications"),
+        ("win+s", "shell_tools", "search"),
+        ("win+r", "shell_tools", "run"),
     ],
 )
 def test_resolve_more_daily_arabic_aliases(message: str, action: str, mode: str) -> None:
