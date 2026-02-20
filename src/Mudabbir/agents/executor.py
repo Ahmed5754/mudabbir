@@ -10,6 +10,7 @@ Changes:
 
 import asyncio
 import logging
+import os
 from pathlib import Path
 
 from Mudabbir.config import Settings
@@ -49,6 +50,13 @@ class OpenInterpreterExecutor:
             if llm.is_ollama:
                 interpreter.llm.model = f"ollama/{llm.model}"
                 interpreter.llm.api_base = llm.ollama_host
+            elif llm.is_gemini and llm.api_key:
+                model_name = llm.model if llm.model.startswith("openai/") else f"openai/{llm.model}"
+                interpreter.llm.model = model_name
+                interpreter.llm.api_key = llm.api_key
+                interpreter.llm.api_base = llm.openai_compatible_base_url
+                os.environ.setdefault("GOOGLE_API_KEY", llm.api_key)
+                os.environ.setdefault("GEMINI_API_KEY", llm.api_key)
             elif llm.api_key:
                 interpreter.llm.model = llm.model
                 interpreter.llm.api_key = llm.api_key

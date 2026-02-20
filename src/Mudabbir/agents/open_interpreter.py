@@ -986,6 +986,18 @@ class OpenInterpreterAgent:
                 interpreter.llm.model = f"ollama/{llm.model}"
                 interpreter.llm.api_base = llm.ollama_host
                 logger.info(f"🤖 Using Ollama: {llm.model}")
+            elif llm.is_gemini and llm.api_key:
+                # Force Gemini through AI Studio's OpenAI-compatible endpoint.
+                # This avoids LiteLLM auto-routing Gemini models to Vertex AI
+                # (which requires Google ADC and causes runtime failures).
+                model_name = llm.model if llm.model.startswith("openai/") else f"openai/{llm.model}"
+                interpreter.llm.model = model_name
+                interpreter.llm.api_key = llm.api_key
+                interpreter.llm.api_base = llm.openai_compatible_base_url
+                # Some dependency stacks read these keys directly.
+                os.environ.setdefault("GOOGLE_API_KEY", llm.api_key)
+                os.environ.setdefault("GEMINI_API_KEY", llm.api_key)
+                logger.info(f"🤖 Using Gemini (AI Studio): {llm.model}")
             elif llm.api_key:
                 interpreter.llm.model = llm.model
                 interpreter.llm.api_key = llm.api_key

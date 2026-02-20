@@ -20,9 +20,22 @@ import os
 import subprocess
 import sys
 import webbrowser
+import warnings
 from importlib.metadata import version as get_version
 from importlib.metadata import PackageNotFoundError
 from pathlib import Path
+
+# Dependency noise filters (do not affect runtime behavior).
+warnings.filterwarnings(
+    "ignore",
+    message=r"pkg_resources is deprecated as an API.*",
+    category=UserWarning,
+)
+warnings.filterwarnings(
+    "ignore",
+    message=r".*asyncio\.iscoroutinefunction.*deprecated.*",
+    category=DeprecationWarning,
+)
 
 
 def _sanitize_sys_path() -> None:
