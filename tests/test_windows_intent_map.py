@@ -49,6 +49,7 @@ def test_confirmation_message_detection() -> None:
         ("اظهار الملفات المخفية", "file_tools", "show_hidden"),
         ("اخفاء الملفات المخفية", "file_tools", "hide_hidden"),
         ("افتح اعدادات الشبكه", "open_settings_page", None),
+        ("افتح إعدادات الخصوصية", "open_settings_page", None),
         ("اغلاق كل البرامج المفتوحة", "app_tools", "close_all_apps"),
         ("فحص حالة القرص الصلب", "disk_tools", "smart_status"),
         ("مفاتيح الاختصار المتاحة", "shell_tools", "list_shortcuts"),
@@ -62,7 +63,10 @@ def test_resolve_new_capabilities(message: str, action: str, mode: str | None) -
     if mode is not None:
         assert result.params.get("mode") == mode
     else:
-        assert result.params.get("page") == "network"
+        if "الخصوصية" in message:
+            assert result.params.get("page") == "privacy"
+        else:
+            assert result.params.get("page") == "network"
 
 
 def test_resolve_rename_pc_extracts_name() -> None:

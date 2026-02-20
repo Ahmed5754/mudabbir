@@ -496,3 +496,34 @@ async def test_global_fastpath_control_panel_and_mmc_replies(
     )
     assert handled_dev is True
     assert "المهام" in str(reply_dev) or "scheduler" in str(reply_dev).lower()
+
+
+@pytest.mark.asyncio
+async def test_global_fastpath_app_tools_extra_replies(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class DummyDesktopTool:
+        async def execute(self, action: str, **kwargs):
+            assert action == "app_tools"
+            return '{"ok": true}'
+
+    monkeypatch.setattr("Mudabbir.tools.builtin.desktop.DesktopTool", DummyDesktopTool)
+    loop = AgentLoop()
+
+    handled_mixer, reply_mixer = await loop._try_global_windows_fastpath(
+        text="volume mixer", session_key="s34"
+    )
+    assert handled_mixer is True
+    assert "mixer" in str(reply_mixer).lower() or "خالط" in str(reply_mixer)
+
+    handled_mic, reply_mic = await loop._try_global_windows_fastpath(
+        text="microphone settings", session_key="s35"
+    )
+    assert handled_mic is True
+    assert "microphone" in str(reply_mic).lower() or "الميكروفون" in str(reply_mic)
+
+    handled_appwiz, reply_appwiz = await loop._try_global_windows_fastpath(
+        text="appwiz.cpl", session_key="s36"
+    )
+    assert handled_appwiz is True
+    assert "programs" in str(reply_appwiz).lower() or "البرامج" in str(reply_appwiz)
