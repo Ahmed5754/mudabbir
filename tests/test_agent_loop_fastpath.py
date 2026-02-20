@@ -771,6 +771,24 @@ async def test_global_fastpath_app_tools_extra_replies(
     assert handled_users is True
     assert "user" in str(reply_users).lower() or "حساب" in str(reply_users)
 
+    handled_folders, reply_folders = await loop._try_global_windows_fastpath(
+        text="control folders", session_key="s36f"
+    )
+    assert handled_folders is True
+    assert "folder" in str(reply_folders).lower() or "مجلد" in str(reply_folders)
+
+    handled_color, reply_color = await loop._try_global_windows_fastpath(
+        text="control color", session_key="s36c"
+    )
+    assert handled_color is True
+    assert "color" in str(reply_color).lower() or "لون" in str(reply_color) or "ألوان" in str(reply_color)
+
+    handled_desktop, reply_desktop = await loop._try_global_windows_fastpath(
+        text="control desktop", session_key="s36d"
+    )
+    assert handled_desktop is True
+    assert "desktop" in str(reply_desktop).lower() or "سطح المكتب" in str(reply_desktop)
+
 
 @pytest.mark.asyncio
 async def test_global_fastpath_open_settings_page_reply(

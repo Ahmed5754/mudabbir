@@ -5445,6 +5445,9 @@ $obj | ConvertTo-Json -Compress
             "open_keyboard_cpl": "control keyboard",
             "open_fonts_cpl": "control fonts",
             "open_region_cpl": "intl.cpl",
+            "open_folder_options_cpl": "control folders",
+            "open_color_cpl": "control color",
+            "open_desktop_cpl": "control desktop",
             "open_printers_cpl": "control printers",
             "open_user_accounts_cpl": "control userpasswords2",
         }

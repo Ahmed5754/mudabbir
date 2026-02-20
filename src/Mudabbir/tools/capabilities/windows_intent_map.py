@@ -358,6 +358,9 @@ RULES: tuple[IntentRule, ...] = (
     IntentRule("apps.open_keyboard_cpl", "app_tools", "open_keyboard_cpl", "safe", ("control keyboard", "keyboard settings classic", "لوحة المفاتيح", "اعدادات الكيبورد الكلاسيكية")),
     IntentRule("apps.open_fonts_cpl", "app_tools", "open_fonts_cpl", "safe", ("control fonts", "fonts control panel", "لوحة الخطوط", "لوحه الخطوط")),
     IntentRule("apps.open_region_cpl", "app_tools", "open_region_cpl", "safe", ("intl.cpl", "region settings", "الاقليم", "الإقليم")),
+    IntentRule("apps.open_folder_options_cpl", "app_tools", "open_folder_options_cpl", "safe", ("control folders", "folder options", "خيارات المجلدات")),
+    IntentRule("apps.open_color_cpl", "app_tools", "open_color_cpl", "safe", ("control color", "color settings classic", "إعدادات الألوان", "اعدادات الالوان")),
+    IntentRule("apps.open_desktop_cpl", "app_tools", "open_desktop_cpl", "safe", ("control desktop", "desktop settings classic", "إعدادات سطح المكتب", "اعدادات سطح المكتب")),
     IntentRule("apps.open_printers_cpl", "app_tools", "open_printers_cpl", "safe", ("control printers", "printers control panel", "الطابعات", "لوحة الطابعات")),
     IntentRule("apps.open_user_accounts_cpl", "app_tools", "open_user_accounts_cpl", "safe", ("control userpasswords2", "user accounts classic", "حسابات المستخدمين الكلاسيكية", "إدارة حسابات المستخدمين")),
     IntentRule("apps.open_camera", "app_tools", "open_camera", "safe", ("open camera", "تشغيل الكاميرا")),
@@ -1024,6 +1027,30 @@ def resolve_windows_intent(message: str) -> IntentResolution:
             capability_id="apps.open_user_accounts_cpl",
             action="app_tools",
             params={"mode": "open_user_accounts_cpl"},
+            risk_level="safe",
+        )
+    if _contains_any(normalized, ("control folders", "folder options", "خيارات المجلدات")):
+        return IntentResolution(
+            matched=True,
+            capability_id="apps.open_folder_options_cpl",
+            action="app_tools",
+            params={"mode": "open_folder_options_cpl"},
+            risk_level="safe",
+        )
+    if _contains_any(normalized, ("control color", "color settings classic", "اعدادات الالوان", "إعدادات الألوان")):
+        return IntentResolution(
+            matched=True,
+            capability_id="apps.open_color_cpl",
+            action="app_tools",
+            params={"mode": "open_color_cpl"},
+            risk_level="safe",
+        )
+    if _contains_any(normalized, ("control desktop", "desktop settings classic", "اعدادات سطح المكتب", "إعدادات سطح المكتب")):
+        return IntentResolution(
+            matched=True,
+            capability_id="apps.open_desktop_cpl",
+            action="app_tools",
+            params={"mode": "open_desktop_cpl"},
             risk_level="safe",
         )
     if _contains_any(normalized, ("nbtstat -a", "استعلام netbios")):

@@ -1064,6 +1064,9 @@ class AgentLoop:
                 "open_keyboard_cpl": "تم فتح إعدادات لوحة المفاتيح.",
                 "open_fonts_cpl": "تم فتح لوحة الخطوط.",
                 "open_region_cpl": "تم فتح إعدادات الإقليم.",
+                "open_folder_options_cpl": "تم فتح خيارات المجلدات.",
+                "open_color_cpl": "تم فتح إعدادات الألوان.",
+                "open_desktop_cpl": "تم فتح إعدادات سطح المكتب.",
                 "open_printers_cpl": "تم فتح لوحة الطابعات.",
                 "open_user_accounts_cpl": "تم فتح إدارة حسابات المستخدمين.",
             }
@@ -1092,6 +1095,9 @@ class AgentLoop:
                 "open_keyboard_cpl": "Opened Keyboard settings.",
                 "open_fonts_cpl": "Opened Fonts control panel.",
                 "open_region_cpl": "Opened Region settings.",
+                "open_folder_options_cpl": "Opened Folder Options.",
+                "open_color_cpl": "Opened classic Color settings.",
+                "open_desktop_cpl": "Opened classic Desktop settings.",
                 "open_printers_cpl": "Opened Printers control panel.",
                 "open_user_accounts_cpl": "Opened classic User Accounts settings.",
             }
