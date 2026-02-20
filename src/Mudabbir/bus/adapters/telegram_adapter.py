@@ -308,7 +308,23 @@ class TelegramAdapter(BaseChannelAdapter):
             }
             if topic_id is not None:
                 send_kwargs["message_thread_id"] = topic_id
-            await self.app.bot.send_message(**send_kwargs)
+            try:
+                await self.app.bot.send_message(**send_kwargs)
+            except Exception as send_err:
+                # Markdown parsing can fail on unbalanced entities from dynamic content.
+                if "Can't parse entities" in str(send_err):
+                    plain_text = _sanitize_telegram_text(sanitized_content)
+                    if plain_text.strip():
+                        plain_kwargs: dict[str, Any] = {
+                            "chat_id": real_chat_id,
+                            "text": plain_text,
+                            "parse_mode": None,
+                        }
+                        if topic_id is not None:
+                            plain_kwargs["message_thread_id"] = topic_id
+                        await self.app.bot.send_message(**plain_kwargs)
+                    return
+                raise
 
         except Exception as e:
             logger.error(f"Failed to send telegram message: {e}")

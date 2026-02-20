@@ -244,6 +244,20 @@ class Mem0MemoryStore:
                 return
             logger.error(f"Failed to initialize Mem0: {e}")
             raise
+        except RuntimeError as e:
+            # qdrant-client local mode may raise RuntimeError when storage lock
+            # file is already held by another process.
+            err_text = str(e).lower()
+            if "already accessed by another instance of qdrant client" in err_text:
+                self._initialized = True
+                self._degraded_to_file = True
+                logger.warning(
+                    "Mem0/Qdrant storage is locked by another process; using file memory fallback: %s",
+                    e,
+                )
+                return
+            logger.error(f"Failed to initialize Mem0: {e}")
+            raise
         except ImportError:
             raise ImportError(
                 "mem0ai package not installed. Install with: pip install Mudabbir[memory]"
