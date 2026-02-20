@@ -222,3 +222,42 @@ async def test_global_fastpath_service_and_security_replies(
     )
     assert handled_security is True
     assert "جدار" in str(reply_security)
+
+
+@pytest.mark.asyncio
+async def test_global_fastpath_startup_background_and_performance_replies(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class DummyDesktopTool:
+        async def execute(self, action: str, **kwargs):
+            if action == "startup_tools":
+                assert kwargs.get("mode") == "startup_list"
+                return '{"ok": true, "items": []}'
+            if action == "background_tools":
+                assert kwargs.get("mode") == "count_background"
+                return '{"ok": true, "total": 120, "background": 87}'
+            if action == "performance_tools":
+                assert kwargs.get("mode") == "total_cpu_percent"
+                return '{"ok": true, "percent": 41.2}'
+            return '{"ok": true}'
+
+    monkeypatch.setattr("Mudabbir.tools.builtin.desktop.DesktopTool", DummyDesktopTool)
+    loop = AgentLoop()
+
+    handled_startup, reply_startup = await loop._try_global_windows_fastpath(
+        text="قائمة برامج بدء التشغيل", session_key="s13"
+    )
+    assert handled_startup is True
+    assert "بدء التشغيل" in str(reply_startup)
+
+    handled_bg, reply_bg = await loop._try_global_windows_fastpath(
+        text="تعداد التطبيقات المشغلة في الخلفية", session_key="s14"
+    )
+    assert handled_bg is True
+    assert "الخلفية" in str(reply_bg)
+
+    handled_perf, reply_perf = await loop._try_global_windows_fastpath(
+        text="اجمالي استهلاك المعالج", session_key="s15"
+    )
+    assert handled_perf is True
+    assert "41.2" in str(reply_perf)

@@ -533,6 +533,89 @@ class AgentLoop:
             if msg:
                 return True, msg
 
+        if action == "background_tools":
+            mode = str(params.get("mode", "")).lower()
+            background_msgs_ar = {
+                "count_background": "تم جلب عدد تطبيقات الخلفية.",
+                "list_visible_windows": "تم جلب قائمة التطبيقات المرئية.",
+                "list_minimized_windows": "تم جلب قائمة التطبيقات المصغرة.",
+                "ghost_apps": "تم جلب التطبيقات الخلفية الثقيلة.",
+                "network_usage_per_app": "تم جلب التطبيقات التي تستخدم الشبكة الآن.",
+                "camera_usage_now": "تم فحص التطبيقات التي تستخدم الكاميرا.",
+                "mic_usage_now": "تم فحص التطبيقات التي تستخدم الميكروفون.",
+                "wake_lock_apps": "تم جلب التطبيقات التي تمنع السكون.",
+                "process_paths": "تم جلب مسارات التطبيقات الشغالة.",
+            }
+            background_msgs_en = {
+                "count_background": "Fetched background processes count.",
+                "list_visible_windows": "Fetched visible windows list.",
+                "list_minimized_windows": "Fetched minimized windows list.",
+                "ghost_apps": "Fetched heavy headless/background apps.",
+                "network_usage_per_app": "Fetched apps currently using network.",
+                "camera_usage_now": "Checked apps currently using camera.",
+                "mic_usage_now": "Checked apps currently using microphone.",
+                "wake_lock_apps": "Fetched apps blocking sleep.",
+                "process_paths": "Fetched running app paths.",
+            }
+            msg = background_msgs_ar.get(mode) if arabic else background_msgs_en.get(mode)
+            if msg:
+                return True, msg
+
+        if action == "startup_tools":
+            mode = str(params.get("mode", "")).lower()
+            item = str(params.get("name", "") or "").strip()
+            startup_msgs_ar = {
+                "startup_list": "تم جلب قائمة برامج بدء التشغيل.",
+                "startup_impact_time": "تم جلب وقت تأثير بدء التشغيل.",
+                "registry_startups": "تم جلب برامج بدء التشغيل من السجل.",
+                "folder_startups": "تم جلب برامج بدء التشغيل من مجلد Startup.",
+                "signature_check": "تم فحص أمان/توقيع برامج بدء التشغيل.",
+                "disable": f"تم تعطيل برنامج بدء التشغيل: {item or 'المحدد'}.",
+                "enable": f"تم تفعيل برنامج بدء التشغيل: {item or 'المحدد'}.",
+            }
+            startup_msgs_en = {
+                "startup_list": "Fetched startup apps list.",
+                "startup_impact_time": "Fetched startup impact time.",
+                "registry_startups": "Fetched registry startup entries.",
+                "folder_startups": "Fetched startup folder entries.",
+                "signature_check": "Checked startup apps signatures/security.",
+                "disable": f"Disabled startup app: {item or 'target item'}.",
+                "enable": f"Enabled startup app: {item or 'target item'}.",
+            }
+            msg = startup_msgs_ar.get(mode) if arabic else startup_msgs_en.get(mode)
+            if msg:
+                return True, msg
+
+        if action == "performance_tools":
+            mode = str(params.get("mode", "")).lower()
+            if mode in {"total_cpu_percent", "total_ram_percent"} and isinstance(parsed, dict):
+                percent = parsed.get("percent")
+                if percent is not None:
+                    if arabic:
+                        label = "المعالج" if mode == "total_cpu_percent" else "الرام"
+                        return True, f"نسبة الاستهلاك الحالية ({label}): {percent}%."
+                    label = "CPU" if mode == "total_cpu_percent" else "RAM"
+                    return True, f"Current {label} usage: {percent}%."
+            perf_msgs_ar = {
+                "top_cpu": "تم جلب أعلى 5 عمليات استهلاكاً للمعالج.",
+                "top_ram": "تم جلب أعلى 5 عمليات استهلاكاً للرام.",
+                "top_disk": "تم جلب أعلى 5 عمليات استهلاكاً للقرص.",
+                "cpu_clock": "تم جلب سرعة المعالج الحالية.",
+                "available_ram": "تم جلب حجم الذاكرة المتاحة.",
+                "pagefile_used": "تم جلب استهلاك ملف التبادل (Page File).",
+            }
+            perf_msgs_en = {
+                "top_cpu": "Fetched top 5 CPU-consuming processes.",
+                "top_ram": "Fetched top 5 RAM-consuming processes.",
+                "top_disk": "Fetched top 5 disk-consuming processes.",
+                "cpu_clock": "Fetched current CPU clock speed.",
+                "available_ram": "Fetched available RAM.",
+                "pagefile_used": "Fetched page file usage.",
+            }
+            msg = perf_msgs_ar.get(mode) if arabic else perf_msgs_en.get(mode)
+            if msg:
+                return True, msg
+
         if action == "window_control":
             mode = str(params.get("mode", "")).lower()
             window_msgs_ar = {

@@ -197,3 +197,34 @@ def test_resolve_service_name_extraction_start() -> None:
     assert result.action == "service_tools"
     assert result.params.get("mode") == "start"
     assert result.params.get("name") == "WinRM"
+
+
+@pytest.mark.parametrize(
+    ("message", "action", "mode"),
+    [
+        ("قائمة برامج بدء التشغيل", "startup_tools", "startup_list"),
+        ("تعطيل برنامج من بدء التشغيل OneDrive", "startup_tools", "disable"),
+        ("تفعيل برنامج في بدء التشغيل OneDrive", "startup_tools", "enable"),
+        ("فحص امان برامج بدء التشغيل", "startup_tools", "signature_check"),
+        ("تعداد التطبيقات المشغلة في الخلفية", "background_tools", "count_background"),
+        ("اي تطبيق يستخدم الانترنت", "background_tools", "network_usage_per_app"),
+        ("التطبيقات التي تمنع السكون", "background_tools", "wake_lock_apps"),
+        ("اكثر 5 تطبيقات تستهلك المعالج", "performance_tools", "top_cpu"),
+        ("اجمالي استهلاك الرام", "performance_tools", "total_ram_percent"),
+    ],
+)
+def test_resolve_startup_background_performance_arabic_aliases(
+    message: str, action: str, mode: str
+) -> None:
+    result = resolve_windows_intent(message)
+    assert result.matched is True
+    assert result.action == action
+    assert result.params.get("mode") == mode
+
+
+def test_resolve_startup_disable_extracts_name() -> None:
+    result = resolve_windows_intent("disable startup OneDrive")
+    assert result.matched is True
+    assert result.action == "startup_tools"
+    assert result.params.get("mode") == "disable"
+    assert result.params.get("name") == "OneDrive"

@@ -336,6 +336,30 @@ RULES: tuple[IntentRule, ...] = (
     IntentRule("security.recent_files", "security_tools", "recent_files_list", "safe", ("recent files", "الملفات المفتوحة مؤخرا", "الملفات المفتوحه مؤخرا")),
     IntentRule("security.close_remote_sessions", "security_tools", "close_remote_sessions", "elevated", ("close remote sessions", "اغلاق الجلسات عن بعد", "إغلاق الجلسات عن بعد")),
     IntentRule("security.intrusion_summary", "security_tools", "intrusion_summary", "safe", ("intrusion summary", "ملخص محاولات الاختراق", "كشف محاولات الاختراق الفاشلة")),
+    IntentRule("background.count", "background_tools", "count_background", "safe", ("count background processes", "تعداد التطبيقات المشغلة في الخلفية", "عدد تطبيقات الخلفية")),
+    IntentRule("background.visible_windows", "background_tools", "list_visible_windows", "safe", ("list visible windows", "قائمة التطبيقات المرئية")),
+    IntentRule("background.minimized_windows", "background_tools", "list_minimized_windows", "safe", ("list minimized windows", "قائمة التطبيقات المصغرة")),
+    IntentRule("background.ghost_apps", "background_tools", "ghost_apps", "safe", ("ghost apps", "التطبيقات التي لا تملك نافذة")),
+    IntentRule("background.network_usage", "background_tools", "network_usage_per_app", "safe", ("network usage per app", "اي تطبيق يستخدم الانترنت", "من يستخدم النت الان")),
+    IntentRule("background.camera_usage", "background_tools", "camera_usage_now", "safe", ("camera usage now", "اي تطبيق يستخدم الكاميرا", "من يستخدم الكاميرا")),
+    IntentRule("background.mic_usage", "background_tools", "mic_usage_now", "safe", ("mic usage now", "اي تطبيق يستخدم الميكروفون", "من يستخدم الميكروفون")),
+    IntentRule("background.wake_lock", "background_tools", "wake_lock_apps", "safe", ("wake lock apps", "التطبيقات التي تمنع السكون", "مين مانع السكون")),
+    IntentRule("background.process_paths", "background_tools", "process_paths", "safe", ("process paths", "مسار التطبيقات الشغالة", "مسار التطبيق الشغال")),
+    IntentRule("startup.signature_check", "startup_tools", "signature_check", "safe", ("startup signature check", "فحص امان برامج بدء التشغيل", "فحص توقيع برامج بدء التشغيل")),
+    IntentRule("startup.list", "startup_tools", "startup_list", "safe", ("startup list", "قائمة برامج بدء التشغيل", "startup apps list")),
+    IntentRule("startup.disable", "startup_tools", "disable", "elevated", ("disable startup", "تعطيل برنامج من بدء التشغيل"), params=("name",)),
+    IntentRule("startup.enable", "startup_tools", "enable", "elevated", ("enable startup", "تفعيل برنامج في بدء التشغيل"), params=("name",)),
+    IntentRule("startup.registry", "startup_tools", "registry_startups", "safe", ("registry startups", "برامج بدء التشغيل من السجل")),
+    IntentRule("startup.folder", "startup_tools", "folder_startups", "safe", ("startup folder list", "برامج بدء التشغيل من مجلد startup")),
+    IntentRule("startup.impact", "startup_tools", "startup_impact_time", "safe", ("startup impact time", "وقت تحميل برامج بدء التشغيل")),
+    IntentRule("perf.top_cpu5", "performance_tools", "top_cpu", "safe", ("top 5 cpu", "اكثر 5 تطبيقات تستهلك المعالج", "اعلى 5 cpu")),
+    IntentRule("perf.top_ram5", "performance_tools", "top_ram", "safe", ("top 5 ram", "اكثر 5 تطبيقات تستهلك الرام", "اعلى 5 ram")),
+    IntentRule("perf.top_disk5", "performance_tools", "top_disk", "safe", ("top 5 disk", "اكثر 5 تطبيقات تستهلك القرص", "اعلى 5 disk")),
+    IntentRule("perf.total_ram", "performance_tools", "total_ram_percent", "safe", ("total ram percent", "اجمالي استهلاك الرام", "نسبة استهلاك الرام")),
+    IntentRule("perf.total_cpu", "performance_tools", "total_cpu_percent", "safe", ("total cpu percent", "اجمالي استهلاك المعالج", "نسبة استهلاك المعالج")),
+    IntentRule("perf.cpu_clock", "performance_tools", "cpu_clock", "safe", ("cpu clock", "سرعة المعالج الحالية")),
+    IntentRule("perf.available_ram", "performance_tools", "available_ram", "safe", ("available ram", "حجم الذاكرة المتاحة", "الرام المتاح")),
+    IntentRule("perf.pagefile", "performance_tools", "pagefile_used", "safe", ("page file used", "حجم ملف التبادل", "استهلاك page file")),
     IntentRule("window.minimize", "window_control", "minimize", "safe", ("minimize window", "تصغير النافذه", "تصغير النافذة")),
     IntentRule("window.maximize", "window_control", "maximize", "safe", ("maximize window", "تكبير النافذه", "تكبير النافذة")),
     IntentRule("window.restore", "window_control", "restore", "safe", ("restore window", "استعاده النافذه", "استعادة النافذة")),
@@ -616,6 +640,16 @@ def _build_params(rule: IntentRule, raw_text: str, normalized: str) -> dict[str,
         )
         if q:
             params["name"] = q
+    if rule.capability_id in {"startup.disable", "startup.enable"}:
+        q = _extract_named_value(
+            raw_text,
+            (
+                r"(?:disable startup|تعطيل برنامج من بدء التشغيل)\s+(.+)$",
+                r"(?:enable startup|تفعيل برنامج في بدء التشغيل)\s+(.+)$",
+            ),
+        )
+        if q:
+            params["name"] = q
     if rule.capability_id == "window.rename_title" and not params.get("text"):
         q = _extract_named_value(
             raw_text,
@@ -642,6 +676,17 @@ def resolve_windows_intent(message: str) -> IntentResolution:
         return IntentResolution(matched=False)
 
     # Contextual override for percentage-based audio/brightness set.
+    if _contains_any(normalized, ("تمنع", "منع", "blocking", "wake lock")) and _contains_any(
+        normalized, ("السكون", "sleep")
+    ):
+        return IntentResolution(
+            matched=True,
+            capability_id="background.wake_lock",
+            action="background_tools",
+            params={"mode": "wake_lock_apps"},
+            risk_level="safe",
+        )
+
     if _contains_any(normalized, ("volume", "الصوت", "الاضاءه", "السطوع", "brightness")):
         if any(token in normalized for token in ("set", "اجعل", "خلي", "اعمل", "to ", "الى", "إلى")):
             value = _extract_first_int(raw)
