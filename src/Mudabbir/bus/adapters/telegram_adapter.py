@@ -86,50 +86,6 @@ def _sanitize_telegram_text(text: str) -> str:
     return cleaned
 
 
-def _clip_user_hint(text: str, max_len: int = 110) -> str:
-    hint = re.sub(r"\s+", " ", str(text or "")).strip()
-    if not hint:
-        return ""
-    if len(hint) <= max_len:
-        return hint
-    return hint[: max_len - 1].rstrip() + "…"
-
-
-def _infer_safe_fallback_text(raw_text: str, user_text: str = "") -> str:
-    lowered = str(raw_text or "").strip().lower()
-    hint = _clip_user_hint(user_text)
-    arabic = _contains_arabic(user_text or raw_text)
-
-    if any(token in lowered for token in ("imagegrab.grab", "pyautogui.screenshot", "screen_snapshot", "screenshot.save")):
-        return "تم تنفيذ طلب الشاشة بنجاح وتم إخفاء التفاصيل التقنية." if arabic else "Screen action was executed successfully; technical payload details were hidden."
-    if any(token in lowered for token in ("launch_start_app", "start-process", "shell:appsfolder", "open_settings_page")):
-        return "تم تنفيذ أمر فتح/تشغيل التطبيق بنجاح." if arabic else "Application launch/open action was executed successfully."
-    if any(token in lowered for token in ("battery_status", "sensors_battery", "win32_battery")):
-        return "تم تنفيذ طلب قراءة حالة البطارية." if arabic else "Battery status request was executed."
-    if any(token in lowered for token in ("volume", "set-volume", "set-volumelevel", "volumedown", "volumeup")):
-        return "تم تنفيذ أمر التحكم بالصوت." if arabic else "Volume control action was executed."
-    if any(token in lowered for token in ("brightness", "screen_brightness_control")):
-        return "تم تنفيذ أمر التحكم بالسطوع." if arabic else "Brightness control action was executed."
-    if any(token in lowered for token in ("pyautogui.write", '"action":"type_text"', '"action": "type_text"')):
-        return "تم تنفيذ الكتابة على الكيبورد بنجاح." if arabic else "Keyboard typing action was executed successfully."
-    if any(token in lowered for token in ("pyautogui.press", '"action":"press_key"', '"action":"hotkey"', '"action": "press_key"', '"action": "hotkey"')):
-        return "تم تنفيذ أمر لوحة المفاتيح بنجاح." if arabic else "Keyboard action was executed successfully."
-    if any(token in lowered for token in ("pyautogui.click", '"action":"click"', '"action":"mouse_move"', '"action": "click"', '"action": "mouse_move"', "ui_target")):
-        return "تم تنفيذ أمر التحكم بالمؤشر/النقر بنجاح." if arabic else "Cursor/click action was executed successfully."
-
-    if hint:
-        return (
-            f"تم تنفيذ طلبك: {hint}\nتم إخفاء التفاصيل التقنية غير المهمة."
-            if arabic
-            else f"Executed your request: {hint}\nTechnical payload details were hidden."
-        )
-    return (
-        "تم تنفيذ الطلب بنجاح مع إخفاء التفاصيل التقنية غير المهمة."
-        if arabic
-        else "Request executed successfully with technical payload details hidden."
-    )
-
-
 class _TelegramPollingNoiseFilter(logging.Filter):
     """Suppress repetitive DNS/polling trace noise while keeping other errors."""
 
@@ -403,10 +359,9 @@ class TelegramAdapter(BaseChannelAdapter):
             buf = self._buffers[chat_id]
             safe_text = _sanitize_telegram_text(str(buf["text"] or ""))
             if not safe_text:
-                safe_text = _infer_safe_fallback_text(
-                    raw_text=str(buf.get("raw_text", "")),
-                    user_text=self._last_user_text_by_chat.get(chat_id, ""),
-                )
+                safe_text = _sanitize_telegram_text(str(buf.get("raw_text", "") or ""))
+            if not safe_text.strip():
+                safe_text = "…"
             text = convert_markdown(safe_text, self.channel)
             await self._update_message(chat_id, buf["message_id"], text)
             del self._buffers[chat_id]

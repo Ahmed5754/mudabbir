@@ -15,6 +15,7 @@ It replaces the old highly-coupled bot loops.
 """
 
 import asyncio
+import json
 import logging
 import re
 
@@ -93,6 +94,125 @@ class AgentLoop:
 
         self._running = False
         get_command_handler().set_on_settings_changed(self._on_settings_changed)
+
+    async def _llm_one_shot_text(
+        self,
+        *,
+        system_prompt: str,
+        user_prompt: str,
+        max_tokens: int = 300,
+        temperature: float = 0.2,
+    ) -> str | None:
+        """Run a single non-streaming completion using current provider settings."""
+        try:
+            from Mudabbir.llm.client import resolve_llm_client
+
+            llm = resolve_llm_client(self.settings)
+
+            if llm.is_ollama:
+                import httpx
+
+                payload = {
+                    "model": llm.model,
+                    "messages": [
+                        {"role": "system", "content": system_prompt},
+                        {"role": "user", "content": user_prompt},
+                    ],
+                    "stream": False,
+                    "options": {
+                        "temperature": max(0.0, min(1.0, float(temperature))),
+                    },
+                }
+                async with httpx.AsyncClient(timeout=30.0) as client:
+                    resp = await client.post(f"{llm.ollama_host}/api/chat", json=payload)
+                    resp.raise_for_status()
+                    data = resp.json()
+                    content = (
+                        (data.get("message") or {}).get("content", "")
+                        if isinstance(data, dict)
+                        else ""
+                    )
+                    return str(content or "").strip() or None
+
+            if llm.provider in {"openai", "openai_compatible", "gemini"}:
+                if llm.provider == "openai":
+                    from openai import AsyncOpenAI
+
+                    client = AsyncOpenAI(
+                        api_key=llm.api_key,
+                        timeout=30.0,
+                        max_retries=1,
+                    )
+                else:
+                    client = llm.create_openai_client(timeout=30.0, max_retries=1)
+
+                request_temperature = max(0.0, min(1.0, float(temperature)))
+                if llm.is_gemini and str(llm.model).lower().startswith("gemini-3"):
+                    request_temperature = 1.0
+
+                response = await client.chat.completions.create(
+                    model=llm.model,
+                    messages=[
+                        {"role": "system", "content": system_prompt},
+                        {"role": "user", "content": user_prompt},
+                    ],
+                    temperature=request_temperature,
+                    max_tokens=int(max(80, min(1200, max_tokens))),
+                )
+                message = response.choices[0].message if response and response.choices else None
+                return str(getattr(message, "content", "") or "").strip() or None
+
+            client = llm.create_anthropic_client(timeout=30.0, max_retries=1)
+            response = await client.messages.create(
+                model=llm.model,
+                max_tokens=int(max(80, min(1200, max_tokens))),
+                system=system_prompt,
+                messages=[{"role": "user", "content": user_prompt}],
+            )
+            parts: list[str] = []
+            for block in getattr(response, "content", []) or []:
+                if getattr(block, "type", "") == "text":
+                    parts.append(str(getattr(block, "text", "") or ""))
+            text = "".join(parts).strip()
+            return text or None
+        except Exception as exc:
+            logger.debug("Response composer completion failed: %s", exc)
+            return None
+
+    async def _compose_response(
+        self,
+        *,
+        user_query: str,
+        events: list[dict],
+        fallback_text: str,
+    ) -> str:
+        """Compose a flexible factual response from execution events."""
+        style = str(getattr(self.settings, "ai_response_style", "flex_factual") or "flex_factual")
+        max_tokens = int(getattr(self.settings, "ai_response_max_tokens", 320) or 320)
+
+        system_prompt = (
+            "You are Mudabbir response composer.\n"
+            "Write a natural, elegant user-facing reply in the same language as the user.\n"
+            "Be factual. Keep concrete numbers/paths/status exactly when available.\n"
+            "Never output raw tool payload JSON, code, or markdown fences.\n"
+            "Do not invent actions that were not executed.\n"
+            f"Style mode: {style}."
+        )
+        user_prompt = (
+            f"User request:\n{user_query}\n\n"
+            f"Execution events (JSON):\n{json.dumps(events[-24:], ensure_ascii=False)}\n\n"
+            f"Fallback plain text:\n{fallback_text[:2200]}\n\n"
+            "Now produce the final answer."
+        )
+        composed = await self._llm_one_shot_text(
+            system_prompt=system_prompt,
+            user_prompt=user_prompt,
+            max_tokens=max_tokens,
+            temperature=0.25,
+        )
+        if composed:
+            return composed
+        return fallback_text
 
     def _on_settings_changed(self) -> None:
         """Reload settings-sensitive runtime pieces after slash command updates."""
@@ -343,6 +463,11 @@ class AgentLoop:
             # 3. Run through AgentRouter (handles all backends)
             router = self._get_router()
             full_response = ""
+            composition_events: list[dict] = []
+            use_ai_composer = bool(
+                getattr(self.settings, "ai_response_composer_enabled", True)
+                and self.settings.agent_backend == "open_interpreter"
+            )
 
             run_iter = router.run(content, system_prompt=system_prompt, history=history)
             try:
@@ -359,16 +484,18 @@ class AgentLoop:
                         content = self._sanitize_stream_chunk(content)
                         if not content:
                             continue
-                        # Stream text to user
+                        composition_events.append({"type": "message", "content": content})
                         full_response += content
-                        await self.bus.publish_outbound(
-                            OutboundMessage(
-                                channel=message.channel,
-                                chat_id=message.chat_id,
-                                content=content,
-                                is_stream_chunk=True,
+                        if not use_ai_composer:
+                            # Stream text to user
+                            await self.bus.publish_outbound(
+                                OutboundMessage(
+                                    channel=message.channel,
+                                    chat_id=message.chat_id,
+                                    content=content,
+                                    is_stream_chunk=True,
+                                )
                             )
-                        )
 
                     elif chunk_type == "code":
                         # Code block from Open Interpreter - emit as tool_use
@@ -384,15 +511,17 @@ class AgentLoop:
                         )
                         # Also stream to user
                         code_block = f"\n```{language}\n{content}\n```\n"
+                        composition_events.append({"type": "code", "language": language})
                         full_response += code_block
-                        await self.bus.publish_outbound(
-                            OutboundMessage(
-                                channel=message.channel,
-                                chat_id=message.chat_id,
-                                content=code_block,
-                                is_stream_chunk=True,
+                        if not use_ai_composer:
+                            await self.bus.publish_outbound(
+                                OutboundMessage(
+                                    channel=message.channel,
+                                    chat_id=message.chat_id,
+                                    content=code_block,
+                                    is_stream_chunk=True,
+                                )
                             )
-                        )
 
                     elif chunk_type == "output":
                         # Output from code execution - emit as tool_result
@@ -408,15 +537,17 @@ class AgentLoop:
                         )
                         # Also stream to user
                         output_block = f"\n```output\n{content}\n```\n"
+                        composition_events.append({"type": "output", "content": content[:400]})
                         full_response += output_block
-                        await self.bus.publish_outbound(
-                            OutboundMessage(
-                                channel=message.channel,
-                                chat_id=message.chat_id,
-                                content=output_block,
-                                is_stream_chunk=True,
+                        if not use_ai_composer:
+                            await self.bus.publish_outbound(
+                                OutboundMessage(
+                                    channel=message.channel,
+                                    chat_id=message.chat_id,
+                                    content=output_block,
+                                    is_stream_chunk=True,
+                                )
                             )
-                        )
 
                     elif chunk_type == "thinking":
                         # Thinking goes to Activity panel only
@@ -459,6 +590,33 @@ class AgentLoop:
                                 },
                             )
                         )
+                        composition_events.append(
+                            {
+                                "type": "tool_result",
+                                "tool": metadata.get("name") or metadata.get("tool", "unknown"),
+                                "content": str(content)[:400],
+                            }
+                        )
+
+                    elif chunk_type == "result":
+                        composition_events.append(
+                            {
+                                "type": "result",
+                                "content": str(content or ""),
+                                "metadata": metadata,
+                            }
+                        )
+                        rendered = str(content or "")
+                        full_response += rendered
+                        if not use_ai_composer and rendered:
+                            await self.bus.publish_outbound(
+                                OutboundMessage(
+                                    channel=message.channel,
+                                    chat_id=message.chat_id,
+                                    content=rendered,
+                                    is_stream_chunk=True,
+                                )
+                            )
 
                     elif chunk_type == "error":
                         # Emit error and send to user
@@ -472,6 +630,7 @@ class AgentLoop:
                                 },
                             )
                         )
+                        composition_events.append({"type": "error", "content": content})
                         await self.bus.publish_outbound(
                             OutboundMessage(
                                 channel=message.channel,
@@ -498,6 +657,22 @@ class AgentLoop:
                 await run_iter.aclose()
 
             # 4. Send stream end marker
+            if use_ai_composer and full_response.strip():
+                composed = await self._compose_response(
+                    user_query=message.content,
+                    events=composition_events,
+                    fallback_text=full_response,
+                )
+                full_response = composed
+                await self.bus.publish_outbound(
+                    OutboundMessage(
+                        channel=message.channel,
+                        chat_id=message.chat_id,
+                        content=composed,
+                        is_stream_chunk=True,
+                    )
+                )
+
             await self.bus.publish_outbound(
                 OutboundMessage(
                     channel=message.channel,

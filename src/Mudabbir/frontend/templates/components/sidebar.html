@@ -27,28 +27,21 @@
     <i x-show="!isDesktop || !sidebarCollapsed" data-lucide="brain-circuit" class="w-5 h-5 text-accent"></i>
     <span x-show="!isDesktop || !sidebarCollapsed" class="text-lg font-semibold tracking-tight">Mudabbir</span>
     <span x-show="!isDesktop || !sidebarCollapsed" class="px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wider bg-amber-500/20 text-amber-400 border border-amber-500/30 rounded-full leading-none">Beta</span>
-    <!-- Collapsed logo button -->
+    <!-- Health indicator / collapsed logo -->
     <button
-        x-show="isDesktop && sidebarCollapsed"
-        class="w-7 h-7 rounded-lg shrink-0 inline-flex items-center justify-center text-accent bg-accent/10 border border-accent/30"
-        @click="openHealthPanel(); sidebarOpen = false"
-        title="Mudabbir"
-    >
-        <i data-lucide="brain-circuit" class="w-4 h-4"></i>
-    </button>
-    <!-- Health indicator dot -->
-    <button
-        x-show="!isDesktop || !sidebarCollapsed"
-        class="w-2.5 h-2.5 rounded-full shrink-0 transition-colors"
-        :class="{
-            'bg-green-400': healthStatus === 'healthy',
-            'bg-yellow-400 animate-pulse': healthStatus === 'degraded',
-            'bg-red-400 animate-pulse': healthStatus === 'unhealthy',
-            'bg-white/20': !healthStatus || healthStatus === 'unknown'
-        }"
+        x-show="!isDesktop || !sidebarCollapsed || (isDesktop && sidebarCollapsed)"
+        class="shrink-0 transition-colors inline-flex items-center justify-center"
+        :class="(isDesktop && sidebarCollapsed) ? 'w-7 h-7 rounded-lg text-accent bg-accent/10 border border-accent/30' : (
+            healthStatus === 'healthy' ? 'w-2.5 h-2.5 rounded-full bg-green-400' :
+            healthStatus === 'degraded' ? 'w-2.5 h-2.5 rounded-full bg-yellow-400 animate-pulse' :
+            healthStatus === 'unhealthy' ? 'w-2.5 h-2.5 rounded-full bg-red-400 animate-pulse' :
+            'w-2.5 h-2.5 rounded-full bg-white/20'
+        )"
         @click="openHealthPanel(); sidebarOpen = false"
         :title="'System: ' + (healthStatus || 'unknown')"
-    ></button>
+    >
+        <i x-show="isDesktop && sidebarCollapsed" data-lucide="brain-circuit" class="w-4 h-4"></i>
+    </button>
 
     <button
         class="hidden md:inline-flex ml-auto p-1.5 rounded-lg text-white/50 hover:text-white hover:bg-white/10 transition-colors"

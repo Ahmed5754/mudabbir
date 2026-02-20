@@ -1026,26 +1026,7 @@ class OpenInterpreterAgent:
     - Provides sandboxed execution environment
     """
 
-    AI_DESKTOP_ACTIONS = {
-        "launch_start_app",
-        "open_settings_page",
-        "close_app",
-        "list_processes",
-        "battery_status",
-        "volume",
-        "brightness",
-        "mouse_move",
-        "click",
-        "press_key",
-        "type_text",
-        "hotkey",
-        "focus_window",
-        "search_files",
-        "list_windows",
-        "desktop_overview",
-        "ui_target",
-        "move_mouse_to_desktop_file",
-    }
+    AI_DESKTOP_ACTIONS: set[str] = set()
 
     def __init__(self, settings: Settings):
         self.settings = settings
@@ -1054,6 +1035,73 @@ class OpenInterpreterAgent:
         self._semaphore = asyncio.Semaphore(1)
         self._desktop_context_cache: dict | None = None
         self._desktop_context_cache_at: float = 0.0
+        if not self.AI_DESKTOP_ACTIONS:
+            try:
+                from Mudabbir.tools.capabilities.registry import DEFAULT_CAPABILITY_REGISTRY
+
+                self.AI_DESKTOP_ACTIONS = DEFAULT_CAPABILITY_REGISTRY.allowed_actions_stage_a()
+            except Exception:
+                self.AI_DESKTOP_ACTIONS = {
+                    "launch_start_app",
+                    "open_settings_page",
+                    "close_app",
+                    "system_power",
+                    "shutdown_schedule",
+                    "system_info",
+                    "network_tools",
+                    "file_tools",
+                    "window_control",
+                    "process_tools",
+                    "service_tools",
+                    "background_tools",
+                    "startup_tools",
+                    "clipboard_tools",
+                    "browser_control",
+                    "user_tools",
+                    "task_tools",
+                    "registry_tools",
+                    "disk_tools",
+                    "security_tools",
+                    "web_tools",
+                    "hardware_tools",
+                    "update_tools",
+                    "ui_tools",
+                    "automation_tools",
+                    "app_tools",
+                    "info_tools",
+                    "dev_tools",
+                    "shell_tools",
+                    "office_tools",
+                    "remote_tools",
+                    "search_tools",
+                    "performance_tools",
+                    "media_tools",
+                    "browser_deep_tools",
+                    "maintenance_tools",
+                    "driver_tools",
+                    "power_user_tools",
+                    "screenshot_tools",
+                    "text_tools",
+                    "api_tools",
+                    "vision_tools",
+                    "threat_tools",
+                    "content_tools",
+                    "list_processes",
+                    "battery_status",
+                    "volume",
+                    "brightness",
+                    "mouse_move",
+                    "click",
+                    "press_key",
+                    "type_text",
+                    "hotkey",
+                    "focus_window",
+                    "search_files",
+                    "list_windows",
+                    "desktop_overview",
+                    "ui_target",
+                    "move_mouse_to_desktop_file",
+                }
         self._initialize()
 
     def _initialize(self) -> None:
@@ -1637,9 +1685,50 @@ Available actions and parameters:
 - open_settings_page: page
 - close_app: process_name, force?
 - list_processes: only_windowed?, max_results?
+- system_power: mode=lock|sleep|hibernate|logoff|shutdown|restart|bios|rename_pc|screen_off|power_plan_balanced|power_plan_saver|power_plan_high, name?
+- shutdown_schedule: mode=set|cancel, minutes?
+- system_info: mode=uptime|windows_version|about|battery
 - battery_status: no params
 - volume: mode=get|set|up|down|max|min|mute|unmute, level?, delta?
 - brightness: mode=get|set|up|down|max|min, level?, delta?
+- network_tools: mode=ip_internal|ip_external|flush_dns|renew_ip|ping|wifi_on|wifi_off|wifi_passwords|disconnect_wifi|disconnect_current_network|connect_wifi|route_table|net_scan|open_settings|open_ports|port_owner|hotspot_on|hotspot_off|file_sharing_on|file_sharing_off|shared_folders|server_online|last_login_events, host?, port?
+- file_tools: mode=open_documents|open_downloads|open_pictures|open_videos|organize_desktop|organize_desktop_semantic|smart_rename|smart_rename_content|create_folder|delete|rename|copy|move|zip|unzip|search_ext|folder_size|open_cmd_here|open_powershell_here|empty_recycle_bin, path?, target?, name?, ext?, permanent?
+- window_control: mode=minimize|maximize|restore|close_current|show_desktop|undo_show_desktop|split_left|split_right|alt_tab|task_view|bring_to_front|set_focus|hide|show|minimize_to_tray|restore_from_tray|coords|move_resize|transparency|borderless_on|borderless_off|disable_close_on|disable_close_off|span_all_screens|move_next_monitor_right|move_next_monitor_left|always_on_top_on|always_on_top_off, app?, x?, y?, width?, height?, opacity?
+- process_tools: mode=list|top_cpu|top_ram|kill_pid|kill_name|close_browsers|close_office|kill_high_cpu|restart_explorer|kill_unresponsive|path_by_pid|cpu_by_pid|ram_by_pid|threads_by_pid|start_time_by_pid|app_uptime|set_priority|suspend_pid|resume_pid|unresponsive, pid?, name?, priority?, threshold?
+- service_tools: mode=list|start|stop|restart|startup|user_services, name?, startup?
+- background_tools: mode=count_background|list_minimized_windows|list_visible_windows|ghost_apps|activity_time|network_usage_per_app|camera_usage|mic_usage|camera_usage_now|mic_usage_now|wake_lock_apps|process_paths, max_results?
+- startup_tools: mode=list|impact_time|impact_breakdown|registry_startups|folder_startups|disable|enable|detect_new|watch_new_live|signature_check|full_audit, name?, seconds?, monitor_seconds?, notify?
+- clipboard_tools: mode=clear|history
+- browser_control: mode=new_tab|close_tab|reopen_tab|next_tab|prev_tab|reload|incognito|history|downloads|find|zoom_in|zoom_out|zoom_reset|save_pdf|home
+- user_tools: mode=list|create|delete|set_password|set_type, username?, password?, group?
+- task_tools: mode=list|create|run|delete, name?, command?, trigger?
+- registry_tools: mode=query|add_key|delete_key|set_value|backup|restore, key, value_name?, value_data?, value_type?
+- disk_tools: mode=smart_status|temp_files_clean|disk_usage|chkdsk_scan|prefetch_clean|logs_clean|defrag, drive?
+- security_tools: mode=firewall_status|firewall_enable|firewall_disable|block_port|unblock_rule|disable_usb|enable_usb|disable_camera|enable_camera|logged_in_users|remote_sessions_list|recent_files|recent_files_clear|current_connections_ips|admin_processes|failed_audit_logins|close_remote_sessions|intrusion_summary, port?, rule_name?
+- web_tools: mode=open_url|download_file|weather, url?, city?
+- hardware_tools: mode=cpu_info|cores_info|gpu_info|gpu_temp|mobo_serial|mobo_model|ram_info|ram_speed_type|battery_report|battery_minutes|battery_cycle_count|smart_status, drive?
+- update_tools: mode=list_updates|last_update_time|check_updates|install_kb|winsxs_cleanup|stop_background_updates, target?
+- ui_tools: mode=dark_mode|light_mode|transparency_on|transparency_off|taskbar_autohide_on|taskbar_autohide_off|night_light_on|night_light_off|desktop_icons_show|desktop_icons_hide|game_mode_on|game_mode_off
+- automation_tools: mode=delay|popup|tts|repeat_key|mouse_keys_toggle|timer|mouse_lock_on|mouse_lock_off|mouse_lock_region|anti_idle_f5|battery_guard|screen_off_mouse_lock, seconds?, monitor_seconds?, text?, key?, repeat_count?, x?, y?, width?, height?
+- app_tools: mode=open_default_browser|open_notepad|open_calc|open_paint|open_task_manager|open_control_panel|open_store|open_registry|open_camera|open_calendar|open_mail|open_chrome|open_edge|open_add_remove_programs|open_volume_mixer|open_mic_settings|close_all_apps|open_app, app?
+- info_tools: mode=timezone_get|timezone_set|system_language|windows_product_key|model_info|windows_install_date|refresh_rate, timezone?
+- dev_tools: mode=open_cmd_admin|open_powershell_admin|open_disk_management|open_device_manager|open_perfmon|open_event_viewer|open_services|open_registry|sfc_scan|chkdsk|env_vars|runtime_versions|git_last_log|open_editor|event_errors|bsod_summary|analyze_bsod|interpret_powershell, drive?, path?, editor?, max_results?, target?, text?, force?
+- shell_tools: mode=quick_settings|notifications|search|run|file_explorer|quick_link_menu|task_view|new_virtual_desktop|next_virtual_desktop|prev_virtual_desktop|close_virtual_desktop|emoji_panel|start_menu|refresh|magnifier_open|magnifier_close|narrator_toggle
+- office_tools: mode=open_word_new|silent_print|docx_to_pdf, path?, target?
+- remote_tools: mode=rdp_open|vpn_connect|vpn_disconnect, host?
+- search_tools: mode=search_text|files_larger_than|modified_today|find_images|find_videos|count_files|search_open_windows|search_open_windows_content, folder?, pattern?, size_mb?
+- performance_tools: mode=top_cpu|top_ram|top_disk|total_ram_percent|total_cpu_percent|cpu_clock|available_ram|pagefile_used|disk_io_rate|gpu_util|top_gpu_processes|gpu_temp|empty_ram|cpu_popup|kill_high_cpu, threshold?
+- media_tools: mode=stop_all_media|youtube_open|media_next|media_prev|play_pause, url?
+- browser_deep_tools: mode=multi_open|clear_chrome_cache|clear_edge_cache, urls?
+- maintenance_tools: mode=empty_ram|winsxs_cleanup|temp_clean
+- driver_tools: mode=drivers_list|drivers_backup|drivers_issues|updates_pending
+- power_user_tools: mode=airplane_on|airplane_off|god_mode|invert_colors
+- screenshot_tools: mode=full|snipping_tool|window_active|region, x?, y?, width?, height?, path?
+- text_tools: mode=text_to_file|clipboard_to_file|word_count|search_replace_files|create_batch, path?, content?, folder?, pattern?, replace_with?
+- api_tools: mode=currency|weather_city|translate_quick, target?, city?, text?
+- vision_tools: mode=describe_screen|ocr_screen|ocr_image|ocr_active_window|ocr_region|copy_ocr_to_clipboard, path?, x?, y?, width?, height?
+- threat_tools: mode=file_hash|sha256|vt_lookup|external_ips|suspicious_connections|suspicious_apps|behavior_scan, path?, target?, max_results?
+- content_tools: mode=draft_reply|email_draft|email_auto_reply_docx|auto_reply_word|draft_to_word|save_word_draft|text_numbers_to_excel|text_to_excel, content?, path?, target?
 - mouse_move: x, y, duration?
 - click: x?, y?, button?, clicks?
 - press_key: key
@@ -1767,60 +1856,57 @@ Required JSON schema:
 
         should_execute = bool(plan.get("should_execute", False))
         if not should_execute:
-            return {"type": "ai_noop", "content": ""}
+            return {"type": "ai_noop", "content": "", "metadata": {"plan": plan}}
 
         actions = plan.get("actions", [])
         if not isinstance(actions, list) or not actions:
             reason = str(plan.get("reason", "") or "").strip()
             if not reason:
                 reason = "Could not determine executable desktop actions."
-            return {"type": "message", "content": reason}
+            return {
+                "type": "result",
+                "content": reason,
+                "metadata": {
+                    "capability_id": "desktop.plan",
+                    "risk_level": "safe",
+                    "facts": {"reason": reason, "should_execute": False},
+                    "plan": plan,
+                },
+            }
 
         results = await self._execute_ai_desktop_actions(actions)
         if not results:
             return None
-
-        summary_system = (
-            "You are a polite assistant summarizing desktop action execution results.\n"
-            "Respond in the user's language based on the original request.\n"
-            "Mention what succeeded and what failed clearly.\n"
-            "Do not output JSON/code/tool payloads.\n"
-            "Do not mention pixel coordinates or low-level mouse movement details unless user explicitly asks."
-        )
-        summary_user = (
-            f"User request:\n{message}\n\n"
-            f"Execution plan:\n{json.dumps(plan, ensure_ascii=False)}\n\n"
-            f"Execution results:\n{json.dumps(results, ensure_ascii=False)}\n\n"
-            "Write a concise natural response."
-        )
-        final_text = await self._llm_one_shot_text(
-            system_prompt=summary_system,
-            user_prompt=summary_user,
-            max_tokens=260,
-            temperature=0.2,
-        )
-        if final_text and not (
-            _looks_like_execute_noise(final_text)
-            or _looks_like_execute_payload_fragment(final_text)
-            or _looks_like_raw_command_leak(final_text)
-        ):
-            return {"type": "message", "content": final_text}
-
-        # Fallback summary if summarizer output is unavailable.
         ok_steps = [r for r in results if isinstance(r, dict) and r.get("ok")]
         fail_steps = [r for r in results if isinstance(r, dict) and not r.get("ok")]
-        lines: list[str] = []
+        fallback_lines: list[str] = []
         if ok_steps:
-            lines.append("تم تنفيذ الأوامر التالية بنجاح:" if _contains_arabic(message) else "Executed successfully:")
-            for step in ok_steps:
-                lines.append(f"- {step.get('action')}")
+            fallback_lines.append(
+                "Executed actions: " + ", ".join(str(step.get("action", "")) for step in ok_steps)
+            )
         if fail_steps:
-            lines.append("أوامر فشلت:" if _contains_arabic(message) else "Failed actions:")
-            for step in fail_steps:
-                lines.append(f"- {step.get('action')}: {step.get('error', 'unknown error')}")
-        if not lines:
-            lines.append("No desktop actions were executed.")
-        return {"type": "message", "content": "\n".join(lines)}
+            fallback_lines.append(
+                "Failed actions: "
+                + ", ".join(
+                    f"{step.get('action', 'unknown')} ({step.get('error', 'error')})"
+                    for step in fail_steps
+                )
+            )
+        fallback_text = "\n".join(fallback_lines).strip() or "Desktop actions processed."
+        return {
+            "type": "result",
+            "content": fallback_text,
+            "metadata": {
+                "capability_id": "desktop.batch",
+                "risk_level": "safe",
+                "facts": {
+                    "success_count": len(ok_steps),
+                    "failure_count": len(fail_steps),
+                },
+                "plan": plan,
+                "results": results,
+            },
+        }
 
     async def _try_direct_desktop_response(
         self, message: str, history: list[dict] | None = None

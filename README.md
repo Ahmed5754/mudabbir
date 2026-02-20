@@ -240,6 +240,23 @@ Uses your existing Chrome if you have it. No extra downloads. If you don't have 
 
 ---
 
+## Windows Skills Coverage (31-39 + AI)
+
+Mudabbir now includes a large Windows desktop skillset covering your requested categories:
+
+- `31. Background Apps Skills`: `background_tools` (`count_background`, `list_minimized_windows`, `list_visible_windows`, `ghost_apps`, `activity_time`, `network_usage_per_app`, `camera_usage_now`, `mic_usage_now`, `wake_lock_apps`, `process_paths`)
+- `32. Startup Skills`: `startup_tools` (`list`, `impact_breakdown`, `disable`, `enable`, `registry_startups`, `folder_startups`, `detect_new`, `watch_new_live`, `signature_check`, `full_audit`)
+- `33. Resource Monitoring`: `performance_tools` (`top_cpu`, `top_ram`, `top_disk`, `total_cpu_percent`, `total_ram_percent`, `cpu_clock`, `available_ram`, `top_gpu_processes`, `gpu_temp`, `pagefile_used`, `disk_io_rate`)
+- `34. App Killing & Cleaning`: `process_tools` (`kill_name`, `kill_pid`, `kill_unresponsive`, `kill_high_cpu`, `close_browsers`, `close_office`, `restart_explorer`) + `maintenance_tools` (`empty_ram`)
+- `35. Deep System Info`: `hardware_tools` + `info_tools` + `driver_tools` + `update_tools` (`cores_info`, `ram_speed_type`, `mobo_model`, `battery_minutes`, `battery_cycle_count`, `drivers_issues`, `windows_install_date`, `last_update_time`)
+- `36. Advanced UI Skills`: `window_control` (`set_focus`, `transparency`, `borderless_on/off`, `disable_close_on/off`, `minimize_to_tray`, `span_all_screens`, `move_resize`)
+- `37. Security Awareness`: `security_tools` (`logged_in_users`, `recent_files`, `recent_files_clear`, `current_connections_ips`, `firewall_status`, `admin_processes`, `failed_audit_logins`, `intrusion_summary`, `remote_sessions_list`, `close_remote_sessions`)
+- `38. Smart Utilities`: `text_tools`, `search_tools`, `screenshot_tools`, `automation_tools`, `ui_tools`, `service_tools` (`clipboard_to_file`, `search_open_windows_content`, screenshot-to-path, timer, mouse lock/region, anti-idle F5, battery guard, screen-off mouse lock, `refresh_rate`, `user_services`, `game_mode_on/off`)
+- `39. Dev Integration`: `dev_tools` (`open_editor`, `env_vars`, `runtime_versions`, `git_last_log`, `create_batch` via `text_tools`) + `interpret_powershell`
+- `AI Add-ons`: `vision_tools` (screen description + OCR), `threat_tools` (`behavior_scan`, `vt_lookup`, file hash), `file_tools` semantic organization and smart content rename, `content_tools` (email/Word drafts + text-to-Excel)
+
+---
+
 ## Architecture
 
 <p align="center">

@@ -314,6 +314,21 @@ class Settings(BaseSettings):
         default=True,
         description="Stop OI stream once a successful final result is detected",
     )
+    ai_response_composer_enabled: bool = Field(
+        default=True,
+        description=(
+            "Use an AI composer to generate flexible factual final replies "
+            "instead of fixed template responses."
+        ),
+    )
+    ai_response_style: str = Field(
+        default="flex_factual",
+        description="Response composer style profile.",
+    )
+    ai_response_max_tokens: int = Field(
+        default=320,
+        description="Max tokens for AI response composer output.",
+    )
 
     # LLM Configuration
     llm_provider: str = Field(
