@@ -26,6 +26,9 @@ logger = logging.getLogger(__name__)
 DEFAULT_OI_MAX_CODE_BLOCKS = 3
 DEFAULT_OI_REPEAT_COMMAND_LIMIT = 1
 DEFAULT_OI_MAX_FIX_RETRIES = 1
+OI_QUEUE_WAIT_CAP_SECONDS = 600
+OI_QUEUE_ACQUIRE_POLL_SECONDS = 5
+OI_QUEUE_HEARTBEAT_SECONDS = 20
 DONE_PATTERNS = (
     "task is done",
     "done",
@@ -4252,8 +4255,50 @@ Required JSON schema:
             history: Recent session history (prepended as summary to prompt).
             system_message: Legacy kwarg, superseded by system_prompt.
         """
-        # Semaphore(1) ensures only one OI session runs at a time
-        async with self._semaphore:
+        # Queue-aware admission for semaphore(1): emit hidden status heartbeats
+        # while waiting so upstream first-chunk timeout does not trigger falsely.
+        acquired = False
+        queue_wait_started_at = time.monotonic()
+        last_queue_heartbeat_at = 0.0
+
+        try:
+            while not acquired:
+                try:
+                    await asyncio.wait_for(
+                        self._semaphore.acquire(),
+                        timeout=OI_QUEUE_ACQUIRE_POLL_SECONDS,
+                    )
+                    acquired = True
+                except TimeoutError:
+                    waited = int(time.monotonic() - queue_wait_started_at)
+                    if waited >= OI_QUEUE_WAIT_CAP_SECONDS:
+                        logger.warning(
+                            "Open Interpreter queue wait exceeded cap (wait=%ss cap=%ss)",
+                            waited,
+                            OI_QUEUE_WAIT_CAP_SECONDS,
+                        )
+                        yield {
+                            "type": "error",
+                            "content": (
+                                "Agent backend is busy for too long. Please retry shortly."
+                                if not _contains_arabic(message)
+                                else "الباكند مشغول لفترة طويلة. حاول مرة ثانية بعد قليل."
+                            ),
+                        }
+                        return
+
+                    now = time.monotonic()
+                    if (now - last_queue_heartbeat_at) >= OI_QUEUE_HEARTBEAT_SECONDS:
+                        last_queue_heartbeat_at = now
+                        yield {
+                            "type": "status",
+                            "content": "waiting_for_backend_slot",
+                            "metadata": {
+                                "wait_seconds": waited,
+                                "wait_cap_seconds": OI_QUEUE_WAIT_CAP_SECONDS,
+                            },
+                        }
+
             self._stop_flag = False
             user_request = message
             is_arabic_request = _contains_arabic(user_request)
@@ -4860,7 +4905,11 @@ Required JSON schema:
                                 continue
                         yield chunk
                     except TimeoutError:
-                        yield {"type": "message", "content": "⏳ Still processing..."}
+                        yield {
+                            "type": "status",
+                            "content": "backend_processing",
+                            "metadata": {"heartbeat_seconds": 60},
+                        }
 
                 # Wait for executor to finish
                 await executor_future
@@ -4870,6 +4919,9 @@ Required JSON schema:
                 yield {"type": "error", "content": f"❌ Agent error: {str(e)}"}
             finally:
                 self._interpreter.system_message = original_system_message
+        finally:
+            if acquired:
+                self._semaphore.release()
 
     async def stop(self) -> None:
         """Stop the agent execution."""

@@ -35,6 +35,13 @@ warnings.filterwarnings(
     "ignore",
     message=r".*asyncio\.iscoroutinefunction.*deprecated.*",
     category=DeprecationWarning,
+    module=r"backoff\._decorator",
+)
+warnings.filterwarnings(
+    "ignore",
+    message=r"remove second argument of ws_handler",
+    category=DeprecationWarning,
+    module=r"websockets\.legacy\.server",
 )
 
 

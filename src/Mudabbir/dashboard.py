@@ -1826,6 +1826,7 @@ async def index(request: Request):
     app_version = app_version or "0.0.0"
 
     return templates.TemplateResponse(
+        request,
         "base.html",
         {"request": request, "v": _static_version(), "app_version": app_version},
     )

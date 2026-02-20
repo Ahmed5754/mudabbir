@@ -33,6 +33,15 @@ FIRST_RESPONSE_TIMEOUT_SECONDS = 90
 STREAM_CHUNK_TIMEOUT_SECONDS = 120
 
 
+class StreamTimeoutError(TimeoutError):
+    """Raised when stream iteration times out with phase metadata."""
+
+    def __init__(self, phase: str, timeout_seconds: float):
+        self.phase = phase
+        self.timeout_seconds = timeout_seconds
+        super().__init__(f"{phase} chunk timed out after {timeout_seconds}s")
+
+
 async def _iter_with_timeout(
     aiter,
     first_timeout=FIRST_RESPONSE_TIMEOUT_SECONDS,
@@ -51,6 +60,9 @@ async def _iter_with_timeout(
             t = first_timeout if first else timeout
             yield await asyncio.wait_for(ait.__anext__(), timeout=t)
             first = False
+        except TimeoutError:
+            phase = "first" if first else "stream"
+            raise StreamTimeoutError(phase=phase, timeout_seconds=t) from None
         except StopAsyncIteration:
             break
 
@@ -472,6 +484,15 @@ class AgentLoop:
                     elif chunk_type == "done":
                         # Agent finished - will send stream_end below
                         pass
+
+                    elif chunk_type == "status":
+                        # Internal backend heartbeat/status chunk.
+                        logger.debug(
+                            "Internal status chunk ignored (session=%s content=%s)",
+                            session_key,
+                            content,
+                        )
+                        continue
             finally:
                 # Always close the async generator to kill any subprocess
                 await run_iter.aclose()
@@ -508,6 +529,73 @@ class AgentLoop:
                     self._background_tasks.add(task)
                     task.add_done_callback(self._background_tasks.discard)
 
+        except StreamTimeoutError as e:
+            llm_provider = str(getattr(self.settings, "llm_provider", "auto") or "auto")
+            llm_model = "unknown"
+            try:
+                from Mudabbir.llm.client import resolve_llm_client
+
+                llm = resolve_llm_client(self.settings)
+                llm_provider = llm.provider
+                llm_model = llm.model
+            except Exception:
+                provider_model_map = {
+                    "gemini": str(getattr(self.settings, "gemini_model", "") or "unknown"),
+                    "openai": str(getattr(self.settings, "openai_model", "") or "unknown"),
+                    "anthropic": str(getattr(self.settings, "anthropic_model", "") or "unknown"),
+                    "ollama": str(getattr(self.settings, "ollama_model", "") or "unknown"),
+                    "openai_compatible": str(
+                        getattr(self.settings, "openai_compatible_model", "") or "unknown"
+                    ),
+                }
+                llm_model = provider_model_map.get(llm_provider, "unknown")
+
+            logger.error(
+                "Agent backend timed out (session=%s backend=%s provider=%s model=%s phase=%s timeout_seconds=%s first_timeout=%ss chunk_timeout=%ss)",
+                session_key,
+                self.settings.agent_backend,
+                llm_provider,
+                llm_model,
+                e.phase,
+                e.timeout_seconds,
+                FIRST_RESPONSE_TIMEOUT_SECONDS,
+                STREAM_CHUNK_TIMEOUT_SECONDS,
+            )
+            # Kill the hung backend so it releases resources
+            try:
+                active_router = self._router
+                if active_router is not None:
+                    await active_router.stop()
+            except Exception:
+                pass
+            # Force router re-init on next message
+            self._router = None
+
+            await self.bus.publish_outbound(
+                OutboundMessage(
+                    channel=message.channel,
+                    chat_id=message.chat_id,
+                    content=(
+                        "Request timed out — the agent backend didn't respond.\n\n"
+                        "**Possible causes:**\n"
+                        "- Claude Code CLI is not installed "
+                        "(`npm install -g @anthropic-ai/claude-code`)\n"
+                        "- API key is missing or invalid "
+                        "(check Settings → API Keys)\n"
+                        "- Try switching to **Mudabbir Native** backend "
+                        "in Settings → General"
+                    ),
+                    is_stream_chunk=True,
+                )
+            )
+            await self.bus.publish_outbound(
+                OutboundMessage(
+                    channel=message.channel,
+                    chat_id=message.chat_id,
+                    content="",
+                    is_stream_end=True,
+                )
+            )
         except TimeoutError:
             llm_provider = str(getattr(self.settings, "llm_provider", "auto") or "auto")
             llm_model = "unknown"
@@ -530,7 +618,7 @@ class AgentLoop:
                 llm_model = provider_model_map.get(llm_provider, "unknown")
 
             logger.error(
-                "Agent backend timed out (session=%s backend=%s provider=%s model=%s first_timeout=%ss chunk_timeout=%ss)",
+                "Agent backend timed out (session=%s backend=%s provider=%s model=%s phase=unknown timeout_seconds=unknown first_timeout=%ss chunk_timeout=%ss)",
                 session_key,
                 self.settings.agent_backend,
                 llm_provider,
@@ -538,14 +626,13 @@ class AgentLoop:
                 FIRST_RESPONSE_TIMEOUT_SECONDS,
                 STREAM_CHUNK_TIMEOUT_SECONDS,
             )
-            # Kill the hung backend so it releases resources
             try:
-                await router.stop()
+                active_router = self._router
+                if active_router is not None:
+                    await active_router.stop()
             except Exception:
                 pass
-            # Force router re-init on next message
             self._router = None
-
             await self.bus.publish_outbound(
                 OutboundMessage(
                     channel=message.channel,
@@ -577,7 +664,9 @@ class AgentLoop:
             logger.exception(f"❌ Error processing message: {e}")
             # Kill the backend on error
             try:
-                await router.stop()
+                active_router = self._router
+                if active_router is not None:
+                    await active_router.stop()
             except Exception:
                 pass
 
