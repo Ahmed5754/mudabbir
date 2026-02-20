@@ -5445,6 +5445,8 @@ $obj | ConvertTo-Json -Compress
             "open_keyboard_cpl": "control keyboard",
             "open_fonts_cpl": "control fonts",
             "open_region_cpl": "intl.cpl",
+            "open_printers_cpl": "control printers",
+            "open_user_accounts_cpl": "control userpasswords2",
         }
         if mode_norm in mapping:
             target = mapping[mode_norm]

@@ -747,6 +747,18 @@ async def test_global_fastpath_app_tools_extra_replies(
     assert handled_appwiz is True
     assert "programs" in str(reply_appwiz).lower() or "البرامج" in str(reply_appwiz)
 
+    handled_printers, reply_printers = await loop._try_global_windows_fastpath(
+        text="control printers", session_key="s36p"
+    )
+    assert handled_printers is True
+    assert "printer" in str(reply_printers).lower() or "طابعات" in str(reply_printers)
+
+    handled_users, reply_users = await loop._try_global_windows_fastpath(
+        text="control userpasswords2", session_key="s36u"
+    )
+    assert handled_users is True
+    assert "user" in str(reply_users).lower() or "حساب" in str(reply_users)
+
 
 @pytest.mark.asyncio
 async def test_global_fastpath_open_settings_page_reply(

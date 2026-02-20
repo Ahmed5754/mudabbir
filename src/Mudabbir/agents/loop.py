@@ -1064,6 +1064,8 @@ class AgentLoop:
                 "open_keyboard_cpl": "تم فتح إعدادات لوحة المفاتيح.",
                 "open_fonts_cpl": "تم فتح لوحة الخطوط.",
                 "open_region_cpl": "تم فتح إعدادات الإقليم.",
+                "open_printers_cpl": "تم فتح لوحة الطابعات.",
+                "open_user_accounts_cpl": "تم فتح إدارة حسابات المستخدمين.",
             }
             app_msgs_en = {
                 "open_task_manager": "Opened Task Manager.",
@@ -1090,6 +1092,8 @@ class AgentLoop:
                 "open_keyboard_cpl": "Opened Keyboard settings.",
                 "open_fonts_cpl": "Opened Fonts control panel.",
                 "open_region_cpl": "Opened Region settings.",
+                "open_printers_cpl": "Opened Printers control panel.",
+                "open_user_accounts_cpl": "Opened classic User Accounts settings.",
             }
             if mode:
                 msg = app_msgs_ar.get(mode) if arabic else app_msgs_en.get(mode)

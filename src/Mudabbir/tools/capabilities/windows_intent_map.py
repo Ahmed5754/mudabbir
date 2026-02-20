@@ -358,6 +358,8 @@ RULES: tuple[IntentRule, ...] = (
     IntentRule("apps.open_keyboard_cpl", "app_tools", "open_keyboard_cpl", "safe", ("control keyboard", "keyboard settings classic", "اعدادات الكيبورد الكلاسيكية")),
     IntentRule("apps.open_fonts_cpl", "app_tools", "open_fonts_cpl", "safe", ("control fonts", "fonts control panel", "لوحة الخطوط", "لوحه الخطوط")),
     IntentRule("apps.open_region_cpl", "app_tools", "open_region_cpl", "safe", ("intl.cpl", "region settings", "الاقليم", "الإقليم")),
+    IntentRule("apps.open_printers_cpl", "app_tools", "open_printers_cpl", "safe", ("control printers", "printers control panel", "الطابعات", "لوحة الطابعات")),
+    IntentRule("apps.open_user_accounts_cpl", "app_tools", "open_user_accounts_cpl", "safe", ("control userpasswords2", "user accounts classic", "حسابات المستخدمين الكلاسيكية", "إدارة حسابات المستخدمين")),
     IntentRule("apps.open_camera", "app_tools", "open_camera", "safe", ("open camera", "تشغيل الكاميرا")),
     IntentRule("apps.open_calendar", "app_tools", "open_calendar", "safe", ("open calendar", "فتح التقويم")),
     IntentRule("apps.open_mail", "app_tools", "open_mail", "safe", ("open mail", "فتح البريد")),
@@ -990,6 +992,22 @@ def resolve_windows_intent(message: str) -> IntentResolution:
             capability_id="network.pathping",
             action="network_tools",
             params=params,
+            risk_level="safe",
+        )
+    if _contains_any(normalized, ("control printers", "printers control panel", "لوحة الطابعات", "الطابعات")):
+        return IntentResolution(
+            matched=True,
+            capability_id="apps.open_printers_cpl",
+            action="app_tools",
+            params={"mode": "open_printers_cpl"},
+            risk_level="safe",
+        )
+    if _contains_any(normalized, ("control userpasswords2", "user accounts classic", "حسابات المستخدمين الكلاسيكية", "ادارة حسابات المستخدمين", "إدارة حسابات المستخدمين")):
+        return IntentResolution(
+            matched=True,
+            capability_id="apps.open_user_accounts_cpl",
+            action="app_tools",
+            params={"mode": "open_user_accounts_cpl"},
             risk_level="safe",
         )
     if _contains_any(normalized, ("nbtstat -a", "استعلام netbios")):
