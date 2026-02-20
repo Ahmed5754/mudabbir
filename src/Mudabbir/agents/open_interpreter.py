@@ -41,6 +41,17 @@ DONE_PATTERNS = (
     "اكتمل التنفيذ",
     "انتهيت من التنفيذ",
 )
+QUOTA_OR_RATE_PATTERNS = (
+    "you ran out of current quota",
+    "insufficient_quota",
+    "rate limit",
+    "rate_limit",
+    "quota exceeded",
+    "quota_exceeded",
+    "too many requests",
+    "429",
+    "resource_exhausted",
+)
 EXTRA_GUARDRAILS = """Execution guardrails:
 - Target OS is Windows. Use PowerShell for system commands unless user explicitly requests Python.
 - For desktop automation (mouse/keyboard/UI control), use Python with pyautogui.
@@ -156,6 +167,91 @@ def _contains_done_signal(text: str) -> bool:
     """Return True if the assistant text indicates the task is complete."""
     lowered = text.lower()
     return any(pattern in lowered for pattern in DONE_PATTERNS)
+
+
+def _is_google_quota_signal(text: str) -> bool:
+    """Detect Google/Gemini quota or rate-limit signals."""
+    lowered = str(text or "").lower()
+    if not lowered.strip():
+        return False
+    google_markers = (
+        "resource_exhausted",
+        "generativelanguage.googleapis.com",
+        "google.api_core",
+        "googleapis.com",
+        "gemini",
+        "google",
+    )
+    return (
+        any(marker in lowered for marker in google_markers)
+        and any(marker in lowered for marker in QUOTA_OR_RATE_PATTERNS)
+    ) or "resource_exhausted" in lowered
+
+
+def _is_quota_or_rate_limit_message(text: str) -> bool:
+    """Return True if text indicates API quota/rate-limit exhaustion."""
+    lowered = str(text or "").lower()
+    if not lowered.strip():
+        return False
+    if _is_google_quota_signal(lowered):
+        return True
+    return any(marker in lowered for marker in QUOTA_OR_RATE_PATTERNS)
+
+
+def _should_retry_with_gemini_fallback(
+    provider: str, fallback_attempted: bool, error_text: str
+) -> bool:
+    """Retry once for Gemini requests that failed due to quota/rate limits."""
+    return (
+        provider == "gemini"
+        and not fallback_attempted
+        and _is_quota_or_rate_limit_message(error_text)
+    )
+
+
+def _build_quota_error_message(
+    provider: str,
+    model: str,
+    fallback_model: str,
+    *,
+    arabic: bool,
+    fallback_attempted: bool,
+) -> str:
+    """Build a provider-aware quota/rate-limit error message."""
+    if provider == "gemini":
+        if arabic:
+            if fallback_attempted:
+                return (
+                    "❌ تم استهلاك حصة Gemini أو تم تجاوز حد المعدل.\n\n"
+                    f"حاولت إعادة الطلب تلقائياً باستخدام `{fallback_model}` ولم تنجح.\n"
+                    "تحقق من حصة Google AI Studio/API Key ثم أعد المحاولة لاحقاً."
+                )
+            return (
+                "❌ تم الوصول إلى حد Gemini (quota/rate limit).\n\n"
+                f"النموذج الحالي: `{model}`\n"
+                "تحقق من حصة Google AI Studio أو جرّب لاحقاً."
+            )
+        if fallback_attempted:
+            return (
+                "❌ Gemini quota/rate limit reached.\n\n"
+                f"Automatic fallback to `{fallback_model}` was attempted and also failed.\n"
+                "Check your Google AI Studio quota/API key and retry later."
+            )
+        return (
+            "❌ Gemini quota/rate limit reached.\n\n"
+            f"Current model: `{model}`\n"
+            "Check your Google AI Studio quota/API key and retry later."
+        )
+
+    if arabic:
+        return (
+            "❌ تم الوصول إلى حد المزود (quota/rate limit).\n\n"
+            "يرجى التحقق من حدود الحساب ثم إعادة المحاولة."
+        )
+    return (
+        "❌ Provider quota/rate limit reached.\n\n"
+        "Please check your account limits and retry."
+    )
 
 
 def _extract_command_fingerprints(command: str, *, allow_fallback: bool = True) -> set[str]:
@@ -1039,6 +1135,9 @@ class OpenInterpreterAgent:
                 os.environ.setdefault("GOOGLE_API_KEY", llm.api_key)
                 os.environ.setdefault("GEMINI_API_KEY", llm.api_key)
                 logger.info(f"🤖 Using Gemini (AI Studio): {llm.model}")
+                logger.info(
+                    "Gemini is running via OpenAI-compatible AI Studio endpoint"
+                )
             elif llm.api_key:
                 interpreter.llm.model = llm.model
                 interpreter.llm.api_key = llm.api_key
@@ -4334,6 +4433,27 @@ Required JSON schema:
             self._stop_flag = False
             user_request = message
             is_arabic_request = _contains_arabic(user_request)
+            quota_fallback_model = "gemini-2.5-flash"
+            resolved_provider = str(getattr(self.settings, "llm_provider", "auto") or "auto")
+            resolved_model = ""
+            try:
+                from Mudabbir.llm.client import resolve_llm_client
+
+                resolved_llm = resolve_llm_client(self.settings)
+                resolved_provider = resolved_llm.provider
+                resolved_model = resolved_llm.model
+            except Exception:
+                if resolved_provider == "gemini":
+                    resolved_model = str(getattr(self.settings, "gemini_model", "") or "")
+
+            respond_mod = None
+            original_display_markdown = None
+            try:
+                respond_mod = importlib.import_module("interpreter.core.respond")
+                original_display_markdown = getattr(respond_mod, "display_markdown_message", None)
+            except Exception:
+                respond_mod = None
+                original_display_markdown = None
 
             # Deterministic fast-path for frequent desktop requests that
             # were previously causing model loops.
@@ -4445,6 +4565,29 @@ Required JSON schema:
                     0, int(getattr(self.settings, "oi_max_fix_retries", DEFAULT_OI_MAX_FIX_RETRIES))
                 )
                 stop_after_success = bool(getattr(self.settings, "oi_stop_after_success", True))
+                fallback_attempted = False
+                quota_state = {"detected": False, "text": ""}
+                runtime_model_before_fallback = str(getattr(self._interpreter.llm, "model", "") or "")
+                fallback_runtime_model = (
+                    f"openai/{quota_fallback_model}"
+                    if runtime_model_before_fallback.startswith("openai/")
+                    else quota_fallback_model
+                )
+
+                def mark_quota_signal(text: str) -> None:
+                    quota_state["detected"] = True
+                    quota_state["text"] = str(text or quota_state.get("text") or "")
+
+                if respond_mod is not None:
+
+                    def _display_markdown_proxy(payload):
+                        text = str(payload or "")
+                        if _is_quota_or_rate_limit_message(text):
+                            mark_quota_signal(text)
+                        # Never emit raw Open Interpreter markdown blocks to terminal.
+                        return None
+
+                    respond_mod.display_markdown_message = _display_markdown_proxy
 
                 def queue_chunk(payload: dict) -> None:
                     if isinstance(payload, dict) and payload.get("type") == "message":
@@ -4909,8 +5052,95 @@ Required JSON schema:
                     # Flush remaining message
                     if current_message:
                         queue_chunk({"type": "message", "content": "".join(current_message)})
+
+                    if _should_retry_with_gemini_fallback(
+                        resolved_provider,
+                        fallback_attempted,
+                        str(quota_state.get("text", "")),
+                    ):
+                        fallback_attempted = True
+                        self._stop_flag = False
+                        quota_state = {"detected": False, "text": ""}
+                        queue_chunk(
+                            {
+                                "type": "status",
+                                "content": "gemini_quota_fallback",
+                                "metadata": {
+                                    "from_model": resolved_model or runtime_model_before_fallback,
+                                    "to_model": quota_fallback_model,
+                                },
+                            }
+                        )
+                        queue_chunk(
+                            {
+                                "type": "message",
+                                "content": (
+                                    f"🔁 تم تجاوز حد Gemini. أعيد المحاولة مرة واحدة عبر `{quota_fallback_model}`..."
+                                    if is_arabic_request
+                                    else f"🔁 Gemini quota reached. Retrying once with `{quota_fallback_model}`..."
+                                ),
+                            }
+                        )
+                        try:
+                            self._interpreter.llm.model = fallback_runtime_model
+                            for fallback_chunk in self._interpreter.chat(message, stream=True):
+                                if self._stop_flag:
+                                    break
+                                if isinstance(fallback_chunk, dict):
+                                    chunk_role = fallback_chunk.get("role", "")
+                                    chunk_type = fallback_chunk.get("type", "")
+                                    content = str(fallback_chunk.get("content", "") or "")
+                                    if chunk_role == "assistant" and chunk_type == "message" and content:
+                                        if not (
+                                            _looks_like_execute_noise(content)
+                                            or _looks_like_execute_payload_fragment(content)
+                                            or _looks_like_raw_command_leak(content)
+                                        ):
+                                            queue_chunk({"type": "message", "content": content})
+                                elif isinstance(fallback_chunk, str) and fallback_chunk:
+                                    content = str(fallback_chunk)
+                                    if not (
+                                        _looks_like_execute_noise(content)
+                                        or _looks_like_execute_payload_fragment(content)
+                                        or _looks_like_raw_command_leak(content)
+                                    ):
+                                        queue_chunk({"type": "message", "content": content})
+                        except Exception as fallback_err:
+                            fallback_text = str(fallback_err)
+                            if _is_quota_or_rate_limit_message(fallback_text):
+                                mark_quota_signal(fallback_text)
+                            else:
+                                queue_chunk(
+                                    {
+                                        "type": "error",
+                                        "content": f"Agent error: {fallback_text}",
+                                    }
+                                )
+                        finally:
+                            try:
+                                self._interpreter.llm.model = runtime_model_before_fallback
+                            except Exception:
+                                pass
+
+                    if quota_state.get("detected"):
+                        queue_chunk(
+                            {
+                                "type": "error",
+                                "content": _build_quota_error_message(
+                                    resolved_provider,
+                                    resolved_model or runtime_model_before_fallback,
+                                    quota_fallback_model,
+                                    arabic=is_arabic_request,
+                                    fallback_attempted=fallback_attempted,
+                                ),
+                            }
+                        )
                 except Exception as e:
-                    queue_chunk({"type": "error", "content": f"Agent error: {str(e)}"})
+                    error_text = str(e)
+                    if _is_quota_or_rate_limit_message(error_text):
+                        mark_quota_signal(error_text)
+                    else:
+                        queue_chunk({"type": "error", "content": f"Agent error: {error_text}"})
                 finally:
                     # Signal completion
                     asyncio.run_coroutine_threadsafe(chunk_queue.put(None), loop)
@@ -4951,6 +5181,14 @@ Required JSON schema:
                 yield {"type": "error", "content": f"❌ Agent error: {str(e)}"}
             finally:
                 self._interpreter.system_message = original_system_message
+                if respond_mod is not None:
+                    try:
+                        if original_display_markdown is not None:
+                            respond_mod.display_markdown_message = original_display_markdown
+                        elif hasattr(respond_mod, "display_markdown_message"):
+                            delattr(respond_mod, "display_markdown_message")
+                    except Exception:
+                        pass
         finally:
             if acquired:
                 self._semaphore.release()
