@@ -41,6 +41,12 @@
 curl -fsSL https://mudabbir.fly.dev/install.sh | sh
 ```
 
+If your Linux shell shows parsing errors (for example `: not found` or `set: Illegal option -`), use:
+
+```bash
+curl -fsSL https://mudabbir.fly.dev/install.sh | tr -d '\r' | sh
+```
+
 Or install directly:
 
 ```bash
