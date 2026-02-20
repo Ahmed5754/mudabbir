@@ -1,0 +1,29 @@
+name: Brand Hygiene
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  scan-brand-tokens:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Fail on legacy branding tokens
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          forbidden_pattern='Mudabbir|MUDABBIR_|src/Mudabbir|github\.com/pocketpaw/pocketpaw'
+          excluded_path=':(exclude).github/workflows/brand-hygiene.yml'
+
+          if git grep -nI -E "$forbidden_pattern" -- . "$excluded_path"; then
+            echo "ERROR: Legacy branding tokens found in tracked files."
+            exit 1
+          fi
+
+          echo "Brand hygiene check passed."

@@ -28,7 +28,7 @@ body:
       required: true
 
   - type: input
-    id: pocketpaw-version
+    id: mudabbir-version
     attributes:
       label: Mudabbir Version
       description: Output of `Mudabbir --version` or the version in pyproject.toml
@@ -63,7 +63,7 @@ body:
       label: Steps to Reproduce
       description: Exact steps someone else can follow to hit this bug.
       placeholder: |
-        1. Run `uv run pocketpaw`
+        1. Run `uv run Mudabbir`
         2. Open the dashboard
         3. Click on...
         4. See error
@@ -115,3 +115,4 @@ body:
           required: true
         - label: I have included terminal output or a screenshot as evidence
           required: true
+

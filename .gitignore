@@ -71,3 +71,8 @@ temp
 *.bundle
 artifacts/
 Mudabbir-release.zip
+
+# Local-only sync artifacts (never commit)
+/docs/upstream-sync/
+/scripts/upstream_sync.py
+/scripts/upstream_sync*.py
