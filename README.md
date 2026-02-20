@@ -5,7 +5,7 @@
 <h1 align="center">Mudabbir</h1>
 
 <p align="center">
-  <strong>Your AI agent. Modular. Secure. Everywhere.</strong>
+  <strong>An AI agent that runs on your machine, not someone else's.</strong>
 </p>
 
 <p align="center">
@@ -13,6 +13,7 @@
   <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT"></a>
   <a href="https://www.python.org/downloads/"><img src="https://img.shields.io/badge/python-3.11+-blue.svg" alt="Python 3.11+"></a>
   <a href="https://github.com/Ahmed5754/mudabbir/releases"><img src="https://img.shields.io/github/downloads/Ahmed5754/mudabbir/total.svg" alt="Downloads"></a>
+  <a href="https://github.com/Ahmed5754/mudabbir/stargazers"><img src="https://img.shields.io/github/stars/Ahmed5754/mudabbir?style=social" alt="GitHub Stars"></a>
 </p>
 
 <p align="center">
