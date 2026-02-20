@@ -1,3 +1,3 @@
 """Mudabbir - The AI agent that runs on your laptop, not a datacenter."""
 
-__version__ = "0.4.410"
+__version__ = "0.5.0"
