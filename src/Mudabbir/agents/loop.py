@@ -239,6 +239,8 @@ class AgentLoop:
 
         compact = stripped.strip("`").strip()
         lowered = compact.lower()
+        if "mcp_sequential-thinking" in lowered:
+            return ""
         markers = (
             "execute",
             "arguments",
