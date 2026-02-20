@@ -18,6 +18,7 @@ import asyncio
 import json
 import logging
 import re
+from typing import Any
 
 from Mudabbir.agents.router import AgentRouter
 from Mudabbir.bootstrap import AgentContextBuilder
@@ -93,6 +94,7 @@ class AgentLoop:
         self._background_tasks: set[asyncio.Task] = set()
 
         self._running = False
+        self._pending_windows_dangerous: dict[str, dict[str, Any]] = {}
         get_command_handler().set_on_settings_changed(self._on_settings_changed)
 
     async def _llm_one_shot_text(
@@ -261,6 +263,9 @@ class AgentLoop:
             "powershell",
             "powers ",
             "python",
+            "mcp_sequential-thinking",
+            "tool▁sep",
+            "tool_call_end",
         )
         broken = ("namepowers", "argumentspowers", "namepython", "argumentspython")
 
@@ -291,6 +296,130 @@ class AgentLoop:
         if compact in {"{", "}", "[", "]", "```", "`"}:
             return ""
         return text
+
+    @staticmethod
+    def _contains_arabic(text: str) -> bool:
+        return bool(re.search(r"[\u0600-\u06FF]", str(text or "")))
+
+    @staticmethod
+    def _normalize_intent_text(text: str) -> str:
+        normalized = str(text or "").strip().lower()
+        normalized = normalized.replace("أ", "ا").replace("إ", "ا").replace("آ", "ا")
+        normalized = normalized.replace("ة", "ه").replace("ى", "ي")
+        normalized = re.sub(r"\s+", " ", normalized)
+        return normalized
+
+    @staticmethod
+    def _is_confirmation_message(text: str) -> bool:
+        normalized = AgentLoop._normalize_intent_text(text)
+        return normalized in {"yes", "y", "ok", "confirm", "نعم", "اي", "أجل", "اجل"}
+
+    async def _try_global_windows_fastpath(
+        self, *, text: str, session_key: str
+    ) -> tuple[bool, str | None]:
+        """Deterministic Windows desktop execution path before any backend call."""
+        try:
+            from Mudabbir.tools.builtin.desktop import DesktopTool
+            from Mudabbir.tools.capabilities.windows_intent_map import resolve_windows_intent
+        except Exception:
+            return False, None
+
+        arabic = self._contains_arabic(text)
+        normalized = self._normalize_intent_text(text)
+        cancel_tokens = ("cancel", "stop", "no", "لا", "الغاء", "إلغاء", "وقف")
+
+        pending = self._pending_windows_dangerous.get(session_key)
+        if pending is not None:
+            if self._is_confirmation_message(text):
+                resolution = pending
+                self._pending_windows_dangerous.pop(session_key, None)
+            elif any(tok in normalized for tok in cancel_tokens):
+                self._pending_windows_dangerous.pop(session_key, None)
+                return True, ("تم إلغاء العملية الخطرة." if arabic else "Canceled the pending dangerous operation.")
+            else:
+                return True, (
+                    "لدي عملية خطرة بانتظار التأكيد. اكتب 'نعم' للتنفيذ أو 'إلغاء' للإلغاء."
+                    if arabic
+                    else "A dangerous operation is pending. Reply 'yes' to execute or 'cancel' to abort."
+                )
+        else:
+            resolved = resolve_windows_intent(text)
+            if not resolved.matched:
+                return False, None
+            resolution = {
+                "capability_id": resolved.capability_id,
+                "action": resolved.action,
+                "params": dict(resolved.params or {}),
+                "risk_level": str(resolved.risk_level or "safe"),
+                "unsupported": bool(resolved.unsupported),
+                "unsupported_reason": resolved.unsupported_reason,
+            }
+
+        if resolution.get("unsupported"):
+            return True, str(
+                resolution.get("unsupported_reason")
+                or ("هذه المهارة غير مدعومة حالياً." if arabic else "This capability is not implemented yet.")
+            )
+
+        risk_level = str(resolution.get("risk_level", "safe"))
+        if risk_level == "destructive" and not self._is_confirmation_message(text):
+            self._pending_windows_dangerous[session_key] = resolution
+            return True, (
+                "هذا أمر خطِر. للتأكيد اكتب: نعم. للإلغاء اكتب: إلغاء."
+                if arabic
+                else "This is a destructive command. Reply 'yes' to confirm or 'cancel' to abort."
+            )
+
+        action = str(resolution.get("action", "")).strip()
+        params = resolution.get("params", {}) if isinstance(resolution.get("params"), dict) else {}
+        if not action:
+            return False, None
+
+        raw = await DesktopTool().execute(action=action, **params)
+        raw_text = str(raw or "")
+        if raw_text.lower().startswith("error:"):
+            return True, raw_text
+
+        parsed: Any = raw
+        if isinstance(raw, str):
+            try:
+                parsed = json.loads(raw)
+            except Exception:
+                parsed = raw
+
+        if action == "volume" and str(params.get("mode", "")).lower() == "get" and isinstance(parsed, dict):
+            level = parsed.get("level_percent")
+            muted = bool(parsed.get("muted", False))
+            if level is not None:
+                if arabic:
+                    return True, f"مستوى الصوت الحالي: {int(level)}% {'(مكتوم)' if muted else ''}".strip()
+                return True, f"Current volume is {int(level)}%{' (muted)' if muted else ''}."
+
+        if action == "clipboard_tools" and str(params.get("mode", "")).lower() in {"history", "clipboard_history"}:
+            return True, ("تم فتح سجل الحافظة (Win+V)." if arabic else "Opened Clipboard History (Win+V).")
+
+        if action == "network_tools" and str(params.get("mode", "")).lower() in {"open_network_settings", "settings"}:
+            return True, ("تم فتح إعدادات الشبكة." if arabic else "Opened network settings.")
+
+        if isinstance(parsed, dict) and "ok" in parsed and "message" in parsed:
+            return True, str(parsed.get("message") or "")
+
+        return True, ("تم تنفيذ الأمر." if arabic else "Command executed successfully.")
+
+    def _timeout_message(self, *, backend: str, provider: str) -> str:
+        backend_n = str(backend or "").strip().lower()
+        provider_n = str(provider or "").strip().lower()
+        hints: list[str] = []
+        if backend_n == "claude_agent_sdk":
+            hints.append("- Claude Code CLI may be missing (`npm install -g @anthropic-ai/claude-code`).")
+        if provider_n == "gemini":
+            hints.append("- Gemini quota/key may be exhausted or invalid in Settings -> API Keys.")
+        if provider_n == "ollama":
+            hints.append("- Ensure Ollama is running and the selected model is available locally.")
+        if provider_n in {"openai", "openai_compatible", "anthropic"}:
+            hints.append("- Check API key and model name in Settings -> API Keys.")
+        hints.append("- You can switch backend in Settings -> General.")
+        return "Request timed out — backend didn't respond.\n\nPossible causes:\n" + "\n".join(hints)
 
     async def start(self) -> None:
         """Start the agent loop."""
@@ -428,6 +557,39 @@ class AgentLoop:
                 # Wrap suspicious (non-blocked) content with sanitization markers
                 if scan_result.threat_level != ThreatLevel.NONE:
                     content = scan_result.sanitized_content
+
+            # Deterministic Windows desktop fast-path (independent from backend/provider)
+            handled_fastpath, fastpath_reply = await self._try_global_windows_fastpath(
+                text=content, session_key=session_key
+            )
+            if handled_fastpath:
+                await self.memory.add_to_session(
+                    session_key=session_key,
+                    role="user",
+                    content=content,
+                    metadata=message.metadata,
+                )
+                reply_text = str(fastpath_reply or "").strip() or "Done."
+                await self.bus.publish_outbound(
+                    OutboundMessage(
+                        channel=message.channel,
+                        chat_id=message.chat_id,
+                        content=reply_text,
+                        is_stream_chunk=True,
+                    )
+                )
+                await self.bus.publish_outbound(
+                    OutboundMessage(
+                        channel=message.channel,
+                        chat_id=message.chat_id,
+                        content="",
+                        is_stream_end=True,
+                    )
+                )
+                await self.memory.add_to_session(
+                    session_key=session_key, role="assistant", content=reply_text
+                )
+                return
 
             # 1. Store User Message
             await self.memory.add_to_session(
@@ -750,15 +912,9 @@ class AgentLoop:
                 OutboundMessage(
                     channel=message.channel,
                     chat_id=message.chat_id,
-                    content=(
-                        "Request timed out — the agent backend didn't respond.\n\n"
-                        "**Possible causes:**\n"
-                        "- Claude Code CLI is not installed "
-                        "(`npm install -g @anthropic-ai/claude-code`)\n"
-                        "- API key is missing or invalid "
-                        "(check Settings → API Keys)\n"
-                        "- Try switching to **Mudabbir Native** backend "
-                        "in Settings → General"
+                    content=self._timeout_message(
+                        backend=self.settings.agent_backend,
+                        provider=llm_provider,
                     ),
                     is_stream_chunk=True,
                 )
@@ -812,15 +968,9 @@ class AgentLoop:
                 OutboundMessage(
                     channel=message.channel,
                     chat_id=message.chat_id,
-                    content=(
-                        "Request timed out — the agent backend didn't respond.\n\n"
-                        "**Possible causes:**\n"
-                        "- Claude Code CLI is not installed "
-                        "(`npm install -g @anthropic-ai/claude-code`)\n"
-                        "- API key is missing or invalid "
-                        "(check Settings → API Keys)\n"
-                        "- Try switching to **Mudabbir Native** backend "
-                        "in Settings → General"
+                    content=self._timeout_message(
+                        backend=self.settings.agent_backend,
+                        provider=llm_provider,
                     ),
                     is_stream_chunk=True,
                 )
@@ -911,3 +1061,4 @@ class AgentLoop:
     def reset_router(self) -> None:
         """Reset the router to pick up new settings."""
         self._router = None
+
