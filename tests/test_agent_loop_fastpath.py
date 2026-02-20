@@ -577,3 +577,22 @@ async def test_global_fastpath_open_settings_page_reply(
     )
     assert handled is True
     assert "الخصوصية" in str(reply) or "privacy" in str(reply).lower()
+
+
+@pytest.mark.asyncio
+async def test_global_fastpath_open_settings_page_update_reply(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class DummyDesktopTool:
+        async def execute(self, action: str, **kwargs):
+            assert action == "open_settings_page"
+            assert kwargs.get("page") == "windowsupdate"
+            return '{"ok": true}'
+
+    monkeypatch.setattr("Mudabbir.tools.builtin.desktop.DesktopTool", DummyDesktopTool)
+    loop = AgentLoop()
+    handled, reply = await loop._try_global_windows_fastpath(
+        text="افتح تحديثات ويندوز", session_key="s38"
+    )
+    assert handled is True
+    assert "تحديثات" in str(reply) or "update" in str(reply).lower()

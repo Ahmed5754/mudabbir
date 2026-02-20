@@ -50,6 +50,9 @@ def test_confirmation_message_detection() -> None:
         ("اخفاء الملفات المخفية", "file_tools", "hide_hidden"),
         ("افتح اعدادات الشبكه", "open_settings_page", None),
         ("افتح إعدادات الخصوصية", "open_settings_page", None),
+        ("افتح تحديثات ويندوز", "open_settings_page", None),
+        ("افتح إعدادات التطبيقات", "open_settings_page", None),
+        ("افتح إعدادات الصوت", "open_settings_page", None),
         ("اغلاق كل البرامج المفتوحة", "app_tools", "close_all_apps"),
         ("فحص حالة القرص الصلب", "disk_tools", "smart_status"),
         ("مفاتيح الاختصار المتاحة", "shell_tools", "list_shortcuts"),
@@ -65,6 +68,12 @@ def test_resolve_new_capabilities(message: str, action: str, mode: str | None) -
     else:
         if "الخصوصية" in message:
             assert result.params.get("page") == "privacy"
+        elif "تحديثات" in message:
+            assert result.params.get("page") == "windowsupdate"
+        elif "التطبيقات" in message:
+            assert result.params.get("page") == "appsfeatures"
+        elif "الصوت" in message:
+            assert result.params.get("page") == "sound"
         else:
             assert result.params.get("page") == "network"
 
