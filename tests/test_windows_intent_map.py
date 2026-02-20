@@ -368,6 +368,29 @@ def test_resolve_browserdeep_office_driver_info_aliases(
     assert result.params.get("mode") == mode
 
 
+@pytest.mark.parametrize(
+    ("message", "action", "mode"),
+    [
+        ("افتح mmsys.cpl", "app_tools", "open_sound_cpl"),
+        ("اتصالات الشبكة", "app_tools", "open_network_connections"),
+        ("الوقت والتاريخ", "app_tools", "open_time_date"),
+        ("خصائص النظام", "app_tools", "open_system_properties"),
+        ("powercfg.cpl", "app_tools", "open_power_options"),
+        ("firewall.cpl", "app_tools", "open_firewall_cpl"),
+        ("taskschd.msc", "dev_tools", "open_task_scheduler"),
+        ("compmgmt.msc", "dev_tools", "open_computer_management"),
+        ("lusrmgr.msc", "dev_tools", "open_local_users_groups"),
+        ("secpol.msc", "dev_tools", "open_local_security_policy"),
+        ("printmanagement.msc", "dev_tools", "open_print_management"),
+    ],
+)
+def test_resolve_control_panel_and_mmc_aliases(message: str, action: str, mode: str) -> None:
+    result = resolve_windows_intent(message)
+    assert result.matched is True
+    assert result.action == action
+    assert result.params.get("mode") == mode
+
+
 def test_resolve_docx_to_pdf_extracts_paths() -> None:
     result = resolve_windows_intent(
         'تحويل docx الى pdf "C:\\tmp\\a.docx" "C:\\tmp\\a.pdf"'

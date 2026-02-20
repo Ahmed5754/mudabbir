@@ -466,3 +466,33 @@ async def test_global_fastpath_browserdeep_office_driver_info_replies(
     )
     assert handled_info is True
     assert "لغة" in str(reply_info) or "language" in str(reply_info).lower()
+
+
+@pytest.mark.asyncio
+async def test_global_fastpath_control_panel_and_mmc_replies(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class DummyDesktopTool:
+        async def execute(self, action: str, **kwargs):
+            if action == "app_tools":
+                assert kwargs.get("mode") == "open_sound_cpl"
+                return '{"ok": true}'
+            if action == "dev_tools":
+                assert kwargs.get("mode") == "open_task_scheduler"
+                return '{"ok": true}'
+            return '{"ok": true}'
+
+    monkeypatch.setattr("Mudabbir.tools.builtin.desktop.DesktopTool", DummyDesktopTool)
+    loop = AgentLoop()
+
+    handled_app, reply_app = await loop._try_global_windows_fastpath(
+        text="افتح mmsys.cpl", session_key="s32"
+    )
+    assert handled_app is True
+    assert "الصوت" in str(reply_app) or "sound" in str(reply_app).lower()
+
+    handled_dev, reply_dev = await loop._try_global_windows_fastpath(
+        text="taskschd.msc", session_key="s33"
+    )
+    assert handled_dev is True
+    assert "المهام" in str(reply_dev) or "scheduler" in str(reply_dev).lower()

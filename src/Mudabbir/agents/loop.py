@@ -988,6 +988,16 @@ class AgentLoop:
                 "open_camera": "تم فتح الكاميرا.",
                 "open_calendar": "تم فتح التقويم.",
                 "open_mail": "تم فتح البريد.",
+                "open_sound_cpl": "تم فتح إعدادات الصوت الكلاسيكية.",
+                "open_network_connections": "تم فتح اتصالات الشبكة.",
+                "open_time_date": "تم فتح إعدادات الوقت والتاريخ.",
+                "open_system_properties": "تم فتح خصائص النظام.",
+                "open_power_options": "تم فتح خيارات الطاقة.",
+                "open_firewall_cpl": "تم فتح جدار الحماية.",
+                "open_mouse_cpl": "تم فتح خصائص الفأرة.",
+                "open_keyboard_cpl": "تم فتح إعدادات لوحة المفاتيح.",
+                "open_fonts_cpl": "تم فتح لوحة الخطوط.",
+                "open_region_cpl": "تم فتح إعدادات الإقليم.",
             }
             app_msgs_en = {
                 "open_task_manager": "Opened Task Manager.",
@@ -1001,9 +1011,42 @@ class AgentLoop:
                 "open_camera": "Opened Camera.",
                 "open_calendar": "Opened Calendar.",
                 "open_mail": "Opened Mail.",
+                "open_sound_cpl": "Opened classic Sound settings.",
+                "open_network_connections": "Opened Network Connections.",
+                "open_time_date": "Opened Date and Time settings.",
+                "open_system_properties": "Opened System Properties.",
+                "open_power_options": "Opened Power Options.",
+                "open_firewall_cpl": "Opened Windows Firewall.",
+                "open_mouse_cpl": "Opened Mouse properties.",
+                "open_keyboard_cpl": "Opened Keyboard settings.",
+                "open_fonts_cpl": "Opened Fonts control panel.",
+                "open_region_cpl": "Opened Region settings.",
             }
             if mode:
                 msg = app_msgs_ar.get(mode) if arabic else app_msgs_en.get(mode)
+                if msg:
+                    return True, msg
+
+        if action == "dev_tools":
+            mode = str(params.get("mode", "")).lower()
+            dev_msgs_ar = {
+                "open_services": "تم فتح نافذة الخدمات.",
+                "open_task_scheduler": "تم فتح جدول المهام.",
+                "open_computer_management": "تم فتح إدارة الكمبيوتر.",
+                "open_local_users_groups": "تم فتح المستخدمين والمجموعات المحلية.",
+                "open_local_security_policy": "تم فتح سياسة الأمان المحلية.",
+                "open_print_management": "تم فتح إدارة الطباعة.",
+            }
+            dev_msgs_en = {
+                "open_services": "Opened Services console.",
+                "open_task_scheduler": "Opened Task Scheduler.",
+                "open_computer_management": "Opened Computer Management.",
+                "open_local_users_groups": "Opened Local Users and Groups.",
+                "open_local_security_policy": "Opened Local Security Policy.",
+                "open_print_management": "Opened Print Management.",
+            }
+            if mode:
+                msg = dev_msgs_ar.get(mode) if arabic else dev_msgs_en.get(mode)
                 if msg:
                     return True, msg
 
