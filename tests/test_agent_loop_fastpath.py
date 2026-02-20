@@ -747,6 +747,18 @@ async def test_global_fastpath_app_tools_extra_replies(
     assert handled_appwiz is True
     assert "programs" in str(reply_appwiz).lower() or "البرامج" in str(reply_appwiz)
 
+    handled_mouse, reply_mouse = await loop._try_global_windows_fastpath(
+        text="control mouse", session_key="s36m"
+    )
+    assert handled_mouse is True
+    assert "mouse" in str(reply_mouse).lower() or "فأرة" in str(reply_mouse) or "الفاره" in str(reply_mouse)
+
+    handled_keyboard, reply_keyboard = await loop._try_global_windows_fastpath(
+        text="control keyboard", session_key="s36k"
+    )
+    assert handled_keyboard is True
+    assert "keyboard" in str(reply_keyboard).lower() or "لوحة المفاتيح" in str(reply_keyboard)
+
     handled_printers, reply_printers = await loop._try_global_windows_fastpath(
         text="control printers", session_key="s36p"
     )

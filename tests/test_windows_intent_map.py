@@ -455,6 +455,8 @@ def test_resolve_browserdeep_office_driver_info_aliases(
         ("خصائص النظام", "app_tools", "open_system_properties"),
         ("powercfg.cpl", "app_tools", "open_power_options"),
         ("firewall.cpl", "app_tools", "open_firewall_cpl"),
+        ("control mouse", "app_tools", "open_mouse_cpl"),
+        ("control keyboard", "app_tools", "open_keyboard_cpl"),
         ("control printers", "app_tools", "open_printers_cpl"),
         ("control userpasswords2", "app_tools", "open_user_accounts_cpl"),
         ("devmgmt.msc", "dev_tools", "open_device_manager"),

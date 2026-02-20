@@ -354,8 +354,8 @@ RULES: tuple[IntentRule, ...] = (
     IntentRule("apps.open_system_properties", "app_tools", "open_system_properties", "safe", ("sysdm.cpl", "system properties", "خصائص النظام")),
     IntentRule("apps.open_power_options", "app_tools", "open_power_options", "safe", ("powercfg.cpl", "power options", "خيارات الطاقة")),
     IntentRule("apps.open_firewall_cpl", "app_tools", "open_firewall_cpl", "safe", ("firewall.cpl", "windows firewall", "جدار الحماية", "جدار الحمايه")),
-    IntentRule("apps.open_mouse_cpl", "app_tools", "open_mouse_cpl", "safe", ("main.cpl", "mouse properties", "خصائص الفاره", "خصائص الفأرة")),
-    IntentRule("apps.open_keyboard_cpl", "app_tools", "open_keyboard_cpl", "safe", ("control keyboard", "keyboard settings classic", "اعدادات الكيبورد الكلاسيكية")),
+    IntentRule("apps.open_mouse_cpl", "app_tools", "open_mouse_cpl", "safe", ("main.cpl", "control mouse", "mouse properties", "خصائص الفاره", "خصائص الفأرة")),
+    IntentRule("apps.open_keyboard_cpl", "app_tools", "open_keyboard_cpl", "safe", ("control keyboard", "keyboard settings classic", "لوحة المفاتيح", "اعدادات الكيبورد الكلاسيكية")),
     IntentRule("apps.open_fonts_cpl", "app_tools", "open_fonts_cpl", "safe", ("control fonts", "fonts control panel", "لوحة الخطوط", "لوحه الخطوط")),
     IntentRule("apps.open_region_cpl", "app_tools", "open_region_cpl", "safe", ("intl.cpl", "region settings", "الاقليم", "الإقليم")),
     IntentRule("apps.open_printers_cpl", "app_tools", "open_printers_cpl", "safe", ("control printers", "printers control panel", "الطابعات", "لوحة الطابعات")),
@@ -1000,6 +1000,22 @@ def resolve_windows_intent(message: str) -> IntentResolution:
             capability_id="apps.open_printers_cpl",
             action="app_tools",
             params={"mode": "open_printers_cpl"},
+            risk_level="safe",
+        )
+    if _contains_any(normalized, ("control mouse", "mouse properties", "خصائص الفاره", "خصائص الفأرة")):
+        return IntentResolution(
+            matched=True,
+            capability_id="apps.open_mouse_cpl",
+            action="app_tools",
+            params={"mode": "open_mouse_cpl"},
+            risk_level="safe",
+        )
+    if _contains_any(normalized, ("control keyboard", "keyboard settings classic", "لوحة المفاتيح", "اعدادات الكيبورد الكلاسيكية")):
+        return IntentResolution(
+            matched=True,
+            capability_id="apps.open_keyboard_cpl",
+            action="app_tools",
+            params={"mode": "open_keyboard_cpl"},
             risk_level="safe",
         )
     if _contains_any(normalized, ("control userpasswords2", "user accounts classic", "حسابات المستخدمين الكلاسيكية", "ادارة حسابات المستخدمين", "إدارة حسابات المستخدمين")):
