@@ -154,7 +154,7 @@ async def test_global_fastpath_network_diagnostics_replies(
     class DummyDesktopTool:
         async def execute(self, action: str, **kwargs):
             assert action == "network_tools"
-            assert kwargs.get("mode") in {"ipconfig_all", "tracert", "pathping", "nslookup", "netstat_active", "display_dns", "getmac", "arp_table", "nbtstat_cache", "nbtstat_host", "net_view"}
+            assert kwargs.get("mode") in {"ipconfig_all", "tracert", "pathping", "nslookup", "netstat_active", "display_dns", "getmac", "arp_table", "nbtstat_cache", "nbtstat_host", "net_view", "netstat_binary", "wifi_profiles"}
             return '{"ok": true}'
 
     monkeypatch.setattr("Mudabbir.tools.builtin.desktop.DesktopTool", DummyDesktopTool)
@@ -225,6 +225,22 @@ async def test_global_fastpath_network_diagnostics_replies(
     )
     assert handled_netview is True
     assert "شبك" in str(reply_netview) or "network" in str(reply_netview).lower()
+
+    handled_netstatb, reply_netstatb = await loop._try_global_windows_fastpath(
+        text="netstat -b", session_key="s7vb"
+    )
+    assert handled_netstatb is True
+    assert (
+        "program" in str(reply_netstatb).lower()
+        or "executable" in str(reply_netstatb).lower()
+        or "البرامج" in str(reply_netstatb)
+    )
+
+    handled_wlan, reply_wlan = await loop._try_global_windows_fastpath(
+        text="netsh wlan show profiles", session_key="s7vw"
+    )
+    assert handled_wlan is True
+    assert "wifi" in str(reply_wlan).lower() or "wi-fi" in str(reply_wlan).lower() or "واي فاي" in str(reply_wlan)
 
 
 @pytest.mark.asyncio

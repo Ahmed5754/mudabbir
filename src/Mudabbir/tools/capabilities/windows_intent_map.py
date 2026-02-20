@@ -313,6 +313,8 @@ RULES: tuple[IntentRule, ...] = (
     IntentRule("network.nbtstat_cache", "network_tools", "nbtstat_cache", "safe", ("nbtstat -c", "netbios cache", "كاش netbios")),
     IntentRule("network.nbtstat_host", "network_tools", "nbtstat_host", "safe", ("nbtstat -a", "netbios host query", "استعلام netbios"), params=("host",)),
     IntentRule("network.net_view", "network_tools", "net_view", "safe", ("net view", "network computers", "اجهزة الشبكة", "الأجهزة على الشبكة")),
+    IntentRule("network.netstat_binary", "network_tools", "netstat_binary", "elevated", ("netstat -b", "netstat with binaries", "الاتصالات مع البرامج")),
+    IntentRule("network.wifi_profiles", "network_tools", "wifi_profiles", "safe", ("netsh wlan show profiles", "wifi profiles", "ملفات wifi المحفوظة", "شبكات الواي فاي المحفوظة")),
     IntentRule("network.net_scan", "network_tools", "net_scan", "safe", ("net scan", "الاجهزة المتصلة بالشبكة", "الاجهزة المتصله بالشبكه")),
     IntentRule("network.file_sharing_on", "network_tools", "file_sharing_on", "elevated", ("file sharing on", "تشغيل مشاركة الملفات")),
     IntentRule("network.file_sharing_off", "network_tools", "file_sharing_off", "elevated", ("file sharing off", "ايقاف مشاركة الملفات")),
@@ -1102,6 +1104,14 @@ def resolve_windows_intent(message: str) -> IntentResolution:
             action="network_tools",
             params=params,
             risk_level="safe",
+        )
+    if _contains_any(normalized, ("netstat -b", "الاتصالات مع البرامج")):
+        return IntentResolution(
+            matched=True,
+            capability_id="network.netstat_binary",
+            action="network_tools",
+            params={"mode": "netstat_binary"},
+            risk_level="elevated",
         )
 
     # Contextual override for percentage-based audio/brightness set.

@@ -374,6 +374,8 @@ def test_resolve_registry_set_value_extracts_fields() -> None:
         ("nbtstat -c", "network_tools", "nbtstat_cache"),
         ("nbtstat -a FILESRV", "network_tools", "nbtstat_host"),
         ("net view", "network_tools", "net_view"),
+        ("netstat -b", "network_tools", "netstat_binary"),
+        ("netsh wlan show profiles", "network_tools", "wifi_profiles"),
         ("الاجهزة المتصلة بالشبكة", "network_tools", "net_scan"),
         ("تشغيل مشاركة الملفات", "network_tools", "file_sharing_on"),
         ("المجلدات المشاركة", "network_tools", "shared_folders"),

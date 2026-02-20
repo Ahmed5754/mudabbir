@@ -2769,6 +2769,12 @@ $obj | ConvertTo-Json -Compress
         if mode_norm in {"net_view"}:
             ok, out = _run_powershell("net view", timeout=12)
             return _json({"ok": True, "mode": "net_view", "output": out[:2000]}) if ok else self._error(out or "net view failed")
+        if mode_norm in {"netstat_binary"}:
+            ok, out = _run_powershell("netstat -b", timeout=20)
+            return _json({"ok": True, "mode": "netstat_binary", "output": out[:3000]}) if ok else self._error(out or "netstat -b failed")
+        if mode_norm in {"wifi_profiles"}:
+            ok, out = _run_powershell("netsh wlan show profiles", timeout=12)
+            return _json({"ok": True, "mode": "wifi_profiles", "output": out[:2500]}) if ok else self._error(out or "wifi profiles failed")
         if mode_norm in {"net_scan", "arp_scan"}:
             ok, out = _run_powershell("arp -a", timeout=10)
             return _json({"ok": True, "mode": "net_scan", "output": out[:2000]}) if ok else self._error(out or "net scan failed")
