@@ -148,6 +148,44 @@ async def test_global_fastpath_network_tools_human_reply(monkeypatch: pytest.Mon
 
 
 @pytest.mark.asyncio
+async def test_global_fastpath_network_diagnostics_replies(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class DummyDesktopTool:
+        async def execute(self, action: str, **kwargs):
+            assert action == "network_tools"
+            assert kwargs.get("mode") in {"tracert", "nslookup", "netstat_active", "display_dns"}
+            return '{"ok": true}'
+
+    monkeypatch.setattr("Mudabbir.tools.builtin.desktop.DesktopTool", DummyDesktopTool)
+    loop = AgentLoop()
+
+    handled_tracert, reply_tracert = await loop._try_global_windows_fastpath(
+        text="تتبع المسار google.com", session_key="s7t"
+    )
+    assert handled_tracert is True
+    assert "تتبع" in str(reply_tracert) or "trace" in str(reply_tracert).lower()
+
+    handled_nslookup, reply_nslookup = await loop._try_global_windows_fastpath(
+        text="nslookup google.com", session_key="s7n"
+    )
+    assert handled_nslookup is True
+    assert "dns" in str(reply_nslookup).lower() or "استعلام" in str(reply_nslookup)
+
+    handled_netstat, reply_netstat = await loop._try_global_windows_fastpath(
+        text="الاتصالات النشطة", session_key="s7s"
+    )
+    assert handled_netstat is True
+    assert "نشط" in str(reply_netstat) or "active" in str(reply_netstat).lower()
+
+    handled_dns, reply_dns = await loop._try_global_windows_fastpath(
+        text="عرض dns", session_key="s7d"
+    )
+    assert handled_dns is True
+    assert "dns" in str(reply_dns).lower()
+
+
+@pytest.mark.asyncio
 async def test_global_fastpath_media_and_window_replies(monkeypatch: pytest.MonkeyPatch) -> None:
     class DummyDesktopTool:
         async def execute(self, action: str, **kwargs):

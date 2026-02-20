@@ -302,6 +302,10 @@ RULES: tuple[IntentRule, ...] = (
     IntentRule("network.open_ports", "network_tools", "open_ports", "safe", ("open ports", "المنافذ المفتوحة", "اظهار المنافذ المفتوحة")),
     IntentRule("network.port_owner", "network_tools", "port_owner", "safe", ("port owner", "من يستخدم المنفذ", "البرنامج الذي يستخدم منفذ"), params=("port",)),
     IntentRule("network.route_table", "network_tools", "route_table", "safe", ("route table", "جدول التوجيه")),
+    IntentRule("network.tracert", "network_tools", "tracert", "safe", ("tracert", "trace route", "تتبع المسار", "تتبع الطريق"), params=("host",)),
+    IntentRule("network.nslookup", "network_tools", "nslookup", "safe", ("nslookup", "dns lookup", "استعلام dns"), params=("host",)),
+    IntentRule("network.netstat", "network_tools", "netstat_active", "safe", ("netstat", "الاتصالات النشطة", "الاتصالات النشطه")),
+    IntentRule("network.display_dns", "network_tools", "display_dns", "safe", ("display dns", "ipconfig displaydns", "عرض dns", "عرض ذاكرة dns")),
     IntentRule("network.net_scan", "network_tools", "net_scan", "safe", ("net scan", "الاجهزة المتصلة بالشبكة", "الاجهزة المتصله بالشبكه")),
     IntentRule("network.file_sharing_on", "network_tools", "file_sharing_on", "elevated", ("file sharing on", "تشغيل مشاركة الملفات")),
     IntentRule("network.file_sharing_off", "network_tools", "file_sharing_off", "elevated", ("file sharing off", "ايقاف مشاركة الملفات")),
@@ -597,6 +601,9 @@ def _build_params(rule: IntentRule, raw_text: str, normalized: str) -> dict[str,
                 (
                     r"(?:connect(?: to)? wifi|الاتصال بشبكه|الاتصال بشبكة|اتصل بشبكه|اتصل بشبكة)\s+(.+)$",
                     r"(?:network|شبكه|شبكة)\s+(.+)$",
+                    r"(?:tracert|trace route|تتبع المسار|تتبع الطريق)\s+(.+)$",
+                    r"(?:nslookup|dns lookup|استعلام dns)\s+(.+)$",
+                    r"(?:server online|فحص توافر خادم|هل السيرفر شغال)\s+(.+)$",
                 ),
             )
         if not host:

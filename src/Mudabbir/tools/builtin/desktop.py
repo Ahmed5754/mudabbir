@@ -2732,6 +2732,20 @@ $obj | ConvertTo-Json -Compress
         if mode_norm in {"route_table"}:
             ok, out = _run_powershell("route print", timeout=12)
             return _json({"ok": True, "mode": "route_table", "output": out[:2000]}) if ok else self._error(out or "route table failed")
+        if mode_norm in {"tracert", "trace_route"}:
+            target = (host or "").strip() or "8.8.8.8"
+            ok, out = _run_powershell(f"tracert -d {target}", timeout=35)
+            return _json({"ok": True, "mode": "tracert", "host": target, "output": out[:2500]}) if ok else self._error(out or "tracert failed")
+        if mode_norm in {"nslookup", "dns_lookup"}:
+            target = (host or "").strip() or "google.com"
+            ok, out = _run_powershell(f"nslookup {target}", timeout=15)
+            return _json({"ok": True, "mode": "nslookup", "host": target, "output": out[:2000]}) if ok else self._error(out or "nslookup failed")
+        if mode_norm in {"netstat_active", "netstat"}:
+            ok, out = _run_powershell("netstat -ano", timeout=15)
+            return _json({"ok": True, "mode": "netstat_active", "output": out[:3000]}) if ok else self._error(out or "netstat failed")
+        if mode_norm in {"display_dns", "dns_cache"}:
+            ok, out = _run_powershell("ipconfig /displaydns", timeout=15)
+            return _json({"ok": True, "mode": "display_dns", "output": out[:3000]}) if ok else self._error(out or "display dns failed")
         if mode_norm in {"net_scan", "arp_scan"}:
             ok, out = _run_powershell("arp -a", timeout=10)
             return _json({"ok": True, "mode": "net_scan", "output": out[:2000]}) if ok else self._error(out or "net scan failed")

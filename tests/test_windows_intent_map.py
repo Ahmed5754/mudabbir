@@ -356,6 +356,10 @@ def test_resolve_registry_set_value_extracts_fields() -> None:
     [
         ("المنافذ المفتوحة", "network_tools", "open_ports"),
         ("جدول التوجيه", "network_tools", "route_table"),
+        ("تتبع المسار google.com", "network_tools", "tracert"),
+        ("nslookup google.com", "network_tools", "nslookup"),
+        ("الاتصالات النشطة", "network_tools", "netstat_active"),
+        ("عرض dns", "network_tools", "display_dns"),
         ("الاجهزة المتصلة بالشبكة", "network_tools", "net_scan"),
         ("تشغيل مشاركة الملفات", "network_tools", "file_sharing_on"),
         ("المجلدات المشاركة", "network_tools", "shared_folders"),
