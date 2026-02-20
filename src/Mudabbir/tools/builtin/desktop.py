@@ -3824,6 +3824,32 @@ $obj | ConvertTo-Json -Compress
             if ok and out:
                 return _json({"ok": True, "mode": "list", "data": json.loads(out)})
             return self._error(out or "list services failed")
+        if mode_norm in {"describe", "description"}:
+            svc = (name or "").strip()
+            if not svc:
+                return self._error("service name is required")
+            ps = (
+                f"Get-CimInstance Win32_Service -Filter \"Name='{svc}'\" | "
+                "Select-Object Name,DisplayName,State,StartMode,StartName,Description | ConvertTo-Json -Compress"
+            )
+            ok, out = _run_powershell(ps, timeout=15)
+            if ok and out:
+                return _json({"ok": True, "mode": mode_norm, "name": svc, "data": json.loads(out)})
+            return self._error(out or "service description failed")
+        if mode_norm in {"dependencies", "deps"}:
+            svc = (name or "").strip()
+            if not svc:
+                return self._error("service name is required")
+            ps = (
+                f"$s=Get-Service -Name '{svc}' -ErrorAction Stop; "
+                "$deps=@($s.ServicesDependedOn | Select-Object Name,DisplayName,Status); "
+                "$dependents=@($s.DependentServices | Select-Object Name,DisplayName,Status); "
+                "@{name=$s.Name; display_name=$s.DisplayName; dependencies=$deps; dependents=$dependents} | ConvertTo-Json -Compress"
+            )
+            ok, out = _run_powershell(ps, timeout=15)
+            if ok and out:
+                return _json({"ok": True, "mode": mode_norm, "name": svc, "data": json.loads(out)})
+            return self._error(out or "service dependencies failed")
         if mode_norm in {"user_services", "list_user_services"}:
             ps = (
                 "Get-CimInstance Win32_Service | "
@@ -5344,6 +5370,16 @@ $obj | ConvertTo-Json -Compress
             "open_add_remove_programs": "appwiz.cpl",
             "open_volume_mixer": "sndvol.exe",
             "open_mic_settings": "ms-settings:sound",
+            "open_sound_cpl": "mmsys.cpl",
+            "open_network_connections": "ncpa.cpl",
+            "open_time_date": "timedate.cpl",
+            "open_system_properties": "sysdm.cpl",
+            "open_power_options": "powercfg.cpl",
+            "open_firewall_cpl": "firewall.cpl",
+            "open_mouse_cpl": "main.cpl",
+            "open_keyboard_cpl": "control keyboard",
+            "open_fonts_cpl": "control fonts",
+            "open_region_cpl": "intl.cpl",
         }
         if mode_norm in mapping:
             target = mapping[mode_norm]
@@ -5439,6 +5475,11 @@ $obj | ConvertTo-Json -Compress
             "open_event_viewer": "Start-Process eventvwr.msc",
             "open_services": "Start-Process services.msc",
             "open_registry": "Start-Process regedit.exe -Verb RunAs",
+            "open_task_scheduler": "Start-Process taskschd.msc",
+            "open_computer_management": "Start-Process compmgmt.msc",
+            "open_local_users_groups": "Start-Process lusrmgr.msc",
+            "open_local_security_policy": "Start-Process secpol.msc",
+            "open_print_management": "Start-Process printmanagement.msc",
         }
         if mode_norm in mapping:
             ok, out = _run_powershell(mapping[mode_norm], timeout=15)

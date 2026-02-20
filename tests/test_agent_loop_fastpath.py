@@ -225,6 +225,37 @@ async def test_global_fastpath_service_and_security_replies(
 
 
 @pytest.mark.asyncio
+async def test_global_fastpath_service_list_and_dependencies_replies(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class DummyDesktopTool:
+        async def execute(self, action: str, **kwargs):
+            assert action == "service_tools"
+            mode = kwargs.get("mode")
+            if mode == "list":
+                return '{"ok": true, "mode":"list", "data":[]}'
+            if mode == "dependencies":
+                assert kwargs.get("name") == "Spooler"
+                return '{"ok": true, "mode":"dependencies", "data":{}}'
+            return '{"ok": true}'
+
+    monkeypatch.setattr("Mudabbir.tools.builtin.desktop.DesktopTool", DummyDesktopTool)
+    loop = AgentLoop()
+
+    handled_list, reply_list = await loop._try_global_windows_fastpath(
+        text="قائمة الخدمات", session_key="s12a"
+    )
+    assert handled_list is True
+    assert "الخدمات" in str(reply_list) or "services" in str(reply_list).lower()
+
+    handled_deps, reply_deps = await loop._try_global_windows_fastpath(
+        text="تبعيات الخدمة Spooler", session_key="s12b"
+    )
+    assert handled_deps is True
+    assert "تبعيات" in str(reply_deps) or "dependencies" in str(reply_deps).lower()
+
+
+@pytest.mark.asyncio
 async def test_global_fastpath_startup_background_and_performance_replies(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

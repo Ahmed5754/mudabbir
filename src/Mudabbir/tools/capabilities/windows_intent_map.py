@@ -369,6 +369,10 @@ RULES: tuple[IntentRule, ...] = (
     IntentRule("services.stop", "service_tools", "stop", "destructive", ("stop service", "ايقاف خدمه", "ايقاف خدمة"), params=("name",)),
     IntentRule("services.restart", "service_tools", "restart", "elevated", ("restart service", "اعادة تشغيل خدمة", "اعاده تشغيل خدمة", "إعادة تشغيل خدمة"), params=("name",)),
     IntentRule("services.start", "service_tools", "start", "elevated", ("start service", "تشغيل خدمة", "تشغيل خدمه", "شغل خدمة", "شغل خدمه"), params=("name",)),
+    IntentRule("services.list", "service_tools", "list", "safe", ("list services", "قائمة الخدمات", "الخدمات المشغلة", "الخدمات المشغله")),
+    IntentRule("services.describe", "service_tools", "describe", "safe", ("service description", "وصف الخدمة", "وصف الخدمه"), params=("name",)),
+    IntentRule("services.dependencies", "service_tools", "dependencies", "safe", ("service dependencies", "تبعيات الخدمة", "تبعيات الخدمه"), params=("name",)),
+    IntentRule("services.startup_type", "service_tools", "startup", "elevated", ("service startup type", "startup type service", "نوع تشغيل الخدمة", "نوع تشغيل الخدمه"), params=("name", "startup")),
     IntentRule("services.open", "dev_tools", "open_services", "safe", ("open services", "services.msc", "فتح الخدمات")),
     IntentRule("process.restart_explorer", "process_tools", "restart_explorer", "elevated", ("restart explorer", "restart explorer.exe", "اعادة تشغيل explorer", "إعادة تشغيل واجهة الويندوز")),
     IntentRule("security.firewall_status", "security_tools", "firewall_status", "safe", ("firewall status", "حالة الجدار الناري", "هل الجدار الناري شغال", "هل جدار الحمايه شغال")),
@@ -609,6 +613,9 @@ def _build_params(rule: IntentRule, raw_text: str, normalized: str) -> dict[str,
         q = _extract_named_value(
             raw_text,
             (
+                r"(?:service startup type|startup type service)\s+([A-Za-z0-9._-]+)",
+                r"(?:وصف الخدمة|وصف الخدمه|تبعيات الخدمة|تبعيات الخدمه|تشغيل خدمة|تشغيل خدمه|شغل خدمة|شغل خدمه|ايقاف خدمة|ايقاف خدمه|اعادة تشغيل خدمة|اعاده تشغيل خدمة|إعادة تشغيل خدمة)\s+([A-Za-z0-9._-]+)",
+                r"(?:start service|stop service|restart service|service description|service dependencies)\s+([A-Za-z0-9._-]+)",
                 r"(?:rename computer|rename pc|تغيير اسم الكمبيوتر)\s*(?:to|الى|إلى)?\s*[:\-]?\s*(.+)$",
                 r"(?:name|named|اسم|باسم)\s*[:\-]?\s*(.+)$",
             ),
@@ -641,6 +648,13 @@ def _build_params(rule: IntentRule, raw_text: str, normalized: str) -> dict[str,
             params["group"] = "admin"
         elif _contains_any(normalized, ("standard", "user", "عادي")):
             params["group"] = "users"
+    if "startup" in rule.params:
+        if _contains_any(normalized, ("automatic", "auto", "تلقائي")):
+            params["startup"] = "auto"
+        elif _contains_any(normalized, ("manual", "يدوي")):
+            params["startup"] = "manual"
+        elif _contains_any(normalized, ("disabled", "disable", "معطل", "تعطيل")):
+            params["startup"] = "disabled"
     if "command" in rule.params:
         q = _extract_named_value(
             raw_text,

@@ -535,15 +535,24 @@ class AgentLoop:
         if action == "service_tools":
             mode = str(params.get("mode", "")).lower()
             svc = str(params.get("name", "") or "").strip()
+            startup = str(params.get("startup", "") or "").strip()
             service_msgs_ar = {
                 "start": f"تم تشغيل الخدمة: {svc or 'المحددة'}.",
                 "stop": f"تم إيقاف الخدمة: {svc or 'المحددة'}.",
                 "restart": f"تمت إعادة تشغيل الخدمة: {svc or 'المحددة'}.",
+                "list": "تم جلب قائمة الخدمات.",
+                "describe": f"تم جلب وصف الخدمة: {svc or 'المحددة'}.",
+                "dependencies": f"تم جلب تبعيات الخدمة: {svc or 'المحددة'}.",
+                "startup": f"تم تعديل نوع تشغيل الخدمة: {svc or 'المحددة'} إلى {startup or 'المطلوب'}.",
             }
             service_msgs_en = {
                 "start": f"Service started: {svc or 'target service'}.",
                 "stop": f"Service stopped: {svc or 'target service'}.",
                 "restart": f"Service restarted: {svc or 'target service'}.",
+                "list": "Fetched services list.",
+                "describe": f"Fetched service description: {svc or 'target service'}.",
+                "dependencies": f"Fetched service dependencies: {svc or 'target service'}.",
+                "startup": f"Updated service startup type: {svc or 'target service'} -> {startup or 'target mode'}.",
             }
             msg = service_msgs_ar.get(mode) if arabic else service_msgs_en.get(mode)
             if msg:

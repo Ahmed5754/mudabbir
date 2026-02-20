@@ -182,6 +182,10 @@ def test_resolve_more_common_arabic_phrases(message: str, action: str, mode: str
 @pytest.mark.parametrize(
     ("message", "action", "mode"),
     [
+        ("قائمة الخدمات", "service_tools", "list"),
+        ("وصف الخدمة WinRM", "service_tools", "describe"),
+        ("تبعيات الخدمة Spooler", "service_tools", "dependencies"),
+        ("نوع تشغيل الخدمة WinRM تلقائي", "service_tools", "startup"),
         ("شغل خدمة Spooler", "service_tools", "start"),
         ("اعادة تشغيل خدمة Spooler", "service_tools", "restart"),
         ("حالة الجدار الناري", "security_tools", "firewall_status"),
@@ -205,6 +209,15 @@ def test_resolve_service_name_extraction_start() -> None:
     assert result.action == "service_tools"
     assert result.params.get("mode") == "start"
     assert result.params.get("name") == "WinRM"
+
+
+def test_resolve_service_startup_extracts_mode() -> None:
+    result = resolve_windows_intent("service startup type WinRM manual")
+    assert result.matched is True
+    assert result.action == "service_tools"
+    assert result.params.get("mode") == "startup"
+    assert result.params.get("name") == "WinRM"
+    assert result.params.get("startup") == "manual"
 
 
 @pytest.mark.parametrize(
