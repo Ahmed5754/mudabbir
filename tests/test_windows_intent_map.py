@@ -147,3 +147,25 @@ def test_resolve_more_daily_arabic_aliases(message: str, action: str, mode: str)
     assert result.matched is True
     assert result.action == action
     assert result.params.get("mode") == mode
+
+
+@pytest.mark.parametrize(
+    ("message", "action", "mode"),
+    [
+        ("شغل الواي فاي", "network_tools", "wifi_on"),
+        ("طفي الواي فاي", "network_tools", "wifi_off"),
+        ("افراغ dns", "network_tools", "flush_dns"),
+        ("افصل النت", "network_tools", "disconnect_current_network"),
+        ("شغل وقف", "media_control", "play_pause"),
+        ("المقطع التالي", "media_control", "next"),
+        ("المقطع السابق", "media_control", "previous"),
+        ("تصغير النافذة", "window_control", "minimize"),
+        ("تكبير النافذة", "window_control", "maximize"),
+        ("استعادة النافذة", "window_control", "restore"),
+    ],
+)
+def test_resolve_more_common_arabic_phrases(message: str, action: str, mode: str) -> None:
+    result = resolve_windows_intent(message)
+    assert result.matched is True
+    assert result.action == action
+    assert result.params.get("mode") == mode

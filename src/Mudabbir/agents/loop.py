@@ -422,6 +422,79 @@ class AgentLoop:
 
         if action == "network_tools" and str(params.get("mode", "")).lower() in {"open_network_settings", "settings"}:
             return True, ("تم فتح إعدادات الشبكة." if arabic else "Opened network settings.")
+        if action == "network_tools":
+            mode = str(params.get("mode", "")).lower()
+            network_msgs_ar = {
+                "wifi_on": "تم تشغيل الواي فاي.",
+                "wifi_off": "تم إيقاف الواي فاي.",
+                "flush_dns": "تم مسح ذاكرة DNS.",
+                "renew_ip": "تم تجديد عنوان IP.",
+                "disconnect_current_network": "تم قطع الاتصال بالشبكة الحالية.",
+                "connect_wifi": "تم إرسال طلب الاتصال بالشبكة.",
+                "ip_internal": "تم جلب عنوان IP الداخلي.",
+                "ip_external": "تم جلب عنوان IP الخارجي.",
+                "ping": "تم تنفيذ اختبار الاتصال (Ping).",
+            }
+            network_msgs_en = {
+                "wifi_on": "Wi-Fi turned on.",
+                "wifi_off": "Wi-Fi turned off.",
+                "flush_dns": "DNS cache flushed.",
+                "renew_ip": "IP renewed.",
+                "disconnect_current_network": "Disconnected from current network.",
+                "connect_wifi": "Sent Wi-Fi connection request.",
+                "ip_internal": "Fetched internal IP.",
+                "ip_external": "Fetched external IP.",
+                "ping": "Ping test executed.",
+            }
+            msg = network_msgs_ar.get(mode) if arabic else network_msgs_en.get(mode)
+            if msg:
+                return True, msg
+
+        if action == "media_control":
+            mode = str(params.get("mode", "")).lower()
+            media_msgs_ar = {
+                "play_pause": "تم تنفيذ تشغيل/إيقاف مؤقت.",
+                "next": "تم الانتقال للمقطع التالي.",
+                "previous": "تم الرجوع للمقطع السابق.",
+            }
+            media_msgs_en = {
+                "play_pause": "Play/Pause executed.",
+                "next": "Skipped to next track.",
+                "previous": "Went back to previous track.",
+            }
+            msg = media_msgs_ar.get(mode) if arabic else media_msgs_en.get(mode)
+            if msg:
+                return True, msg
+
+        if action == "window_control":
+            mode = str(params.get("mode", "")).lower()
+            window_msgs_ar = {
+                "minimize": "تم تصغير النافذة.",
+                "maximize": "تم تكبير النافذة.",
+                "restore": "تمت استعادة حجم النافذة.",
+                "close_current": "تم إغلاق النافذة الحالية.",
+                "show_desktop": "تم تصغير كل النوافذ وإظهار سطح المكتب.",
+                "undo_show_desktop": "تمت إعادة إظهار النوافذ المصغرة.",
+                "split_left": "تم نقل النافذة لليسار.",
+                "split_right": "تم نقل النافذة لليمين.",
+                "task_view": "تم فتح عرض المهام.",
+                "alt_tab": "تم تبديل النافذة.",
+            }
+            window_msgs_en = {
+                "minimize": "Window minimized.",
+                "maximize": "Window maximized.",
+                "restore": "Window restored.",
+                "close_current": "Current window closed.",
+                "show_desktop": "Minimized all windows (Show Desktop).",
+                "undo_show_desktop": "Restored minimized windows.",
+                "split_left": "Moved window to the left side.",
+                "split_right": "Moved window to the right side.",
+                "task_view": "Opened Task View.",
+                "alt_tab": "Switched window.",
+            }
+            msg = window_msgs_ar.get(mode) if arabic else window_msgs_en.get(mode)
+            if msg:
+                return True, msg
 
         if action == "app_tools":
             mode = str(params.get("mode", "")).lower()

@@ -128,3 +128,46 @@ async def test_global_fastpath_shell_tools_human_reply(monkeypatch: pytest.Monke
     )
     assert handled is True
     assert "السريعة" in str(reply)
+
+
+@pytest.mark.asyncio
+async def test_global_fastpath_network_tools_human_reply(monkeypatch: pytest.MonkeyPatch) -> None:
+    class DummyDesktopTool:
+        async def execute(self, action: str, **kwargs):
+            assert action == "network_tools"
+            assert kwargs.get("mode") == "wifi_on"
+            return '{"ok": true}'
+
+    monkeypatch.setattr("Mudabbir.tools.builtin.desktop.DesktopTool", DummyDesktopTool)
+    loop = AgentLoop()
+    handled, reply = await loop._try_global_windows_fastpath(
+        text="شغل الواي فاي", session_key="s7"
+    )
+    assert handled is True
+    assert "الواي فاي" in str(reply)
+
+
+@pytest.mark.asyncio
+async def test_global_fastpath_media_and_window_replies(monkeypatch: pytest.MonkeyPatch) -> None:
+    class DummyDesktopTool:
+        async def execute(self, action: str, **kwargs):
+            if action == "media_control":
+                assert kwargs.get("mode") == "next"
+            if action == "window_control":
+                assert kwargs.get("mode") == "minimize"
+            return '{"ok": true}'
+
+    monkeypatch.setattr("Mudabbir.tools.builtin.desktop.DesktopTool", DummyDesktopTool)
+    loop = AgentLoop()
+
+    handled_media, reply_media = await loop._try_global_windows_fastpath(
+        text="المقطع التالي", session_key="s8"
+    )
+    assert handled_media is True
+    assert "التالي" in str(reply_media)
+
+    handled_window, reply_window = await loop._try_global_windows_fastpath(
+        text="تصغير النافذة", session_key="s9"
+    )
+    assert handled_window is True
+    assert "تصغير" in str(reply_window)
