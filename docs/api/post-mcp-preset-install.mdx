@@ -2,7 +2,7 @@
 title: Install MCP Preset
 description: "Install an MCP server from a preset template with a single API call. The preset provides pre-configured command, arguments, and environment variables for popular MCP servers."
 api: POST /api/mcp/presets/install
-baseUrl: http://localhost:8000
+baseUrl: http://localhost:8888
 layout: '@/layouts/APIEndpointLayout.astro'
 auth: bearer
 section: API Reference
@@ -39,7 +39,7 @@ Installs an MCP server from a preset template. Automatically configures the serv
 <Tabs items={["cURL", "JavaScript", "Python"]}>
   <Tab title="cURL">
     ```bash
-    curl -X POST "http://localhost:8000/api/mcp/presets/install" \
+    curl -X POST "http://localhost:8888/api/mcp/presets/install" \
       -H "Authorization: Bearer <token>" \
       -H "Content-Type: application/json" \
       -d '{
@@ -50,7 +50,7 @@ Installs an MCP server from a preset template. Automatically configures the serv
   </Tab>
   <Tab title="JavaScript">
     ```javascript
-    const response = await fetch("http://localhost:8000/api/mcp/presets/install", {
+    const response = await fetch("http://localhost:8888/api/mcp/presets/install", {
       method: "POST",
       headers: {
         "Authorization": "Bearer <token>",
@@ -70,7 +70,7 @@ Installs an MCP server from a preset template. Automatically configures the serv
     import requests
 
     response = requests.post(
-        "http://localhost:8000/api/mcp/presets/install",
+        "http://localhost:8888/api/mcp/presets/install",
         headers={"Authorization": "Bearer <token>"},
         json={
             "preset_id": "filesystem",

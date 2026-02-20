@@ -2,7 +2,7 @@
 title: Create Mission Control Agent
 description: "Register a new AI agent in Mudabbir's Mission Control with a name, role, specialties, backend configuration, and autonomy level. Agents can be assigned to tasks for autonomous execution."
 api: POST /api/mission-control/agents
-baseUrl: http://localhost:8000
+baseUrl: http://localhost:8888
 layout: '@/layouts/APIEndpointLayout.astro'
 auth: bearer
 section: API Reference
@@ -45,7 +45,7 @@ Creates a new agent profile in Mission Control. Agents can be assigned to tasks 
 <Tabs items={["cURL", "JavaScript", "Python"]}>
   <Tab title="cURL">
 ```bash
-curl -X POST http://localhost:8000/api/mission-control/agents \
+curl -X POST http://localhost:8888/api/mission-control/agents \
   -H "Authorization: Bearer YOUR_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -58,7 +58,7 @@ curl -X POST http://localhost:8000/api/mission-control/agents \
   </Tab>
   <Tab title="JavaScript">
 ```javascript
-const res = await fetch('http://localhost:8000/api/mission-control/agents', {
+const res = await fetch('http://localhost:8888/api/mission-control/agents', {
   method: 'POST',
   headers: {
     'Authorization': 'Bearer YOUR_TOKEN',
@@ -77,7 +77,7 @@ const res = await fetch('http://localhost:8000/api/mission-control/agents', {
 import httpx
 
 res = httpx.post(
-    "http://localhost:8000/api/mission-control/agents",
+    "http://localhost:8888/api/mission-control/agents",
     headers={"Authorization": "Bearer YOUR_TOKEN"},
     json={
         "name": "backend-dev",

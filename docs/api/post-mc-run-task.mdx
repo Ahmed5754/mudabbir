@@ -2,7 +2,7 @@
 title: Run Mission Control Task
 description: "Execute a Mission Control task with a specified AI agent in the background. The agent receives the task description, project context, and upstream deliverables. Output streams via WebSocket events."
 api: POST /api/mission-control/tasks/{task_id}/run
-baseUrl: http://localhost:8000
+baseUrl: http://localhost:8888
 layout: '@/layouts/APIEndpointLayout.astro'
 auth: bearer
 section: API Reference
@@ -43,7 +43,7 @@ Up to 5 tasks can run concurrently.
 <Tabs items={["cURL"]}>
   <Tab title="cURL">
 ```bash
-curl -X POST http://localhost:8000/api/mission-control/tasks/TASK_ID/run \
+curl -X POST http://localhost:8888/api/mission-control/tasks/TASK_ID/run \
   -H "Authorization: Bearer YOUR_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"agent_id": "AGENT_UUID"}'

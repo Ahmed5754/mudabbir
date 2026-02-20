@@ -2,7 +2,7 @@
 title: Start Deep Work Project
 description: "Create a new Deep Work project and start the AI-powered planning pipeline in the background. Returns the project immediately while research, PRD generation, and task breakdown run asynchronously."
 api: POST /api/deep-work/start
-baseUrl: http://localhost:8000
+baseUrl: http://localhost:8888
 layout: '@/layouts/APIEndpointLayout.astro'
 auth: bearer
 section: API Reference
@@ -43,7 +43,7 @@ Creates a new Deep Work project and starts the planning pipeline in the backgrou
 <Tabs items={["cURL", "JavaScript", "Python"]}>
   <Tab title="cURL">
 ```bash
-curl -X POST http://localhost:8000/api/deep-work/start \
+curl -X POST http://localhost:8888/api/deep-work/start \
   -H "Authorization: Bearer YOUR_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -54,7 +54,7 @@ curl -X POST http://localhost:8000/api/deep-work/start \
   </Tab>
   <Tab title="JavaScript">
 ```javascript
-const res = await fetch('http://localhost:8000/api/deep-work/start', {
+const res = await fetch('http://localhost:8888/api/deep-work/start', {
   method: 'POST',
   headers: {
     'Authorization': 'Bearer YOUR_TOKEN',
@@ -73,7 +73,7 @@ const data = await res.json();
 import httpx
 
 res = httpx.post(
-    "http://localhost:8000/api/deep-work/start",
+    "http://localhost:8888/api/deep-work/start",
     headers={"Authorization": "Bearer YOUR_TOKEN"},
     json={
         "description": "Build a REST API for recipe management with user auth and search",

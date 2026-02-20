@@ -2,7 +2,7 @@
 title: List Webhooks
 description: "List all configured inbound webhook slots in Mudabbir. Each webhook has a unique ID, auto-generated secret for authentication, and a URL for receiving external payloads."
 api: GET /api/webhooks
-baseUrl: http://localhost:8000
+baseUrl: http://localhost:8888
 layout: '@/layouts/APIEndpointLayout.astro'
 auth: bearer
 section: API Reference
@@ -29,13 +29,13 @@ Returns all configured inbound webhook slots. Each webhook slot provides a uniqu
 <Tabs items={["cURL", "JavaScript", "Python"]}>
   <Tab title="cURL">
     ```bash
-    curl -X GET "http://localhost:8000/api/webhooks" \
+    curl -X GET "http://localhost:8888/api/webhooks" \
       -H "Authorization: Bearer <token>"
     ```
   </Tab>
   <Tab title="JavaScript">
     ```javascript
-    const response = await fetch("http://localhost:8000/api/webhooks", {
+    const response = await fetch("http://localhost:8888/api/webhooks", {
       headers: { "Authorization": "Bearer <token>" }
     });
     const data = await response.json();
@@ -47,7 +47,7 @@ Returns all configured inbound webhook slots. Each webhook slot provides a uniqu
     import requests
 
     response = requests.get(
-        "http://localhost:8000/api/webhooks",
+        "http://localhost:8888/api/webhooks",
         headers={"Authorization": "Bearer <token>"}
     )
     print(response.json())
@@ -66,13 +66,13 @@ Returns all configured inbound webhook slots. Each webhook slot provides a uniqu
           "name": "github-events",
           "description": "GitHub repository webhooks",
           "secret": "whsec_a1b2c3d4e5f6...",
-          "url": "http://localhost:8000/webhook/inbound/github-events"
+          "url": "http://localhost:8888/webhook/inbound/github-events"
         },
         {
           "name": "stripe-payments",
           "description": "Stripe payment notifications",
           "secret": "whsec_x7y8z9w0...",
-          "url": "http://localhost:8000/webhook/inbound/stripe-payments"
+          "url": "http://localhost:8888/webhook/inbound/stripe-payments"
         }
       ]
     }

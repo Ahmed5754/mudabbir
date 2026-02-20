@@ -2,7 +2,7 @@
 title: Search Sessions
 description: "Perform full-text search across all Mudabbir session messages. Returns matching sessions with highlighted excerpts, enabling quick retrieval of past conversations by content or keyword."
 api: GET /api/sessions/search
-baseUrl: http://localhost:8000
+baseUrl: http://localhost:8888
 layout: '@/layouts/APIEndpointLayout.astro'
 auth: bearer
 section: API Reference
@@ -42,13 +42,13 @@ Searches session message content for a query string. Returns matching sessions w
 <Tabs items={["cURL", "JavaScript", "Python"]}>
   <Tab title="cURL">
     ```bash
-    curl -X GET "http://localhost:8000/api/sessions/search?q=prime&limit=20" \
+    curl -X GET "http://localhost:8888/api/sessions/search?q=prime&limit=20" \
       -H "Authorization: Bearer <token>"
     ```
   </Tab>
   <Tab title="JavaScript">
     ```javascript
-    const response = await fetch("http://localhost:8000/api/sessions/search?q=prime&limit=20", {
+    const response = await fetch("http://localhost:8888/api/sessions/search?q=prime&limit=20", {
       headers: { "Authorization": "Bearer <token>" }
     });
     const data = await response.json();
@@ -60,7 +60,7 @@ Searches session message content for a query string. Returns matching sessions w
     import requests
 
     response = requests.get(
-        "http://localhost:8000/api/sessions/search",
+        "http://localhost:8888/api/sessions/search",
         params={"q": "prime", "limit": 20},
         headers={"Authorization": "Bearer <token>"},
     )

@@ -2,7 +2,7 @@
 title: Receive Webhook Payload
 description: "Receive an inbound webhook payload and forward it to the Mudabbir agent for processing. Validates the webhook secret, parses the payload, and publishes it to the message bus."
 api: POST /webhook/inbound/{webhook_name}
-baseUrl: http://localhost:8000
+baseUrl: http://localhost:8888
 layout: '@/layouts/APIEndpointLayout.astro'
 auth: none
 section: API Reference
@@ -54,7 +54,7 @@ Authentication is via webhook secret header, not the standard Bearer token.
 <Tabs items={["cURL", "JavaScript", "Python"]}>
   <Tab title="cURL">
     ```bash
-    curl -X POST "http://localhost:8000/webhook/inbound/github-events" \
+    curl -X POST "http://localhost:8888/webhook/inbound/github-events" \
       -H "X-Webhook-Secret: whsec_a1b2c3d4e5f6..." \
       -H "Content-Type: application/json" \
       -d '{"action": "opened", "issue": {"title": "Bug report"}}'
@@ -63,7 +63,7 @@ Authentication is via webhook secret header, not the standard Bearer token.
   <Tab title="JavaScript">
     ```javascript
     const response = await fetch(
-      "http://localhost:8000/webhook/inbound/github-events",
+      "http://localhost:8888/webhook/inbound/github-events",
       {
         method: "POST",
         headers: {
@@ -85,7 +85,7 @@ Authentication is via webhook secret header, not the standard Bearer token.
     import requests
 
     response = requests.post(
-        "http://localhost:8000/webhook/inbound/github-events",
+        "http://localhost:8888/webhook/inbound/github-events",
         headers={"X-Webhook-Secret": "whsec_a1b2c3d4e5f6..."},
         json={
             "action": "opened",

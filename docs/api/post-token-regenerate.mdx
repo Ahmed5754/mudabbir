@@ -2,7 +2,7 @@
 title: Regenerate Access Token
 description: "Generate a new Mudabbir access token and invalidate all existing session tokens. Use this to rotate credentials or revoke access after a security incident or personnel change."
 api: POST /api/token/regenerate
-baseUrl: http://localhost:8000
+baseUrl: http://localhost:8888
 layout: '@/layouts/APIEndpointLayout.astro'
 auth: bearer
 section: API Reference
@@ -27,13 +27,13 @@ Generates a new master access token and invalidates all existing session tokens.
 <Tabs items={["cURL", "JavaScript", "Python"]}>
   <Tab title="cURL">
     ```bash
-    curl -X POST "http://localhost:8000/api/token/regenerate" \
+    curl -X POST "http://localhost:8888/api/token/regenerate" \
       -H "Authorization: Bearer <token>"
     ```
   </Tab>
   <Tab title="JavaScript">
     ```javascript
-    const response = await fetch("http://localhost:8000/api/token/regenerate", {
+    const response = await fetch("http://localhost:8888/api/token/regenerate", {
       method: "POST",
       headers: { "Authorization": "Bearer <token>" }
     });
@@ -46,7 +46,7 @@ Generates a new master access token and invalidates all existing session tokens.
     import requests
 
     response = requests.post(
-        "http://localhost:8000/api/token/regenerate",
+        "http://localhost:8888/api/token/regenerate",
         headers={"Authorization": "Bearer <token>"}
     )
     print(response.json())

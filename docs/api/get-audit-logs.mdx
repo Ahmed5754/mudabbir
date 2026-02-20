@@ -2,7 +2,7 @@
 title: Get Audit Logs
 description: "Retrieve the append-only security audit log entries from Mudabbir. Returns timestamped security events with severity levels (INFO, WARNING, CRITICAL, ALERT) and structured metadata."
 api: GET /api/audit
-baseUrl: http://localhost:8000
+baseUrl: http://localhost:8888
 layout: '@/layouts/APIEndpointLayout.astro'
 auth: bearer
 section: API Reference
@@ -38,13 +38,13 @@ Returns an array of audit entry objects:
 <Tabs items={["cURL", "JavaScript", "Python"]}>
   <Tab title="cURL">
     ```bash
-    curl -X GET "http://localhost:8000/api/audit?limit=50" \
+    curl -X GET "http://localhost:8888/api/audit?limit=50" \
       -H "Authorization: Bearer <token>"
     ```
   </Tab>
   <Tab title="JavaScript">
     ```javascript
-    const response = await fetch("http://localhost:8000/api/audit?limit=50", {
+    const response = await fetch("http://localhost:8888/api/audit?limit=50", {
       headers: { "Authorization": "Bearer <token>" }
     });
     const data = await response.json();
@@ -56,7 +56,7 @@ Returns an array of audit entry objects:
     import requests
 
     response = requests.get(
-        "http://localhost:8000/api/audit",
+        "http://localhost:8888/api/audit",
         params={"limit": 50},
         headers={"Authorization": "Bearer <token>"}
     )

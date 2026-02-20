@@ -2,7 +2,7 @@
 title: Get Deep Work Plan
 description: "Retrieve the generated plan for a Deep Work project including the PRD document, task list with dependencies, execution levels for DAG visualization, and overall progress metrics."
 api: GET /api/deep-work/projects/{project_id}/plan
-baseUrl: http://localhost:8000
+baseUrl: http://localhost:8888
 layout: '@/layouts/APIEndpointLayout.astro'
 auth: bearer
 section: API Reference
@@ -56,13 +56,13 @@ Returns the full plan for a Deep Work project including the PRD, task list with 
 <Tabs items={["cURL", "JavaScript", "Python"]}>
   <Tab title="cURL">
 ```bash
-curl http://localhost:8000/api/deep-work/projects/PROJECT_ID/plan \
+curl http://localhost:8888/api/deep-work/projects/PROJECT_ID/plan \
   -H "Authorization: Bearer YOUR_TOKEN"
 ```
   </Tab>
   <Tab title="JavaScript">
 ```javascript
-const res = await fetch(`http://localhost:8000/api/deep-work/projects/${projectId}/plan`, {
+const res = await fetch(`http://localhost:8888/api/deep-work/projects/${projectId}/plan`, {
   headers: { 'Authorization': 'Bearer YOUR_TOKEN' },
 });
 const data = await res.json();
@@ -73,7 +73,7 @@ const data = await res.json();
 import httpx
 
 res = httpx.get(
-    f"http://localhost:8000/api/deep-work/projects/{project_id}/plan",
+    f"http://localhost:8888/api/deep-work/projects/{project_id}/plan",
     headers={"Authorization": "Bearer YOUR_TOKEN"},
 )
 data = res.json()

@@ -2,7 +2,7 @@
 title: List MCP Presets
 description: "Get all available MCP server presets with their installation status. Presets are pre-configured server templates that can be installed with a single click from the dashboard."
 api: GET /api/mcp/presets
-baseUrl: http://localhost:8000
+baseUrl: http://localhost:8888
 layout: '@/layouts/APIEndpointLayout.astro'
 auth: bearer
 section: API Reference
@@ -32,13 +32,13 @@ Returns an array of preset objects:
 <Tabs items={["cURL", "JavaScript", "Python"]}>
   <Tab title="cURL">
     ```bash
-    curl -X GET "http://localhost:8000/api/mcp/presets" \
+    curl -X GET "http://localhost:8888/api/mcp/presets" \
       -H "Authorization: Bearer <token>"
     ```
   </Tab>
   <Tab title="JavaScript">
     ```javascript
-    const response = await fetch("http://localhost:8000/api/mcp/presets", {
+    const response = await fetch("http://localhost:8888/api/mcp/presets", {
       headers: { "Authorization": "Bearer <token>" }
     });
     const data = await response.json();
@@ -50,7 +50,7 @@ Returns an array of preset objects:
     import requests
 
     response = requests.get(
-        "http://localhost:8000/api/mcp/presets",
+        "http://localhost:8888/api/mcp/presets",
         headers={"Authorization": "Bearer <token>"}
     )
     print(response.json())

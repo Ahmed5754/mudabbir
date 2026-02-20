@@ -2,7 +2,7 @@
 title: Get MCP Status
 description: "Retrieve the status of all configured MCP servers in Mudabbir: running state, transport type (stdio/HTTP), available tools count, and last connection timestamp."
 api: GET /api/mcp/status
-baseUrl: http://localhost:8000
+baseUrl: http://localhost:8888
 layout: '@/layouts/APIEndpointLayout.astro'
 auth: bearer
 section: API Reference
@@ -31,13 +31,13 @@ Returns an object keyed by server name:
 <Tabs items={["cURL", "JavaScript", "Python"]}>
   <Tab title="cURL">
     ```bash
-    curl -X GET "http://localhost:8000/api/mcp/status" \
+    curl -X GET "http://localhost:8888/api/mcp/status" \
       -H "Authorization: Bearer <token>"
     ```
   </Tab>
   <Tab title="JavaScript">
     ```javascript
-    const response = await fetch("http://localhost:8000/api/mcp/status", {
+    const response = await fetch("http://localhost:8888/api/mcp/status", {
       headers: { "Authorization": "Bearer <token>" }
     });
     const data = await response.json();
@@ -49,7 +49,7 @@ Returns an object keyed by server name:
     import requests
 
     response = requests.get(
-        "http://localhost:8000/api/mcp/status",
+        "http://localhost:8888/api/mcp/status",
         headers={"Authorization": "Bearer <token>"}
     )
     print(response.json())

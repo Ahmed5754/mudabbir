@@ -2,7 +2,7 @@
 title: Update Memory Settings
 description: "Update Mudabbir's memory backend configuration: switch between file store and Mem0, configure LLM and embedder providers, set vector store options, and toggle auto-learning."
 api: POST /api/memory/settings
-baseUrl: http://localhost:8000
+baseUrl: http://localhost:8888
 layout: '@/layouts/APIEndpointLayout.astro'
 auth: bearer
 section: API Reference
@@ -52,7 +52,7 @@ Updates the memory backend configuration. Changes take effect immediately — th
 <Tabs items={["cURL", "JavaScript", "Python"]}>
   <Tab title="cURL">
     ```bash
-    curl -X POST "http://localhost:8000/api/memory/settings" \
+    curl -X POST "http://localhost:8888/api/memory/settings" \
       -H "Authorization: Bearer <token>" \
       -H "Content-Type: application/json" \
       -d '{
@@ -68,7 +68,7 @@ Updates the memory backend configuration. Changes take effect immediately — th
   </Tab>
   <Tab title="JavaScript">
     ```javascript
-    const response = await fetch("http://localhost:8000/api/memory/settings", {
+    const response = await fetch("http://localhost:8888/api/memory/settings", {
       method: "POST",
       headers: {
         "Authorization": "Bearer <token>",
@@ -93,7 +93,7 @@ Updates the memory backend configuration. Changes take effect immediately — th
     import requests
 
     response = requests.post(
-        "http://localhost:8000/api/memory/settings",
+        "http://localhost:8888/api/memory/settings",
         headers={"Authorization": "Bearer <token>"},
         json={
             "memory_backend": "mem0",

@@ -2,7 +2,7 @@
 title: Get Standup Report
 description: "Generate a daily standup report summarizing Mission Control activity: completed tasks, in-progress work, blocked items, and agent status across all projects in markdown format."
 api: GET /api/mission-control/standup
-baseUrl: http://localhost:8000
+baseUrl: http://localhost:8888
 layout: '@/layouts/APIEndpointLayout.astro'
 auth: bearer
 section: API Reference
@@ -25,7 +25,7 @@ Generates a markdown standup report summarizing completed tasks, in-progress wor
 <Tabs items={["cURL"]}>
   <Tab title="cURL">
 ```bash
-curl http://localhost:8000/api/mission-control/standup \
+curl http://localhost:8888/api/mission-control/standup \
   -H "Authorization: Bearer YOUR_TOKEN"
 ```
   </Tab>

@@ -2,7 +2,7 @@
 title: Create Webhook Slot
 description: "Create a new inbound webhook slot with an auto-generated secret for authenticating incoming payloads. Webhooks forward external data to the Mudabbir agent for processing."
 api: POST /api/webhooks/add
-baseUrl: http://localhost:8000
+baseUrl: http://localhost:8888
 layout: '@/layouts/APIEndpointLayout.astro'
 auth: bearer
 section: API Reference
@@ -39,7 +39,7 @@ Creates a new inbound webhook slot. A unique secret is auto-generated for signat
 <Tabs items={["cURL", "JavaScript", "Python"]}>
   <Tab title="cURL">
     ```bash
-    curl -X POST "http://localhost:8000/api/webhooks/add" \
+    curl -X POST "http://localhost:8888/api/webhooks/add" \
       -H "Authorization: Bearer <token>" \
       -H "Content-Type: application/json" \
       -d '{"name": "github-events", "description": "GitHub repository webhooks"}'
@@ -47,7 +47,7 @@ Creates a new inbound webhook slot. A unique secret is auto-generated for signat
   </Tab>
   <Tab title="JavaScript">
     ```javascript
-    const response = await fetch("http://localhost:8000/api/webhooks/add", {
+    const response = await fetch("http://localhost:8888/api/webhooks/add", {
       method: "POST",
       headers: {
         "Authorization": "Bearer <token>",
@@ -67,7 +67,7 @@ Creates a new inbound webhook slot. A unique secret is auto-generated for signat
     import requests
 
     response = requests.post(
-        "http://localhost:8000/api/webhooks/add",
+        "http://localhost:8888/api/webhooks/add",
         headers={"Authorization": "Bearer <token>"},
         json={
             "name": "github-events",

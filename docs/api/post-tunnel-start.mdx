@@ -2,7 +2,7 @@
 title: Start Tunnel
 description: "Start a Cloudflare tunnel to expose Mudabbir's local server with a public HTTPS URL. Required for WhatsApp Business webhooks and remote dashboard access without port forwarding."
 api: POST /api/remote/start
-baseUrl: http://localhost:8000
+baseUrl: http://localhost:8888
 layout: '@/layouts/APIEndpointLayout.astro'
 auth: bearer
 section: API Reference
@@ -33,13 +33,13 @@ Starts a Cloudflare quick tunnel that exposes the local dashboard to the interne
 <Tabs items={["cURL", "JavaScript", "Python"]}>
   <Tab title="cURL">
     ```bash
-    curl -X POST "http://localhost:8000/api/remote/start" \
+    curl -X POST "http://localhost:8888/api/remote/start" \
       -H "Authorization: Bearer <token>"
     ```
   </Tab>
   <Tab title="JavaScript">
     ```javascript
-    const response = await fetch("http://localhost:8000/api/remote/start", {
+    const response = await fetch("http://localhost:8888/api/remote/start", {
       method: "POST",
       headers: { "Authorization": "Bearer <token>" }
     });
@@ -52,7 +52,7 @@ Starts a Cloudflare quick tunnel that exposes the local dashboard to the interne
     import requests
 
     response = requests.post(
-        "http://localhost:8000/api/remote/start",
+        "http://localhost:8888/api/remote/start",
         headers={"Authorization": "Bearer <token>"}
     )
     print(response.json())

@@ -2,7 +2,7 @@
 title: Clear Health Errors
 description: "Clear all entries from the persistent health error log. Deletes the errors.jsonl file from disk."
 api: DELETE /api/health/errors
-baseUrl: http://localhost:8000
+baseUrl: http://localhost:8888
 layout: '@/layouts/APIEndpointLayout.astro'
 auth: none
 section: API Reference
@@ -39,12 +39,12 @@ No request body is required.
 <Tabs items={["cURL", "JavaScript", "Python"]}>
   <Tab title="cURL">
     ```bash
-    curl -X DELETE "http://localhost:8000/api/health/errors"
+    curl -X DELETE "http://localhost:8888/api/health/errors"
     ```
   </Tab>
   <Tab title="JavaScript">
     ```javascript
-    const response = await fetch("http://localhost:8000/api/health/errors", {
+    const response = await fetch("http://localhost:8888/api/health/errors", {
       method: "DELETE"
     });
     const data = await response.json();
@@ -55,7 +55,7 @@ No request body is required.
     ```python
     import requests
 
-    response = requests.delete("http://localhost:8000/api/health/errors")
+    response = requests.delete("http://localhost:8888/api/health/errors")
     data = response.json()
     print(data)  # {"cleared": True}
     ```

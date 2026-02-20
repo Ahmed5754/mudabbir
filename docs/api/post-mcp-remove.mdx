@@ -2,7 +2,7 @@
 title: Remove MCP Server
 description: "Remove an MCP server configuration from Mudabbir. If the server is currently running, it will be stopped before removal. The server's tools become unavailable immediately."
 api: POST /api/mcp/remove
-baseUrl: http://localhost:8000
+baseUrl: http://localhost:8888
 layout: '@/layouts/APIEndpointLayout.astro'
 auth: bearer
 section: API Reference
@@ -31,7 +31,7 @@ Removes an MCP server from the configuration. If the server is currently running
 <Tabs items={["cURL", "JavaScript", "Python"]}>
   <Tab title="cURL">
     ```bash
-    curl -X POST "http://localhost:8000/api/mcp/remove" \
+    curl -X POST "http://localhost:8888/api/mcp/remove" \
       -H "Authorization: Bearer <token>" \
       -H "Content-Type: application/json" \
       -d '{"name": "filesystem"}'
@@ -39,7 +39,7 @@ Removes an MCP server from the configuration. If the server is currently running
   </Tab>
   <Tab title="JavaScript">
     ```javascript
-    const response = await fetch("http://localhost:8000/api/mcp/remove", {
+    const response = await fetch("http://localhost:8888/api/mcp/remove", {
       method: "POST",
       headers: {
         "Authorization": "Bearer <token>",
@@ -56,7 +56,7 @@ Removes an MCP server from the configuration. If the server is currently running
     import requests
 
     response = requests.post(
-        "http://localhost:8000/api/mcp/remove",
+        "http://localhost:8888/api/mcp/remove",
         headers={"Authorization": "Bearer <token>"},
         json={"name": "filesystem"}
     )

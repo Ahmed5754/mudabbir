@@ -2,7 +2,7 @@
 title: List Mission Control Agents
 description: "List all AI agents registered in Mudabbir's Mission Control system. Filter by status (idle, active, blocked, offline) and view each agent's name, role, specialties, and last heartbeat."
 api: GET /api/mission-control/agents
-baseUrl: http://localhost:8000
+baseUrl: http://localhost:8888
 layout: '@/layouts/APIEndpointLayout.astro'
 auth: bearer
 section: API Reference
@@ -41,13 +41,13 @@ Returns all agents registered in Mission Control. Optionally filter by status.
 <Tabs items={["cURL", "JavaScript", "Python"]}>
   <Tab title="cURL">
 ```bash
-curl http://localhost:8000/api/mission-control/agents \
+curl http://localhost:8888/api/mission-control/agents \
   -H "Authorization: Bearer YOUR_TOKEN"
 ```
   </Tab>
   <Tab title="JavaScript">
 ```javascript
-const res = await fetch('http://localhost:8000/api/mission-control/agents', {
+const res = await fetch('http://localhost:8888/api/mission-control/agents', {
   headers: { 'Authorization': 'Bearer YOUR_TOKEN' },
 });
 const data = await res.json();
@@ -58,7 +58,7 @@ const data = await res.json();
 import httpx
 
 res = httpx.get(
-    "http://localhost:8000/api/mission-control/agents",
+    "http://localhost:8888/api/mission-control/agents",
     headers={"Authorization": "Bearer YOUR_TOKEN"},
 )
 data = res.json()

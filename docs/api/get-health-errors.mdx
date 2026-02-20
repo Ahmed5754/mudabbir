@@ -2,7 +2,7 @@
 title: Get Health Errors
 description: "Query the persistent error log for recent errors. Supports pagination with limit and text search filtering."
 api: GET /api/health/errors
-baseUrl: http://localhost:8000
+baseUrl: http://localhost:8888
 layout: '@/layouts/APIEndpointLayout.astro'
 auth: none
 section: API Reference
@@ -64,21 +64,21 @@ Returns an array of error entries. Each entry is an object with:
   <Tab title="cURL">
     ```bash
     # Get last 10 errors
-    curl -X GET "http://localhost:8000/api/health/errors?limit=10"
+    curl -X GET "http://localhost:8888/api/health/errors?limit=10"
 
     # Search for API-related errors
-    curl -X GET "http://localhost:8000/api/health/errors?search=api&limit=5"
+    curl -X GET "http://localhost:8888/api/health/errors?search=api&limit=5"
     ```
   </Tab>
   <Tab title="JavaScript">
     ```javascript
     // Get recent errors
-    const response = await fetch("http://localhost:8000/api/health/errors?limit=10");
+    const response = await fetch("http://localhost:8888/api/health/errors?limit=10");
     const errors = await response.json();
 
     // Search for specific errors
     const filtered = await fetch(
-      "http://localhost:8000/api/health/errors?search=timeout&limit=5"
+      "http://localhost:8888/api/health/errors?search=timeout&limit=5"
     );
     const results = await filtered.json();
     ```
@@ -89,14 +89,14 @@ Returns an array of error entries. Each entry is an object with:
 
     # Get recent errors
     response = requests.get(
-        "http://localhost:8000/api/health/errors",
+        "http://localhost:8888/api/health/errors",
         params={"limit": 10}
     )
     errors = response.json()
 
     # Search for specific errors
     response = requests.get(
-        "http://localhost:8000/api/health/errors",
+        "http://localhost:8888/api/health/errors",
         params={"search": "anthropic", "limit": 5}
     )
     ```

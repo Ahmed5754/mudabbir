@@ -2,7 +2,7 @@
 title: Create Session Token
 description: "Exchange a master access token for a time-limited session token. Session tokens provide temporary authenticated access to the Mudabbir dashboard API with automatic expiration."
 api: POST /api/auth/session
-baseUrl: http://localhost:8000
+baseUrl: http://localhost:8888
 layout: '@/layouts/APIEndpointLayout.astro'
 auth: bearer
 section: API Reference
@@ -32,13 +32,13 @@ Exchanges the master access token for a time-limited session token. Session toke
 <Tabs items={["cURL", "JavaScript", "Python"]}>
   <Tab title="cURL">
     ```bash
-    curl -X POST "http://localhost:8000/api/auth/session" \
+    curl -X POST "http://localhost:8888/api/auth/session" \
       -H "Authorization: Bearer <token>"
     ```
   </Tab>
   <Tab title="JavaScript">
     ```javascript
-    const response = await fetch("http://localhost:8000/api/auth/session", {
+    const response = await fetch("http://localhost:8888/api/auth/session", {
       method: "POST",
       headers: { "Authorization": "Bearer <token>" }
     });
@@ -51,7 +51,7 @@ Exchanges the master access token for a time-limited session token. Session toke
     import requests
 
     response = requests.post(
-        "http://localhost:8000/api/auth/session",
+        "http://localhost:8888/api/auth/session",
         headers={"Authorization": "Bearer <token>"}
     )
     print(response.json())

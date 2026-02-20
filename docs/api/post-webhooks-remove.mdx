@@ -2,7 +2,7 @@
 title: Remove Webhook Slot
 description: "Delete an inbound webhook slot from Mudabbir. The webhook URL and secret are immediately invalidated and any future payloads sent to it will be rejected."
 api: POST /api/webhooks/remove
-baseUrl: http://localhost:8000
+baseUrl: http://localhost:8888
 layout: '@/layouts/APIEndpointLayout.astro'
 auth: bearer
 section: API Reference
@@ -37,7 +37,7 @@ Removes an inbound webhook slot by name. Any future requests to the webhook URL 
 <Tabs items={["cURL", "JavaScript", "Python"]}>
   <Tab title="cURL">
     ```bash
-    curl -X POST "http://localhost:8000/api/webhooks/remove" \
+    curl -X POST "http://localhost:8888/api/webhooks/remove" \
       -H "Authorization: Bearer <token>" \
       -H "Content-Type: application/json" \
       -d '{"name": "github-events"}'
@@ -45,7 +45,7 @@ Removes an inbound webhook slot by name. Any future requests to the webhook URL 
   </Tab>
   <Tab title="JavaScript">
     ```javascript
-    const response = await fetch("http://localhost:8000/api/webhooks/remove", {
+    const response = await fetch("http://localhost:8888/api/webhooks/remove", {
       method: "POST",
       headers: {
         "Authorization": "Bearer <token>",
@@ -62,7 +62,7 @@ Removes an inbound webhook slot by name. Any future requests to the webhook URL 
     import requests
 
     response = requests.post(
-        "http://localhost:8000/api/webhooks/remove",
+        "http://localhost:8888/api/webhooks/remove",
         headers={"Authorization": "Bearer <token>"},
         json={"name": "github-events"}
     )

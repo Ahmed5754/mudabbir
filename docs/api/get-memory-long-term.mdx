@@ -2,7 +2,7 @@
 title: List Long-Term Memories
 description: "Retrieve stored long-term memory entries from Mudabbir's memory backend. Returns facts, preferences, and knowledge extracted from past conversations via auto-learning."
 api: GET /api/memory/long_term
-baseUrl: http://localhost:8000
+baseUrl: http://localhost:8888
 layout: '@/layouts/APIEndpointLayout.astro'
 auth: bearer
 section: API Reference
@@ -36,13 +36,13 @@ Returns an array of memory entry objects:
 <Tabs items={["cURL", "JavaScript", "Python"]}>
   <Tab title="cURL">
     ```bash
-    curl -X GET "http://localhost:8000/api/memory/long_term?limit=50" \
+    curl -X GET "http://localhost:8888/api/memory/long_term?limit=50" \
       -H "Authorization: Bearer <token>"
     ```
   </Tab>
   <Tab title="JavaScript">
     ```javascript
-    const response = await fetch("http://localhost:8000/api/memory/long_term?limit=50", {
+    const response = await fetch("http://localhost:8888/api/memory/long_term?limit=50", {
       headers: { "Authorization": "Bearer <token>" }
     });
     const data = await response.json();
@@ -54,7 +54,7 @@ Returns an array of memory entry objects:
     import requests
 
     response = requests.get(
-        "http://localhost:8000/api/memory/long_term",
+        "http://localhost:8888/api/memory/long_term",
         params={"limit": 50},
         headers={"Authorization": "Bearer <token>"}
     )

@@ -2,7 +2,7 @@
 title: Delete Memory Entry
 description: "Delete a specific long-term memory entry from Mudabbir's memory store. Use this to remove outdated or incorrect facts that the auto-learn system extracted from conversations."
 api: DELETE /api/memory/long_term/{entry_id}
-baseUrl: http://localhost:8000
+baseUrl: http://localhost:8888
 layout: '@/layouts/APIEndpointLayout.astro'
 auth: bearer
 section: API Reference
@@ -37,13 +37,13 @@ Permanently deletes a long-term memory entry. This is useful for removing outdat
 <Tabs items={["cURL", "JavaScript", "Python"]}>
   <Tab title="cURL">
     ```bash
-    curl -X DELETE "http://localhost:8000/api/memory/long_term/mem_001" \
+    curl -X DELETE "http://localhost:8888/api/memory/long_term/mem_001" \
       -H "Authorization: Bearer <token>"
     ```
   </Tab>
   <Tab title="JavaScript">
     ```javascript
-    const response = await fetch("http://localhost:8000/api/memory/long_term/mem_001", {
+    const response = await fetch("http://localhost:8888/api/memory/long_term/mem_001", {
       method: "DELETE",
       headers: { "Authorization": "Bearer <token>" }
     });
@@ -56,7 +56,7 @@ Permanently deletes a long-term memory entry. This is useful for removing outdat
     import requests
 
     response = requests.delete(
-        "http://localhost:8000/api/memory/long_term/mem_001",
+        "http://localhost:8888/api/memory/long_term/mem_001",
         headers={"Authorization": "Bearer <token>"}
     )
     print(response.json())

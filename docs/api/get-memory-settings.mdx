@@ -2,7 +2,7 @@
 title: Get Memory Settings
 description: "Retrieve the current memory backend configuration including the active provider (file store or Mem0), LLM and embedder settings, vector store configuration, and auto-learn status."
 api: GET /api/memory/settings
-baseUrl: http://localhost:8000
+baseUrl: http://localhost:8888
 layout: '@/layouts/APIEndpointLayout.astro'
 auth: bearer
 section: API Reference
@@ -30,13 +30,13 @@ Returns the current memory backend configuration, including the active backend, 
 <Tabs items={["cURL", "JavaScript", "Python"]}>
   <Tab title="cURL">
     ```bash
-    curl -X GET "http://localhost:8000/api/memory/settings" \
+    curl -X GET "http://localhost:8888/api/memory/settings" \
       -H "Authorization: Bearer <token>"
     ```
   </Tab>
   <Tab title="JavaScript">
     ```javascript
-    const response = await fetch("http://localhost:8000/api/memory/settings", {
+    const response = await fetch("http://localhost:8888/api/memory/settings", {
       headers: { "Authorization": "Bearer <token>" }
     });
     const data = await response.json();
@@ -48,7 +48,7 @@ Returns the current memory backend configuration, including the active backend, 
     import requests
 
     response = requests.get(
-        "http://localhost:8000/api/memory/settings",
+        "http://localhost:8888/api/memory/settings",
         headers={"Authorization": "Bearer <token>"}
     )
     print(response.json())

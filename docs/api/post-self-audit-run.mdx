@@ -2,7 +2,7 @@
 title: Trigger Self-Audit
 description: "Trigger an immediate run of Mudabbir's self-audit daemon. Executes all 12 background security and operational checks and saves a new report accessible via the audit reports endpoint."
 api: POST /api/self-audit/run
-baseUrl: http://localhost:8000
+baseUrl: http://localhost:8888
 layout: '@/layouts/APIEndpointLayout.astro'
 auth: bearer
 section: API Reference
@@ -29,13 +29,13 @@ Returns the full audit report (same format as the individual report endpoint):
 <Tabs items={["cURL", "JavaScript", "Python"]}>
   <Tab title="cURL">
     ```bash
-    curl -X POST "http://localhost:8000/api/self-audit/run" \
+    curl -X POST "http://localhost:8888/api/self-audit/run" \
       -H "Authorization: Bearer <token>"
     ```
   </Tab>
   <Tab title="JavaScript">
     ```javascript
-    const response = await fetch("http://localhost:8000/api/self-audit/run", {
+    const response = await fetch("http://localhost:8888/api/self-audit/run", {
       method: "POST",
       headers: { "Authorization": "Bearer <token>" }
     });
@@ -48,7 +48,7 @@ Returns the full audit report (same format as the individual report endpoint):
     import requests
 
     response = requests.post(
-        "http://localhost:8000/api/self-audit/run",
+        "http://localhost:8888/api/self-audit/run",
         headers={"Authorization": "Bearer <token>"}
     )
     print(response.json())

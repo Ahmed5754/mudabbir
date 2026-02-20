@@ -2,7 +2,7 @@
 title: Rename Session
 description: "Update the display title of an existing Mudabbir session. Useful for organizing conversations with descriptive names that appear in the sidebar session list."
 api: POST /api/sessions/{session_id}/title
-baseUrl: http://localhost:8000
+baseUrl: http://localhost:8888
 layout: '@/layouts/APIEndpointLayout.astro'
 auth: bearer
 section: API Reference
@@ -41,7 +41,7 @@ Updates the display title of a session. By default, sessions are auto-titled bas
 <Tabs items={["cURL", "JavaScript", "Python"]}>
   <Tab title="cURL">
     ```bash
-    curl -X POST "http://localhost:8000/api/sessions/session_abc123/title" \
+    curl -X POST "http://localhost:8888/api/sessions/session_abc123/title" \
       -H "Authorization: Bearer <token>" \
       -H "Content-Type: application/json" \
       -d '{"title": "Docker deployment guide"}'
@@ -50,7 +50,7 @@ Updates the display title of a session. By default, sessions are auto-titled bas
   <Tab title="JavaScript">
     ```javascript
     const sessionId = "session_abc123";
-    const response = await fetch(`http://localhost:8000/api/sessions/${sessionId}/title`, {
+    const response = await fetch(`http://localhost:8888/api/sessions/${sessionId}/title`, {
       method: "POST",
       headers: {
         "Authorization": "Bearer <token>",
@@ -68,7 +68,7 @@ Updates the display title of a session. By default, sessions are auto-titled bas
 
     session_id = "session_abc123"
     response = requests.post(
-        f"http://localhost:8000/api/sessions/{session_id}/title",
+        f"http://localhost:8888/api/sessions/{session_id}/title",
         headers={"Authorization": "Bearer <token>"},
         json={"title": "Docker deployment guide"},
     )

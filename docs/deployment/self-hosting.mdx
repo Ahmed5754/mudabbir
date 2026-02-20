@@ -52,7 +52,7 @@ chmod 600 ~/.mudabbir/config.json
 mudabbir
 ```
 
-The dashboard starts on `http://0.0.0.0:8000`.
+The dashboard starts on `http://0.0.0.0:8888`.
 
 ## Production Deployment
 
@@ -64,7 +64,7 @@ For production, put Mudabbir behind nginx or Caddy:
 
 ```
 mudabbir.example.com {
-    reverse_proxy localhost:8000
+    reverse_proxy localhost:8888
 }
 ```
 
@@ -79,7 +79,7 @@ server {
     ssl_certificate_key /etc/ssl/private/mudabbir.key;
 
     location / {
-        proxy_pass http://localhost:8000;
+        proxy_pass http://localhost:8888;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection "upgrade";
@@ -100,8 +100,8 @@ Set environment variables in a `.env` file or your system's environment:
 ```bash
 # /etc/mudabbir/env
 MUDABBIR_ANTHROPIC_API_KEY=sk-ant-...
-MUDABBIR_DASHBOARD_HOST=127.0.0.1
-MUDABBIR_DASHBOARD_PORT=8000
+MUDABBIR_WEB_HOST=127.0.0.1
+MUDABBIR_WEB_PORT=8888
 MUDABBIR_TOOL_PROFILE=coding
 ```
 

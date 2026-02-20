@@ -2,7 +2,7 @@
 title: Resume Deep Work Project
 description: "Resume a paused Deep Work project and re-dispatch all ready tasks. Tasks whose blockers have been resolved during the pause are included in the next execution wave."
 api: POST /api/deep-work/projects/{project_id}/resume
-baseUrl: http://localhost:8000
+baseUrl: http://localhost:8888
 layout: '@/layouts/APIEndpointLayout.astro'
 auth: bearer
 section: API Reference
@@ -35,7 +35,7 @@ Resumes a paused Deep Work project. All ready tasks (with no unresolved blockers
 <Tabs items={["cURL"]}>
   <Tab title="cURL">
 ```bash
-curl -X POST http://localhost:8000/api/deep-work/projects/PROJECT_ID/resume \
+curl -X POST http://localhost:8888/api/deep-work/projects/PROJECT_ID/resume \
   -H "Authorization: Bearer YOUR_TOKEN"
 ```
   </Tab>

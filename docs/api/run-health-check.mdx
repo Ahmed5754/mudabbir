@@ -2,7 +2,7 @@
 title: Run Health Check
 description: "Trigger a full health check run (startup + connectivity checks) and return the updated status summary. Broadcasts results to all connected WebSocket clients."
 api: POST /api/health/check
-baseUrl: http://localhost:8000
+baseUrl: http://localhost:8888
 layout: '@/layouts/APIEndpointLayout.astro'
 auth: none
 section: API Reference
@@ -47,12 +47,12 @@ No request body is required.
 <Tabs items={["cURL", "JavaScript", "Python"]}>
   <Tab title="cURL">
     ```bash
-    curl -X POST "http://localhost:8000/api/health/check"
+    curl -X POST "http://localhost:8888/api/health/check"
     ```
   </Tab>
   <Tab title="JavaScript">
     ```javascript
-    const response = await fetch("http://localhost:8000/api/health/check", {
+    const response = await fetch("http://localhost:8888/api/health/check", {
       method: "POST"
     });
     const data = await response.json();
@@ -63,7 +63,7 @@ No request body is required.
     ```python
     import requests
 
-    response = requests.post("http://localhost:8000/api/health/check")
+    response = requests.post("http://localhost:8888/api/health/check")
     data = response.json()
     print(f"Status: {data['status']}, Issues: {len(data['issues'])}")
     ```

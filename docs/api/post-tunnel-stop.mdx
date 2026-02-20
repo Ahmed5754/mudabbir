@@ -2,7 +2,7 @@
 title: Stop Tunnel
 description: "Stop the active Cloudflare tunnel and revoke the public URL. The Mudabbir server remains accessible locally but is no longer reachable from the internet."
 api: POST /api/remote/stop
-baseUrl: http://localhost:8000
+baseUrl: http://localhost:8888
 layout: '@/layouts/APIEndpointLayout.astro'
 auth: bearer
 section: API Reference
@@ -23,13 +23,13 @@ Stops the currently running Cloudflare tunnel, removing remote access. The publi
 <Tabs items={["cURL", "JavaScript", "Python"]}>
   <Tab title="cURL">
     ```bash
-    curl -X POST "http://localhost:8000/api/remote/stop" \
+    curl -X POST "http://localhost:8888/api/remote/stop" \
       -H "Authorization: Bearer <token>"
     ```
   </Tab>
   <Tab title="JavaScript">
     ```javascript
-    const response = await fetch("http://localhost:8000/api/remote/stop", {
+    const response = await fetch("http://localhost:8888/api/remote/stop", {
       method: "POST",
       headers: { "Authorization": "Bearer <token>" }
     });
@@ -42,7 +42,7 @@ Stops the currently running Cloudflare tunnel, removing remote access. The publi
     import requests
 
     response = requests.post(
-        "http://localhost:8000/api/remote/stop",
+        "http://localhost:8888/api/remote/stop",
         headers={"Authorization": "Bearer <token>"}
     )
     print(response.json())

@@ -2,7 +2,7 @@
 title: Save Channel Config
 description: "Save configuration credentials and settings for a Mudabbir channel adapter. Supports Discord, Slack, WhatsApp, Signal, Matrix, Teams, and Google Chat configuration fields."
 api: POST /api/channels/save
-baseUrl: http://localhost:8000
+baseUrl: http://localhost:8888
 layout: '@/layouts/APIEndpointLayout.astro'
 auth: bearer
 section: API Reference
@@ -36,7 +36,7 @@ Saves the configuration (tokens, IDs, credentials) for a specific channel adapte
 <Tabs items={["cURL", "JavaScript", "Python"]}>
   <Tab title="cURL">
     ```bash
-    curl -X POST "http://localhost:8000/api/channels/save" \
+    curl -X POST "http://localhost:8888/api/channels/save" \
       -H "Authorization: Bearer <token>" \
       -H "Content-Type: application/json" \
       -d '{
@@ -51,7 +51,7 @@ Saves the configuration (tokens, IDs, credentials) for a specific channel adapte
   </Tab>
   <Tab title="JavaScript">
     ```javascript
-    const response = await fetch("http://localhost:8000/api/channels/save", {
+    const response = await fetch("http://localhost:8888/api/channels/save", {
       method: "POST",
       headers: {
         "Authorization": "Bearer <token>",
@@ -75,7 +75,7 @@ Saves the configuration (tokens, IDs, credentials) for a specific channel adapte
     import requests
 
     response = requests.post(
-        "http://localhost:8000/api/channels/save",
+        "http://localhost:8888/api/channels/save",
         headers={"Authorization": "Bearer <token>"},
         json={
             "channel": "discord",

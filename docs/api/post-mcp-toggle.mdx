@@ -2,7 +2,7 @@
 title: Toggle MCP Server
 description: "Enable or disable an MCP server in Mudabbir without removing its configuration. Disabled servers retain their settings but their tools are not available to the agent."
 api: POST /api/mcp/toggle
-baseUrl: http://localhost:8000
+baseUrl: http://localhost:8888
 layout: '@/layouts/APIEndpointLayout.astro'
 auth: bearer
 section: API Reference
@@ -32,7 +32,7 @@ Enables or disables an MCP server. Disabling a server stops its process and remo
 <Tabs items={["cURL", "JavaScript", "Python"]}>
   <Tab title="cURL">
     ```bash
-    curl -X POST "http://localhost:8000/api/mcp/toggle" \
+    curl -X POST "http://localhost:8888/api/mcp/toggle" \
       -H "Authorization: Bearer <token>" \
       -H "Content-Type: application/json" \
       -d '{"name": "filesystem"}'
@@ -40,7 +40,7 @@ Enables or disables an MCP server. Disabling a server stops its process and remo
   </Tab>
   <Tab title="JavaScript">
     ```javascript
-    const response = await fetch("http://localhost:8000/api/mcp/toggle", {
+    const response = await fetch("http://localhost:8888/api/mcp/toggle", {
       method: "POST",
       headers: {
         "Authorization": "Bearer <token>",
@@ -57,7 +57,7 @@ Enables or disables an MCP server. Disabling a server stops its process and remo
     import requests
 
     response = requests.post(
-        "http://localhost:8000/api/mcp/toggle",
+        "http://localhost:8888/api/mcp/toggle",
         headers={"Authorization": "Bearer <token>"},
         json={"name": "filesystem"}
     )

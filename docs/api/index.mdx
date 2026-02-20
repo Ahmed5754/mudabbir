@@ -13,7 +13,7 @@ The Mudabbir web dashboard exposes a comprehensive REST API for managing channel
 
 <Card title="Base URL" icon="lucide:globe">
   ```
-  http://localhost:8000
+  http://localhost:8888
   ```
 </Card>
 
@@ -60,13 +60,13 @@ Most API endpoints require authentication. Mudabbir supports multiple auth metho
 <Tabs>
   <Tab title="Bearer Token">
     ```bash
-    curl http://localhost:8000/api/sessions \
+    curl http://localhost:8888/api/sessions \
       -H "Authorization: Bearer your-access-token"
     ```
   </Tab>
   <Tab title="Query Parameter">
     ```bash
-    curl "http://localhost:8000/api/sessions?token=your-access-token"
+    curl "http://localhost:8888/api/sessions?token=your-access-token"
     ```
   </Tab>
   <Tab title="Localhost Bypass">

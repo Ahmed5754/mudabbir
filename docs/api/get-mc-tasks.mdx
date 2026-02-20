@@ -2,7 +2,7 @@
 title: List Mission Control Tasks
 description: "List all tasks managed by Mudabbir's Mission Control. Filter by status, assigned agent, or tags. Returns task details including priority, dependencies, project association, and execution state."
 api: GET /api/mission-control/tasks
-baseUrl: http://localhost:8000
+baseUrl: http://localhost:8888
 layout: '@/layouts/APIEndpointLayout.astro'
 auth: bearer
 section: API Reference
@@ -50,7 +50,7 @@ Returns all tasks managed by Mission Control. Filter by status, assignee, or tag
 <Tabs items={["cURL"]}>
   <Tab title="cURL">
 ```bash
-curl "http://localhost:8000/api/mission-control/tasks?status=in_progress" \
+curl "http://localhost:8888/api/mission-control/tasks?status=in_progress" \
   -H "Authorization: Bearer YOUR_TOKEN"
 ```
   </Tab>

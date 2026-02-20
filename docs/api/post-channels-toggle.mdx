@@ -2,7 +2,7 @@
 title: Toggle Channel
 description: "Start or stop a Mudabbir channel adapter dynamically without restarting the server. Toggle channels on and off from the dashboard or via API calls for runtime channel management."
 api: POST /api/channels/toggle
-baseUrl: http://localhost:8000
+baseUrl: http://localhost:8888
 layout: '@/layouts/APIEndpointLayout.astro'
 auth: bearer
 section: API Reference
@@ -36,7 +36,7 @@ Starts or stops a channel adapter at runtime without restarting the server. The 
 <Tabs items={["cURL", "JavaScript", "Python"]}>
   <Tab title="cURL">
     ```bash
-    curl -X POST "http://localhost:8000/api/channels/toggle" \
+    curl -X POST "http://localhost:8888/api/channels/toggle" \
       -H "Authorization: Bearer <token>" \
       -H "Content-Type: application/json" \
       -d '{
@@ -47,7 +47,7 @@ Starts or stops a channel adapter at runtime without restarting the server. The 
   </Tab>
   <Tab title="JavaScript">
     ```javascript
-    const response = await fetch("http://localhost:8000/api/channels/toggle", {
+    const response = await fetch("http://localhost:8888/api/channels/toggle", {
       method: "POST",
       headers: {
         "Authorization": "Bearer <token>",
@@ -67,7 +67,7 @@ Starts or stops a channel adapter at runtime without restarting the server. The 
     import requests
 
     response = requests.post(
-        "http://localhost:8000/api/channels/toggle",
+        "http://localhost:8888/api/channels/toggle",
         headers={"Authorization": "Bearer <token>"},
         json={"channel": "discord", "action": "start"},
     )

@@ -2,7 +2,7 @@
 title: Create Mission Control Task
 description: "Create a new task in Mudabbir's Mission Control with title, description, priority, tags, and optional agent assignment. Tasks can be linked to Deep Work projects for orchestrated execution."
 api: POST /api/mission-control/tasks
-baseUrl: http://localhost:8000
+baseUrl: http://localhost:8888
 layout: '@/layouts/APIEndpointLayout.astro'
 auth: bearer
 section: API Reference
@@ -45,7 +45,7 @@ Creates a new task. Optionally link it to a Deep Work project and assign it to a
 <Tabs items={["cURL"]}>
   <Tab title="cURL">
 ```bash
-curl -X POST http://localhost:8000/api/mission-control/tasks \
+curl -X POST http://localhost:8888/api/mission-control/tasks \
   -H "Authorization: Bearer YOUR_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{

@@ -2,7 +2,7 @@
 title: Get Channel Status
 description: "Retrieve the running status, configuration state, and adapter details of all channel adapters connected to Mudabbir. Returns which channels are active and their current configuration."
 api: GET /api/channels/status
-baseUrl: http://localhost:8000
+baseUrl: http://localhost:8888
 layout: '@/layouts/APIEndpointLayout.astro'
 auth: bearer
 section: API Reference
@@ -63,13 +63,13 @@ Returns the current status of all 8 supported channel adapters, including whethe
 <Tabs items={["cURL", "JavaScript", "Python"]}>
   <Tab title="cURL">
     ```bash
-    curl -X GET "http://localhost:8000/api/channels/status" \
+    curl -X GET "http://localhost:8888/api/channels/status" \
       -H "Authorization: Bearer <token>"
     ```
   </Tab>
   <Tab title="JavaScript">
     ```javascript
-    const response = await fetch("http://localhost:8000/api/channels/status", {
+    const response = await fetch("http://localhost:8888/api/channels/status", {
       headers: { "Authorization": "Bearer <token>" }
     });
     const data = await response.json();
@@ -81,7 +81,7 @@ Returns the current status of all 8 supported channel adapters, including whethe
     import requests
 
     response = requests.get(
-        "http://localhost:8000/api/channels/status",
+        "http://localhost:8888/api/channels/status",
         headers={"Authorization": "Bearer <token>"}
     )
     print(response.json())

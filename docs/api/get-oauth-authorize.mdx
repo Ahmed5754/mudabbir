@@ -2,7 +2,7 @@
 title: Start OAuth Flow
 description: "Initiate an OAuth 2.0 authorization flow for connecting third-party services like Google Workspace or Spotify. Redirects to the provider's consent screen and handles the callback."
 api: GET /api/oauth/authorize
-baseUrl: http://localhost:8000
+baseUrl: http://localhost:8888
 layout: '@/layouts/APIEndpointLayout.astro'
 auth: bearer
 section: API Reference
@@ -41,7 +41,7 @@ Returns an HTTP 302 redirect to the provider's consent screen.
 <Tabs items={["cURL", "JavaScript", "Python"]}>
   <Tab title="cURL">
     ```bash
-    curl -X GET "http://localhost:8000/api/oauth/authorize?service=google_gmail" \
+    curl -X GET "http://localhost:8888/api/oauth/authorize?service=google_gmail" \
       -H "Authorization: Bearer <token>" \
       -L
     ```
@@ -50,7 +50,7 @@ Returns an HTTP 302 redirect to the provider's consent screen.
     ```javascript
     // Redirect the browser to the OAuth consent screen
     window.location.href =
-      "http://localhost:8000/api/oauth/authorize?service=google_gmail";
+      "http://localhost:8888/api/oauth/authorize?service=google_gmail";
     ```
   </Tab>
   <Tab title="Python">
@@ -58,7 +58,7 @@ Returns an HTTP 302 redirect to the provider's consent screen.
     import requests
 
     response = requests.get(
-        "http://localhost:8000/api/oauth/authorize",
+        "http://localhost:8888/api/oauth/authorize",
         params={"service": "google_gmail"},
         headers={"Authorization": "Bearer <token>"},
         allow_redirects=False

@@ -2,7 +2,7 @@
 title: Get Health Status
 description: "Retrieve the current health status summary including overall status, check count, active issues, and last check timestamp."
 api: GET /api/health
-baseUrl: http://localhost:8000
+baseUrl: http://localhost:8888
 layout: '@/layouts/APIEndpointLayout.astro'
 auth: none
 section: API Reference
@@ -51,12 +51,12 @@ This endpoint requires no authentication. Health status is considered non-sensit
 <Tabs items={["cURL", "JavaScript", "Python"]}>
   <Tab title="cURL">
     ```bash
-    curl -X GET "http://localhost:8000/api/health"
+    curl -X GET "http://localhost:8888/api/health"
     ```
   </Tab>
   <Tab title="JavaScript">
     ```javascript
-    const response = await fetch("http://localhost:8000/api/health");
+    const response = await fetch("http://localhost:8888/api/health");
     const data = await response.json();
     console.log(data.status); // "healthy", "degraded", or "unhealthy"
     ```
@@ -65,7 +65,7 @@ This endpoint requires no authentication. Health status is considered non-sensit
     ```python
     import requests
 
-    response = requests.get("http://localhost:8000/api/health")
+    response = requests.get("http://localhost:8888/api/health")
     data = response.json()
     print(data["status"])
     ```
