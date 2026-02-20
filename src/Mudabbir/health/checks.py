@@ -6,7 +6,7 @@
 
 from __future__ import annotations
 
-import importlib.util
+import importlib
 import json
 import logging
 import re
@@ -163,10 +163,18 @@ def check_api_key_primary() -> HealthCheckResult:
     backend = settings.agent_backend
 
     if backend == "claude_agent_sdk":
-        # Claude Agent SDK uses its own auth (ANTHROPIC_API_KEY env var)
-        # Check both settings and env
         import os
 
+        provider = settings.claude_sdk_provider or "anthropic"
+        if provider in {"ollama", "openai_compatible"}:
+            return HealthCheckResult(
+                check_id="api_key_primary",
+                name="Primary API Key",
+                category="config",
+                status="ok",
+                message=f"Claude SDK provider is {provider} (no primary API key required)",
+                fix_hint="",
+            )
         has_key = bool(settings.anthropic_api_key) or bool(os.environ.get("ANTHROPIC_API_KEY"))
         if has_key:
             return HealthCheckResult(
@@ -174,7 +182,7 @@ def check_api_key_primary() -> HealthCheckResult:
                 name="Primary API Key",
                 category="config",
                 status="ok",
-                message="Anthropic API key is configured",
+                message="Anthropic API key is configured for Claude SDK",
                 fix_hint="",
             )
         return HealthCheckResult(
@@ -247,13 +255,83 @@ def check_api_key_primary() -> HealthCheckResult:
             fix_hint="",
         )
 
+    elif backend == "openai_agents":
+        provider = settings.openai_agents_provider or "openai"
+        if provider == "openai" and not settings.openai_api_key:
+            return HealthCheckResult(
+                check_id="api_key_primary",
+                name="Primary API Key",
+                category="config",
+                status="critical",
+                message="OpenAI Agents backend requires OpenAI API key for provider=openai",
+                fix_hint="Set OpenAI API key in Settings > API Keys.",
+            )
+        return HealthCheckResult(
+            check_id="api_key_primary",
+            name="Primary API Key",
+            category="config",
+            status="ok",
+            message=f"OpenAI Agents provider={provider}",
+            fix_hint="",
+        )
+
+    elif backend == "google_adk":
+        if not settings.google_api_key:
+            return HealthCheckResult(
+                check_id="api_key_primary",
+                name="Primary API Key",
+                category="config",
+                status="critical",
+                message="Google ADK backend requires Google API key",
+                fix_hint="Set Google API key in Settings > API Keys.",
+            )
+        return HealthCheckResult(
+            check_id="api_key_primary",
+            name="Primary API Key",
+            category="config",
+            status="ok",
+            message="Google API key configured for Google ADK",
+            fix_hint="",
+        )
+
+    elif backend == "codex_cli":
+        import os
+
+        if not settings.openai_api_key and not os.environ.get("OPENAI_API_KEY"):
+            return HealthCheckResult(
+                check_id="api_key_primary",
+                name="Primary API Key",
+                category="config",
+                status="warning",
+                message="Codex CLI usually needs OPENAI_API_KEY",
+                fix_hint="Set OpenAI API key in Settings > API Keys or in environment.",
+            )
+        return HealthCheckResult(
+            check_id="api_key_primary",
+            name="Primary API Key",
+            category="config",
+            status="ok",
+            message="OpenAI key is configured for Codex CLI",
+            fix_hint="",
+        )
+
+    elif backend in {"opencode", "copilot_sdk"}:
+        return HealthCheckResult(
+            check_id="api_key_primary",
+            name="Primary API Key",
+            category="config",
+            status="ok",
+            message=f"{backend} backend does not require a primary API key in settings",
+            fix_hint="",
+        )
+
     return HealthCheckResult(
         check_id="api_key_primary",
         name="Primary API Key",
         category="config",
         status="warning",
         message=f"Unknown backend: {backend}",
-        fix_hint="Set agent_backend to 'claude_agent_sdk', 'Mudabbir_native', or 'open_interpreter'.",
+        fix_hint="Set agent_backend to a registered backend from /backends.",
     )
 
 
@@ -297,30 +375,40 @@ def check_api_key_format() -> HealthCheckResult:
 
 def check_backend_deps() -> HealthCheckResult:
     """Check that required packages are importable for the selected backend."""
+    import shutil
+
+    from Mudabbir.agents.registry import get_backend_info
     from Mudabbir.config import get_settings
 
     settings = get_settings()
     backend = settings.agent_backend
-    missing = []
+    info = get_backend_info(backend)
+    hint = info.install_hint or {}
 
-    if backend == "claude_agent_sdk":
-        if importlib.util.find_spec("claude_code_sdk") is None:
-            missing.append("claude-code-sdk")
-    elif backend == "Mudabbir_native":
-        if importlib.util.find_spec("anthropic") is None:
-            missing.append("anthropic")
-    elif backend == "open_interpreter":
-        if importlib.util.find_spec("interpreter") is None:
-            missing.append("open-interpreter")
+    missing: list[str] = []
+    verify_import = hint.get("verify_import")
+    if verify_import:
+        try:
+            mod = importlib.import_module(verify_import)
+            verify_attr = hint.get("verify_attr")
+            if verify_attr and not hasattr(mod, verify_attr):
+                missing.append(f"{verify_import}.{verify_attr}")
+        except Exception:
+            missing.append(verify_import)
+
+    binary = hint.get("binary")
+    if binary and shutil.which(binary) is None:
+        missing.append(f"binary:{binary}")
 
     if missing:
+        install_hint = hint.get("pip_spec") or hint.get("external_cmd") or "install dependencies"
         return HealthCheckResult(
             check_id="backend_deps",
             name="Backend Dependencies",
             category="config",
             status="critical",
             message=f"Missing packages for {backend}: {', '.join(missing)}",
-            fix_hint=f"Install: pip install {' '.join(missing)}",
+            fix_hint=f"Install hint: {install_hint}",
         )
     return HealthCheckResult(
         check_id="backend_deps",
@@ -328,6 +416,44 @@ def check_backend_deps() -> HealthCheckResult:
         category="config",
         status="ok",
         message=f"All dependencies available for {backend}",
+        fix_hint="",
+    )
+
+
+def check_mem0_config() -> HealthCheckResult:
+    """Validate Mem0 config shape before runtime memory initialization."""
+    from Mudabbir.config import get_settings
+    from Mudabbir.memory.validation import validate_mem0_settings
+
+    settings = get_settings()
+    errors = validate_mem0_settings(settings)
+
+    if errors:
+        return HealthCheckResult(
+            check_id="mem0_config",
+            name="Mem0 Configuration",
+            category="config",
+            status="critical",
+            message=errors[0],
+            fix_hint="Fix Mem0 settings in Settings > Memory or in ~/.Mudabbir/config.json.",
+        )
+
+    if settings.memory_backend == "mem0":
+        return HealthCheckResult(
+            check_id="mem0_config",
+            name="Mem0 Configuration",
+            category="config",
+            status="ok",
+            message="Mem0 configuration is valid",
+            fix_hint="",
+        )
+
+    return HealthCheckResult(
+        check_id="mem0_config",
+        name="Mem0 Configuration",
+        category="config",
+        status="ok",
+        message="Memory backend is not mem0",
         fix_hint="",
     )
 
@@ -665,6 +791,7 @@ STARTUP_CHECKS = [
     check_api_key_primary,
     check_api_key_format,
     check_backend_deps,
+    check_mem0_config,
     check_secrets_encrypted,
     check_disk_space,
     check_audit_log_writable,

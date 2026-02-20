@@ -56,10 +56,25 @@ PLAYBOOKS: dict[str, dict] = {
             "Virtual environment changed or recreated without dependencies",
         ],
         "fix_steps": [
-            "For Claude Agent SDK: pip install claude-code-sdk",
-            "For Mudabbir Native: pip install anthropic",
-            "For Open Interpreter: pip install open-interpreter",
-            "Or reinstall Mudabbir: pip install Mudabbir",
+            "Open Settings > General and check backend install banner",
+            "For pip-installable backends, click Install or run: pip install 'Mudabbir[extra]'",
+            "For CLI backends (Codex/OpenCode/Copilot), install the required external binary",
+            "Re-run: Mudabbir --doctor to verify dependencies",
+        ],
+        "auto_fixable": False,
+    },
+    "mem0_config": {
+        "symptom": "Chat fails when memory backend is Mem0",
+        "causes": [
+            "mem0_ollama_base_url contains a model name instead of URL",
+            "Ollama provider selected without valid endpoint URL",
+            "Model fields accidentally contain URLs (or vice versa)",
+        ],
+        "fix_steps": [
+            "Open Settings > Memory",
+            "Set Ollama Base URL to endpoint only (example: http://localhost:11434)",
+            "Keep model names only in mem0_llm_model and mem0_embedder_model",
+            "Or edit ~/.Mudabbir/config.json and restart Mudabbir",
         ],
         "auto_fixable": False,
     },
@@ -130,6 +145,7 @@ def diagnose_config(section: str = "") -> str:
                 elif section == "backend" and result.check_id not in (
                     "backend_deps",
                     "api_key_primary",
+                    "mem0_config",
                 ):
                     continue
                 elif section == "storage" and result.category != "storage":

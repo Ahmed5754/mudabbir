@@ -211,6 +211,72 @@ class Settings(BaseSettings):
         default=25,
         description="Max tool-use turns per query in Claude SDK (safety net against runaway loops)",
     )
+    claude_sdk_provider: str = Field(
+        default="anthropic",
+        description="Provider mode for Claude SDK backend: anthropic, ollama, or openai_compatible",
+    )
+
+    # OpenAI Agents Backend
+    openai_agents_model: str = Field(
+        default="",
+        description="Model override for OpenAI Agents backend",
+    )
+    openai_agents_max_turns: int = Field(
+        default=0,
+        description="Max turns for OpenAI Agents backend (0 = SDK default)",
+    )
+    openai_agents_provider: str = Field(
+        default="openai",
+        description="Provider mode for OpenAI Agents backend: openai, ollama, openai_compatible",
+    )
+
+    # Google ADK Backend
+    google_adk_model: str = Field(
+        default="gemini-2.5-flash",
+        description="Model for Google ADK backend",
+    )
+    google_adk_max_turns: int = Field(
+        default=0,
+        description="Max turns for Google ADK backend (0 = SDK default)",
+    )
+
+    # Codex CLI Backend
+    codex_cli_model: str = Field(
+        default="gpt-4o",
+        description="Model for Codex CLI backend",
+    )
+    codex_cli_max_turns: int = Field(
+        default=0,
+        description="Max turns for Codex CLI backend (0 = backend default)",
+    )
+
+    # OpenCode Backend
+    opencode_base_url: str = Field(
+        default="http://localhost:4096",
+        description="Base URL for OpenCode server backend",
+    )
+    opencode_model: str = Field(
+        default="",
+        description="Model override for OpenCode backend",
+    )
+    opencode_max_turns: int = Field(
+        default=0,
+        description="Max turns for OpenCode backend (0 = backend default)",
+    )
+
+    # Copilot SDK Backend
+    copilot_sdk_model: str = Field(
+        default="gpt-4o",
+        description="Model for Copilot SDK backend",
+    )
+    copilot_sdk_provider: str = Field(
+        default="copilot",
+        description="Provider mode for Copilot SDK backend: copilot, openai, azure, anthropic",
+    )
+    copilot_sdk_max_turns: int = Field(
+        default=0,
+        description="Max turns for Copilot SDK backend (0 = backend default)",
+    )
 
     # Open Interpreter Controls
     oi_ai_desktop_planner: bool = Field(
@@ -639,6 +705,20 @@ class Settings(BaseSettings):
             "agent_backend": _normalize_backend_name(self.agent_backend),
             "claude_sdk_model": self.claude_sdk_model,
             "claude_sdk_max_turns": self.claude_sdk_max_turns,
+            "claude_sdk_provider": self.claude_sdk_provider,
+            "openai_agents_model": self.openai_agents_model,
+            "openai_agents_max_turns": self.openai_agents_max_turns,
+            "openai_agents_provider": self.openai_agents_provider,
+            "google_adk_model": self.google_adk_model,
+            "google_adk_max_turns": self.google_adk_max_turns,
+            "codex_cli_model": self.codex_cli_model,
+            "codex_cli_max_turns": self.codex_cli_max_turns,
+            "opencode_base_url": self.opencode_base_url,
+            "opencode_model": self.opencode_model,
+            "opencode_max_turns": self.opencode_max_turns,
+            "copilot_sdk_model": self.copilot_sdk_model,
+            "copilot_sdk_provider": self.copilot_sdk_provider,
+            "copilot_sdk_max_turns": self.copilot_sdk_max_turns,
             "memory_backend": self.memory_backend,
             "memory_use_inference": self.memory_use_inference,
             "mem0_llm_provider": self.mem0_llm_provider,

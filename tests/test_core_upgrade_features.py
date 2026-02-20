@@ -16,7 +16,13 @@ def test_backend_registry_normalization() -> None:
     assert "claude_agent_sdk" in names
     assert "Mudabbir_native" in names
     assert "open_interpreter" in names
+    assert "openai_agents" in names
+    assert "google_adk" in names
+    assert "codex_cli" in names
+    assert "opencode" in names
+    assert "copilot_sdk" in names
     assert normalize_backend_name("claude_code") == "claude_agent_sdk"
+    assert normalize_backend_name("adk") == "google_adk"
     assert get_backend_info("open_interpreter").display_name == "Open Interpreter"
 
 

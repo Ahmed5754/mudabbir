@@ -49,7 +49,11 @@ class BackendInfo:
     description: str
     capabilities: Capability = Capability.NONE
     aliases: tuple[str, ...] = ()
-    install_hint: str = "pip install Mudabbir"
+    builtin_tools: tuple[str, ...] = ()
+    required_keys: tuple[str, ...] = ()
+    supported_providers: tuple[str, ...] = ()
+    install_hint: dict[str, str] = field(default_factory=dict)
+    beta: bool = False
 
 
 # =============================================================================

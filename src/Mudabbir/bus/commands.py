@@ -389,18 +389,22 @@ class CommandHandler:
 
     def _cmd_backends(self, message: InboundMessage) -> OutboundMessage:
         """List all registered backends with status and capabilities."""
-        from Mudabbir.agents.registry import list_backend_infos
+        from Mudabbir.agents.registry import list_backend_summaries
         from Mudabbir.config import get_settings
 
         settings = get_settings()
         active = settings.agent_backend
 
         lines = ["**Available Backends:**\n"]
-        for info in list_backend_infos():
-            marker = " (active)" if info.name == active else ""
-            caps = self._capability_labels(info.capabilities)
-            lines.append(f"- **{info.display_name}** (`{info.name}`){marker} — {caps}")
-            lines.append(f"  {info.description}")
+        for backend in list_backend_summaries():
+            marker = " (active)" if backend["name"] == active else ""
+            status = "installed" if backend["available"] else "not installed"
+            caps = ", ".join(backend["capabilities"]) if backend["capabilities"] else "none"
+            lines.append(
+                f"- **{backend['displayName']}** (`{backend['name']}`){marker} — {caps} [{status}]"
+            )
+            if backend.get("description"):
+                lines.append(f"  {backend['description']}")
 
         lines.append("\nUse /backend <name> to switch.")
         return OutboundMessage(
@@ -415,19 +419,27 @@ class CommandHandler:
 
     def _cmd_backend(self, message: InboundMessage, args: str) -> OutboundMessage:
         """Show or switch the active backend."""
-        from Mudabbir.agents.registry import get_backend_info, list_backend_names, normalize_backend_name
+        from Mudabbir.agents.registry import (
+            get_backend_info,
+            install_hint_text,
+            is_backend_available,
+            list_backend_names,
+            normalize_backend_name,
+        )
         from Mudabbir.config import Settings, get_settings
 
         settings = get_settings()
 
         if not args:
             info = get_backend_info(settings.agent_backend)
+            installed = "yes" if is_backend_available(info.name) else "no"
             return OutboundMessage(
                 channel=message.channel,
                 chat_id=message.chat_id,
                 content=(
                     f"Current backend: **{info.display_name}** (`{info.name}`)\n"
-                    f"Capabilities: {self._capability_labels(info.capabilities)}"
+                    f"Capabilities: {self._capability_labels(info.capabilities)}\n"
+                    f"Installed: {installed}"
                 ),
             )
 
@@ -446,6 +458,18 @@ class CommandHandler:
                 channel=message.channel,
                 chat_id=message.chat_id,
                 content=f"Already using `{normalized}`.",
+            )
+
+        info = get_backend_info(normalized)
+        if not is_backend_available(normalized):
+            hint = install_hint_text(info)
+            return OutboundMessage(
+                channel=message.channel,
+                chat_id=message.chat_id,
+                content=(
+                    f"Backend `{normalized}` is not available in this environment.\n"
+                    f"Install hint: {hint}"
+                ),
             )
 
         settings.agent_backend = normalized

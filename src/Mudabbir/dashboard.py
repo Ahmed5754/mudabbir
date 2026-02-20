@@ -35,7 +35,7 @@ try:
     import uvicorn
     from fastapi import FastAPI, HTTPException, Query, Request, WebSocket, WebSocketDisconnect
     from fastapi.middleware.cors import CORSMiddleware
-    from fastapi.responses import Response, StreamingResponse
+    from fastapi.responses import JSONResponse, Response, StreamingResponse
     from fastapi.staticfiles import StaticFiles
     from fastapi.templating import Jinja2Templates
 except ImportError as _exc:
@@ -52,6 +52,7 @@ from Mudabbir.config import Settings, get_access_token, get_config_path, regener
 from Mudabbir.daemon import get_daemon
 from Mudabbir.deep_work.api import router as deep_work_router
 from Mudabbir.memory import MemoryType, get_memory_manager
+from Mudabbir.memory.validation import validate_mem0_settings
 from Mudabbir.mission_control.api import router as mission_control_router
 from Mudabbir.scheduler import get_scheduler
 from Mudabbir.security import get_audit_logger
@@ -553,6 +554,8 @@ async def shutdown_event():
 
         mcp = get_mcp_manager()
         await mcp.stop_all()
+    except asyncio.CancelledError:
+        logger.debug("MCP shutdown was cancelled by lifespan scope; continuing shutdown")
     except Exception as e:
         logger.warning("Error stopping MCP servers: %s", e)
 
@@ -1455,6 +1458,88 @@ async def install_extras(request: Request):
     ]
     for mod in adapter_modules:
         del sys.modules[mod]
+
+    return {"status": "ok"}
+
+
+@app.get("/api/backends")
+async def list_available_backends():
+    """List all registered backends with availability and capability metadata."""
+    from Mudabbir.agents.registry import list_backend_summaries
+
+    return list_backend_summaries()
+
+
+@app.post("/api/backends/install")
+async def install_backend(request: Request):
+    """Install a pip-installable backend dependency."""
+    import importlib
+    import shutil
+    import subprocess
+    import sys
+
+    from Mudabbir.agents.registry import get_backend_info, list_backend_names
+
+    data = await request.json()
+    backend_name = str(data.get("backend", "")).strip()
+    if not backend_name:
+        return {"error": "Missing backend name"}
+
+    if backend_name not in list_backend_names():
+        return {"error": f"Unknown backend: {backend_name}"}
+    info = get_backend_info(backend_name)
+
+    hint = info.install_hint or {}
+    pip_spec = hint.get("pip_spec", "")
+    verify_import = hint.get("verify_import", "")
+
+    if not pip_spec:
+        return {"error": f"Backend '{info.name}' is not pip-installable from dashboard"}
+
+    # Already available by import probe
+    if verify_import:
+        try:
+            importlib.import_module(verify_import)
+            return {"status": "ok"}
+        except Exception:
+            pass
+
+    def _install() -> None:
+        in_venv = hasattr(sys, "real_prefix") or sys.prefix != sys.base_prefix
+        uv = shutil.which("uv")
+
+        if uv:
+            cmd = [uv, "pip", "install"]
+            if not in_venv:
+                cmd.append("--system")
+            cmd.append(pip_spec)
+        else:
+            cmd = [sys.executable, "-m", "pip", "install"]
+            if not in_venv:
+                cmd.append("--user")
+            cmd.append(pip_spec)
+
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=180)
+        if result.returncode != 0:
+            stderr = (result.stderr or result.stdout or "").strip()
+            raise RuntimeError(stderr or f"pip exited with code {result.returncode}")
+
+        importlib.invalidate_caches()
+        if verify_import:
+            importlib.import_module(verify_import)
+
+    try:
+        await asyncio.to_thread(_install)
+    except RuntimeError as exc:
+        return {"error": f"Install failed: {exc}"}
+    except Exception as exc:
+        return {"error": f"Install failed: {exc}"}
+
+    # Clear loaded backend modules so next initialization picks up new deps.
+    for key in list(sys.modules):
+        if key.startswith("Mudabbir.agents."):
+            del sys.modules[key]
+    importlib.invalidate_caches()
 
     return {"status": "ok"}
 
@@ -2406,6 +2491,19 @@ async def websocket_endpoint(
             # Handle settings update
             elif action == "settings":
                 async with _settings_lock:
+                    if any(key in data for key in _MEMORY_WS_KEYS):
+                        proposed_memory = _memory_validation_payload(settings, data)
+                        mem0_errors = validate_mem0_settings(proposed_memory)
+                        if mem0_errors:
+                            await websocket.send_json(
+                                {
+                                    "type": "error",
+                                    "content": "Invalid Mem0 settings:\n- "
+                                    + "\n- ".join(mem0_errors),
+                                }
+                            )
+                            continue
+
                     settings.agent_backend = data.get("agent_backend", settings.agent_backend)
                     if "claude_sdk_model" in data:
                         settings.claude_sdk_model = data["claude_sdk_model"]
@@ -2413,6 +2511,44 @@ async def websocket_endpoint(
                         val = data["claude_sdk_max_turns"]
                         if isinstance(val, (int, float)) and 1 <= val <= 200:
                             settings.claude_sdk_max_turns = int(val)
+                    if data.get("claude_sdk_provider"):
+                        settings.claude_sdk_provider = data["claude_sdk_provider"]
+                    if "openai_agents_model" in data:
+                        settings.openai_agents_model = data["openai_agents_model"]
+                    if "openai_agents_max_turns" in data:
+                        val = data["openai_agents_max_turns"]
+                        if isinstance(val, (int, float)) and 0 <= val <= 500:
+                            settings.openai_agents_max_turns = int(val)
+                    if data.get("openai_agents_provider"):
+                        settings.openai_agents_provider = data["openai_agents_provider"]
+                    if "google_adk_model" in data:
+                        settings.google_adk_model = data["google_adk_model"]
+                    if "google_adk_max_turns" in data:
+                        val = data["google_adk_max_turns"]
+                        if isinstance(val, (int, float)) and 0 <= val <= 500:
+                            settings.google_adk_max_turns = int(val)
+                    if "codex_cli_model" in data:
+                        settings.codex_cli_model = data["codex_cli_model"]
+                    if "codex_cli_max_turns" in data:
+                        val = data["codex_cli_max_turns"]
+                        if isinstance(val, (int, float)) and 0 <= val <= 500:
+                            settings.codex_cli_max_turns = int(val)
+                    if "opencode_base_url" in data and data["opencode_base_url"] is not None:
+                        settings.opencode_base_url = data["opencode_base_url"]
+                    if "opencode_model" in data:
+                        settings.opencode_model = data["opencode_model"]
+                    if "opencode_max_turns" in data:
+                        val = data["opencode_max_turns"]
+                        if isinstance(val, (int, float)) and 0 <= val <= 500:
+                            settings.opencode_max_turns = int(val)
+                    if "copilot_sdk_model" in data:
+                        settings.copilot_sdk_model = data["copilot_sdk_model"]
+                    if data.get("copilot_sdk_provider"):
+                        settings.copilot_sdk_provider = data["copilot_sdk_provider"]
+                    if "copilot_sdk_max_turns" in data:
+                        val = data["copilot_sdk_max_turns"]
+                        if isinstance(val, (int, float)) and 0 <= val <= 500:
+                            settings.copilot_sdk_max_turns = int(val)
                     settings.llm_provider = data.get("llm_provider", settings.llm_provider)
                     if data.get("ollama_host"):
                         settings.ollama_host = data["ollama_host"]
@@ -2625,6 +2761,20 @@ async def websocket_endpoint(
                             "agentBackend": settings.agent_backend,
                             "claudeSdkModel": settings.claude_sdk_model,
                             "claudeSdkMaxTurns": settings.claude_sdk_max_turns,
+                            "claudeSdkProvider": settings.claude_sdk_provider,
+                            "openaiAgentsModel": settings.openai_agents_model,
+                            "openaiAgentsMaxTurns": settings.openai_agents_max_turns,
+                            "openaiAgentsProvider": settings.openai_agents_provider,
+                            "googleAdkModel": settings.google_adk_model,
+                            "googleAdkMaxTurns": settings.google_adk_max_turns,
+                            "codexCliModel": settings.codex_cli_model,
+                            "codexCliMaxTurns": settings.codex_cli_max_turns,
+                            "opencodeBaseUrl": settings.opencode_base_url,
+                            "opencodeModel": settings.opencode_model,
+                            "opencodeMaxTurns": settings.opencode_max_turns,
+                            "copilotSdkModel": settings.copilot_sdk_model,
+                            "copilotSdkProvider": settings.copilot_sdk_provider,
+                            "copilotSdkMaxTurns": settings.copilot_sdk_max_turns,
                             "llmProvider": settings.llm_provider,
                             "ollamaHost": settings.ollama_host,
                             "ollamaModel": settings.ollama_model,
@@ -3541,6 +3691,26 @@ _MEMORY_CONFIG_KEYS = {
     "mem0_auto_learn": "mem0_auto_learn",
 }
 
+_MEMORY_WS_KEYS = set(_MEMORY_CONFIG_KEYS.keys())
+
+
+def _memory_validation_payload(settings: Settings, payload: dict) -> dict:
+    """Build effective memory settings for validation before persisting."""
+    return {
+        "memory_backend": payload.get("memory_backend", settings.memory_backend),
+        "mem0_llm_provider": payload.get("mem0_llm_provider", settings.mem0_llm_provider),
+        "mem0_llm_model": payload.get("mem0_llm_model", settings.mem0_llm_model),
+        "mem0_embedder_provider": payload.get(
+            "mem0_embedder_provider", settings.mem0_embedder_provider
+        ),
+        "mem0_embedder_model": payload.get("mem0_embedder_model", settings.mem0_embedder_model),
+        "mem0_vector_store": payload.get("mem0_vector_store", settings.mem0_vector_store),
+        "mem0_ollama_base_url": payload.get(
+            "mem0_ollama_base_url", settings.mem0_ollama_base_url
+        ),
+        "mem0_auto_learn": payload.get("mem0_auto_learn", settings.mem0_auto_learn),
+    }
+
 
 @app.get("/api/memory/settings")
 async def get_memory_settings():
@@ -3564,6 +3734,10 @@ async def save_memory_settings(request: Request):
     """Save memory backend configuration."""
     data = await request.json()
     settings = Settings.load()
+
+    mem0_errors = validate_mem0_settings(_memory_validation_payload(settings, data))
+    if mem0_errors:
+        return JSONResponse(status_code=400, content={"status": "error", "errors": mem0_errors})
 
     for key, value in data.items():
         settings_field = _MEMORY_CONFIG_KEYS.get(key)

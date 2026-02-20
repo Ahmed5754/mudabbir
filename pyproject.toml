@@ -82,6 +82,15 @@ desktop = [
 native = [
     "open-interpreter>=0.2.0,<0.5.0",
 ]
+openai-agents = [
+    "openai-agents",
+]
+google-adk = [
+    "google-adk",
+]
+copilot-sdk = [
+    "github-copilot-sdk",
+]
 memory = [
     "mem0ai>=0.1.115",
     "ollama>=0.6.1",
@@ -143,7 +152,7 @@ all-tools = [
     "Mudabbir[browser,desktop,image,extract,voice,ocr,sarvam,mcp,memory]",
 ]
 all-backends = [
-    "Mudabbir[native]",
+    "Mudabbir[native,openai-agents,google-adk,copilot-sdk]",
 ]
 all = [
     "Mudabbir[recommended,all-channels,all-tools,all-backends]",

@@ -513,13 +513,19 @@ class MCPManager:
         try:
             if state.session:
                 await state.session.__aexit__(None, None, None)
-        except Exception as e:
-            logger.debug("Error closing MCP session: %s", e)
+        except BaseException as e:
+            if isinstance(e, asyncio.CancelledError):
+                logger.debug("MCP session cleanup cancelled during shutdown")
+            else:
+                logger.debug("Error closing MCP session: %s", e)
         try:
             if state.client:
                 await state.client.__aexit__(None, None, None)
-        except Exception as e:
-            logger.debug("Error closing MCP client: %s", e)
+        except BaseException as e:
+            if isinstance(e, asyncio.CancelledError):
+                logger.debug("MCP client cleanup cancelled during shutdown")
+            else:
+                logger.debug("Error closing MCP client: %s", e)
         state.connected = False
 
     def discover_tools(self, name: str) -> list[MCPToolInfo]:

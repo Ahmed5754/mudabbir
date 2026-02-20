@@ -52,7 +52,7 @@ def _sanitize_sys_path() -> None:
 
 _sanitize_sys_path()
 
-from Mudabbir.config import Settings, get_settings  # noqa: E402
+from Mudabbir.config import Settings, get_config_path, get_settings  # noqa: E402
 from Mudabbir.logging_setup import setup_logging  # noqa: E402
 
 
@@ -64,6 +64,24 @@ def _runtime_version() -> str:
         except PackageNotFoundError:
             continue
     return "0.0.0"
+
+
+def _print_mem0_config_error(errors: list[str]) -> None:
+    """Print a clear terminal diagnostic and fix hints, then exit."""
+    config_path = get_config_path()
+    print("\n" + "=" * 64)
+    print("MEM0 CONFIG ERROR")
+    print("=" * 64)
+    print("Mudabbir stopped because memory_backend=mem0 has invalid settings.\n")
+    for idx, err in enumerate(errors, start=1):
+        print(f"{idx}. {err}")
+    print("\nHow to fix:")
+    print(f"- Open: {config_path}")
+    print("- Set mem0_ollama_base_url to a valid endpoint URL")
+    print("  Example: http://localhost:11434")
+    print("- Keep model names in model fields only:")
+    print("  mem0_llm_model / mem0_embedder_model")
+    print("=" * 64 + "\n")
 
 # Setup beautiful logging with Rich
 setup_logging(level="INFO")
@@ -498,6 +516,73 @@ async def check_openai_compatible(settings: Settings) -> int:
     return 1 if failures > 1 else 0
 
 
+async def run_doctor(settings: Settings) -> int:
+    """Run diagnostic checks and print categorized output."""
+    from collections import defaultdict
+
+    from Mudabbir.config import get_config_dir
+    from Mudabbir.health import get_health_engine
+    from Mudabbir.update_check import check_for_updates
+
+    engine = get_health_engine()
+    startup = engine.run_startup_checks()
+    connectivity = await engine.run_connectivity_checks()
+    all_results = startup + connectivity
+
+    grouped: dict[str, list] = defaultdict(list)
+    for result in all_results:
+        grouped[result.category].append(result)
+
+    update_info = check_for_updates(_runtime_version(), get_config_dir())
+    update_rows: list[tuple[str, str, str]] = []
+    if update_info and update_info.get("update_available"):
+        latest = update_info.get("latest", "unknown")
+        update_rows.append(
+            (
+                "warning",
+                f"Update available: {latest}",
+                "Run: pip install --upgrade Mudabbir",
+            )
+        )
+    else:
+        update_rows.append(("ok", "You are on the latest known version", ""))
+
+    def _icon(status: str) -> str:
+        return {"ok": "[OK]", "warning": "[WARN]", "critical": "[FAIL]"}.get(status, "[?]")
+
+    print("\n" + "=" * 64)
+    print("Mudabbir Doctor")
+    print("=" * 64)
+
+    sections = (
+        ("Config", grouped.get("config", [])),
+        ("Storage", grouped.get("storage", [])),
+        ("Connectivity", grouped.get("connectivity", [])),
+    )
+    for title, rows in sections:
+        print(f"\n{title}:")
+        if not rows:
+            print("  [OK] No checks in this category")
+            continue
+        for row in rows:
+            print(f"  {_icon(row.status)} {row.name}: {row.message}")
+            if row.fix_hint and row.status != "ok":
+                print(f"       Fix: {row.fix_hint}")
+
+    print("\nUpdates:")
+    for status, message, hint in update_rows:
+        print(f"  {_icon(status)} {message}")
+        if hint:
+            print(f"       Fix: {hint}")
+
+    status = engine.overall_status
+    print(f"\nOverall: {status.upper()}")
+    print("=" * 64 + "\n")
+
+    has_critical = any(r.status == "critical" for r in all_results)
+    return 1 if has_critical else 0
+
+
 def _check_extras_installed(args: argparse.Namespace) -> None:
     """Check that required optional dependencies are installed for the chosen mode.
 
@@ -545,6 +630,7 @@ Examples:
   Mudabbir --slack                  Start headless Slack bot (Socket Mode)
   Mudabbir --whatsapp               Start headless WhatsApp webhook server
   Mudabbir --discord --slack        Run Discord + Slack simultaneously
+  Mudabbir --doctor                 Run categorized diagnostics and exit
   Mudabbir --dev                    Start dashboard with auto-reload (dev mode)
 """,
     )
@@ -602,6 +688,11 @@ Examples:
         help="Check OpenAI-compatible endpoint connectivity and tool calling support",
     )
     parser.add_argument(
+        "--doctor",
+        action="store_true",
+        help="Run categorized health diagnostics (Config, Storage, Connectivity, Updates)",
+    )
+    parser.add_argument(
         "--version", "-v", action="version", version=f"%(prog)s {_runtime_version()}"
     )
 
@@ -611,6 +702,18 @@ Examples:
     _check_extras_installed(args)
 
     settings = get_settings()
+
+    if args.doctor:
+        exit_code = asyncio.run(run_doctor(settings))
+        raise SystemExit(exit_code)
+
+    # Strict fail-fast for invalid Mem0 settings (do not crash later during chat).
+    from Mudabbir.memory.validation import validate_mem0_settings
+
+    mem0_errors = validate_mem0_settings(settings)
+    if mem0_errors:
+        _print_mem0_config_error(mem0_errors)
+        raise SystemExit(2)
 
     # Run startup health checks (non-blocking, informational only)
     if settings.health_check_on_startup:

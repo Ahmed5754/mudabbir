@@ -75,6 +75,20 @@ function app() {
             agentBackend: 'claude_agent_sdk',
             claudeSdkModel: '',
             claudeSdkMaxTurns: 25,
+            claudeSdkProvider: 'anthropic',
+            openaiAgentsModel: '',
+            openaiAgentsMaxTurns: 0,
+            openaiAgentsProvider: 'openai',
+            googleAdkModel: 'gemini-2.5-flash',
+            googleAdkMaxTurns: 0,
+            codexCliModel: 'gpt-4o',
+            codexCliMaxTurns: 0,
+            opencodeBaseUrl: 'http://localhost:4096',
+            opencodeModel: '',
+            opencodeMaxTurns: 0,
+            copilotSdkModel: 'gpt-4o',
+            copilotSdkProvider: 'copilot',
+            copilotSdkMaxTurns: 0,
             llmProvider: 'auto',
             ollamaHost: 'http://localhost:11434',
             ollamaModel: 'llama3.2',
@@ -142,6 +156,8 @@ function app() {
         hasSpotifyClientId: false,
         hasSpotifyClientSecret: false,
         hasSarvamKey: false,
+        _backendsData: [],
+        backendInstallLoading: false,
 
         // Spread feature states
         ...featureStates,
@@ -349,6 +365,7 @@ function app() {
                 // Fetch initial status and settings
                 socket.runTool('status');
                 socket.send('get_settings');
+                this.loadBackendsCatalog();
 
                 // Fetch initial data for sidebar badges
                 socket.send('get_reminders');
@@ -449,6 +466,11 @@ function app() {
             // Data-driven settings sync: map server keys to local settings
             const SETTINGS_MAP = [
                 'agentBackend', 'claudeSdkModel', 'claudeSdkMaxTurns',
+                'claudeSdkProvider', 'openaiAgentsModel', 'openaiAgentsMaxTurns',
+                'openaiAgentsProvider', 'googleAdkModel', 'googleAdkMaxTurns',
+                'codexCliModel', 'codexCliMaxTurns',
+                'opencodeBaseUrl', 'opencodeModel', 'opencodeMaxTurns',
+                'copilotSdkModel', 'copilotSdkProvider', 'copilotSdkMaxTurns',
                 'llmProvider', 'ollamaHost', 'ollamaModel', 'anthropicModel',
                 'openaiCompatibleBaseUrl', 'openaiCompatibleModel', 'openaiCompatibleMaxTokens',
                 'geminiModel',
@@ -543,6 +565,7 @@ function app() {
         openSettings() {
             this.settingsMobileView = 'list';
             this.showSettings = true;
+            if (!this._backendsData.length) this.loadBackendsCatalog();
         },
 
         /**
@@ -570,6 +593,93 @@ function app() {
             socket.saveSettings(this.settings);
             this.log('Settings updated', 'info');
             this.showToast('Settings saved', 'success');
+        },
+
+        /**
+         * Fetch backend catalog from server.
+         */
+        async loadBackendsCatalog() {
+            try {
+                const resp = await fetch('/api/backends');
+                if (!resp.ok) return;
+                this._backendsData = await resp.json();
+            } catch (_err) {
+                // Keep UI functional with static fallback options.
+            }
+        },
+
+        /**
+         * Check availability for selected backend.
+         */
+        isCurrentBackendAvailable() {
+            const backend = this._backendsData.find(x => x.name === this.settings.agentBackend);
+            return backend ? !!backend.available : true;
+        },
+
+        /**
+         * Install hint for selected backend.
+         */
+        currentBackendInstallHint() {
+            const backend = this._backendsData.find(x => x.name === this.settings.agentBackend);
+            return (backend && backend.installHint) || {};
+        },
+
+        /**
+         * Install current backend dependency through API.
+         */
+        async installBackend() {
+            this.backendInstallLoading = true;
+            try {
+                const resp = await fetch('/api/backends/install', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ backend: this.settings.agentBackend }),
+                });
+                const data = await resp.json();
+                if (data.error) {
+                    this.showToast(data.error, 'error');
+                } else {
+                    this.showToast('Backend installed successfully', 'success');
+                    await this.loadBackendsCatalog();
+                }
+            } catch (e) {
+                this.showToast(`Install failed: ${e.message}`, 'error');
+            } finally {
+                this.backendInstallLoading = false;
+            }
+        },
+
+        /**
+         * Copy helper for install commands.
+         */
+        copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                this.showToast('Copied to clipboard', 'success');
+            }).catch(() => {});
+        },
+
+        /**
+         * Return true if selected backend needs an API key not currently configured.
+         */
+        isBackendUnconfigured() {
+            const backend = this.settings.agentBackend;
+            if (backend === 'claude_agent_sdk') return !this.hasAnthropicKey;
+            if (backend === 'openai_agents') return !this.hasOpenaiKey;
+            if (backend === 'google_adk') return !this.hasGoogleApiKey;
+            if (backend === 'codex_cli') return !this.hasOpenaiKey;
+            return false;
+        },
+
+        /**
+         * Whether the selected backend needs a specific key field.
+         */
+        backendNeedsKey(keyField) {
+            const backend = this.settings.agentBackend;
+            if (backend === 'claude_agent_sdk') return keyField === 'anthropic_api_key';
+            if (backend === 'openai_agents') return keyField === 'openai_api_key';
+            if (backend === 'google_adk') return keyField === 'google_api_key';
+            if (backend === 'codex_cli') return keyField === 'openai_api_key';
+            return false;
         },
 
         /**
@@ -659,7 +769,12 @@ function app() {
             const labels = {
                 'claude_agent_sdk': '🚀 Claude SDK',
                 'Mudabbir_native': '🧠 Mudabbir',
-                'open_interpreter': '🤖 Open Interpreter (Experimental)'
+                'open_interpreter': '🤖 Open Interpreter',
+                'openai_agents': '🤖 OpenAI Agents',
+                'google_adk': '🔷 Google ADK',
+                'codex_cli': '⌨️ Codex CLI',
+                'opencode': '🧩 OpenCode',
+                'copilot_sdk': '🧭 Copilot SDK'
             };
             return labels[this.settings.agentBackend] || this.settings.agentBackend;
         },
@@ -671,7 +786,12 @@ function app() {
             const descriptions = {
                 'claude_agent_sdk': 'Built-in tools: Bash, WebSearch, WebFetch, Read, Write, Edit, Glob, Grep. Works with Anthropic & Ollama.',
                 'Mudabbir_native': 'Custom orchestrator with shell, files, memory tools. Works with Anthropic & Ollama.',
-                'open_interpreter': 'Experimental — Standalone agent. Works with local LLMs (Ollama) or cloud APIs.'
+                'open_interpreter': 'Standalone Open Interpreter backend for local or cloud providers.',
+                'openai_agents': 'OpenAI Agents SDK backend with function-tool bridge support.',
+                'google_adk': 'Google ADK backend with Gemini + MCP integration.',
+                'codex_cli': 'Codex CLI subprocess backend for coding-focused workflows.',
+                'opencode': 'OpenCode REST backend (requires OpenCode server).',
+                'copilot_sdk': 'GitHub Copilot SDK backend with provider routing support.'
             };
             return descriptions[backend] || '';
         },

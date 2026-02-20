@@ -78,7 +78,7 @@
           <h3 class="text-[14px] font-semibold text-white/80 mb-3">General</h3>
 
           <!-- Agent Backend -->
-          <div class="flex flex-col gap-1.5">
+          <div class="flex flex-col gap-1.5" x-init="if (!_backendsData.length) loadBackendsCatalog()">
             <label
               class="text-[12px] font-medium text-[var(--text-secondary)] uppercase tracking-wide"
               >Agent Backend</label
@@ -89,15 +89,21 @@
                 @change="saveSettings()"
                 class="w-full appearance-none bg-black/30 border border-[var(--glass-border)] rounded-[10px] py-2.5 px-3 text-[13px] text-white focus:outline-none focus:border-[var(--accent-color)] focus:bg-black/40 transition-all"
               >
-                <option value="claude_agent_sdk">
-                  Claude Agent SDK (Recommended)
-                </option>
-                <option value="Mudabbir_native">
-                  Mudabbir Native (Custom models)
-                </option>
-                <option value="open_interpreter">
-                  Open Interpreter (Experimental)
-                </option>
+                <template x-for="backend in _backendsData" :key="backend.name">
+                  <option
+                    :value="backend.name"
+                    x-text="backend.displayName + (backend.beta ? ' [Beta]' : '') + (!backend.available ? ' - not installed' : '')"
+                  ></option>
+                </template>
+                <template x-if="_backendsData.length === 0">
+                  <option value="claude_agent_sdk">Claude SDK</option>
+                </template>
+                <template x-if="_backendsData.length === 0">
+                  <option value="Mudabbir_native">Mudabbir Native</option>
+                </template>
+                <template x-if="_backendsData.length === 0">
+                  <option value="open_interpreter">Open Interpreter</option>
+                </template>
               </select>
               <div
                 class="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none opacity-50"
@@ -105,22 +111,64 @@
                 <i data-lucide="chevron-down" class="w-3.5 h-3.5"></i>
               </div>
             </div>
+            <div class="flex flex-wrap gap-1 mt-0.5">
+              <template x-for="backend in _backendsData.filter(x => x.name === settings.agentBackend)" :key="backend.name">
+                <template x-for="cap in backend.capabilities" :key="cap">
+                  <span class="text-[10px] px-1.5 py-0.5 rounded-full bg-white/10 text-white/60" x-text="cap"></span>
+                </template>
+              </template>
+            </div>
             <small
               class="text-white/50 text-[11px]"
               x-text="getBackendDescription(settings.agentBackend)"
             ></small>
           </div>
 
-          <!-- Claude SDK Settings (shown when Claude Agent SDK selected) -->
+          <!-- Backend install banner -->
+          <div
+            x-show="_backendsData.length > 0 && !isCurrentBackendAvailable()"
+            x-transition
+            class="flex flex-col gap-2 bg-[var(--danger-color)]/10 border border-[var(--danger-color)]/30 rounded-xl px-4 py-3"
+          >
+            <p class="text-[12px] text-white/80">
+              Selected backend is not installed on this environment.
+            </p>
+            <div class="flex items-center gap-2">
+              <button
+                class="px-3 py-1.5 rounded-lg text-[12px] font-medium bg-[var(--accent-color)] text-black hover:opacity-90 transition-opacity disabled:opacity-50"
+                @click="installBackend()"
+                :disabled="backendInstallLoading"
+                x-text="backendInstallLoading ? 'Installing...' : 'Install'"
+              ></button>
+              <template x-if="currentBackendInstallHint().external_cmd">
+                <button
+                  class="px-2.5 py-1.5 rounded-lg text-[12px] font-medium border border-[var(--glass-border)] hover:bg-white/10 transition-colors"
+                  @click="copyToClipboard(currentBackendInstallHint().external_cmd)"
+                >
+                  Copy CLI Install Command
+                </button>
+              </template>
+            </div>
+          </div>
+
+          <!-- Claude SDK Settings -->
           <div
             x-show="settings.agentBackend === 'claude_agent_sdk'"
             x-transition
             class="flex flex-col gap-3 pl-4 border-l-2 border-[var(--accent-color)]/30"
           >
-            <small class="text-white/50 text-[11px]">
-              Claude Code handles model selection automatically. Only set a
-              model below if you want to override it.
-            </small>
+            <div class="flex flex-col gap-1">
+              <label class="text-[12px] font-medium text-[var(--text-secondary)]">Provider</label>
+              <select
+                x-model="settings.claudeSdkProvider"
+                @change="saveSettings()"
+                class="w-full appearance-none bg-black/30 border border-[var(--glass-border)] rounded-[10px] py-2 px-3 text-[13px] text-white focus:outline-none focus:border-[var(--accent-color)] focus:bg-black/40 transition-all"
+              >
+                <option value="anthropic">Anthropic</option>
+                <option value="ollama">Ollama</option>
+                <option value="openai_compatible">OpenAI-Compatible</option>
+              </select>
+            </div>
             <div class="flex flex-col gap-1">
               <label
                 class="text-[12px] font-medium text-[var(--text-secondary)]"
@@ -133,10 +181,6 @@
                 placeholder="auto (recommended)"
                 class="w-full bg-black/30 border border-[var(--glass-border)] rounded-[10px] py-2 px-3 text-[13px] text-white focus:outline-none focus:border-[var(--accent-color)] focus:bg-black/40 transition-all placeholder-white/40"
               />
-              <small class="text-white/50 text-[11px]"
-                >Leave empty to let Claude Code auto-select the best
-                model</small
-              >
             </div>
             <div class="flex flex-col gap-1">
               <label
@@ -151,9 +195,142 @@
                 max="200"
                 class="w-full bg-black/30 border border-[var(--glass-border)] rounded-[10px] py-2 px-3 text-[13px] text-white focus:outline-none focus:border-[var(--accent-color)] focus:bg-black/40 transition-all"
               />
-              <small class="text-white/50 text-[11px]"
-                >Max agent tool-use loops per query (default: 25)</small
+            </div>
+          </div>
+
+          <!-- OpenAI Agents Settings -->
+          <div
+            x-show="settings.agentBackend === 'openai_agents'"
+            x-transition
+            class="flex flex-col gap-3 pl-4 border-l-2 border-[var(--accent-color)]/30"
+          >
+            <div class="flex flex-col gap-1">
+              <label class="text-[12px] font-medium text-[var(--text-secondary)]">Provider</label>
+              <select
+                x-model="settings.openaiAgentsProvider"
+                @change="saveSettings()"
+                class="w-full appearance-none bg-black/30 border border-[var(--glass-border)] rounded-[10px] py-2 px-3 text-[13px] text-white focus:outline-none focus:border-[var(--accent-color)] focus:bg-black/40 transition-all"
               >
+                <option value="openai">OpenAI</option>
+                <option value="ollama">Ollama</option>
+                <option value="openai_compatible">OpenAI-Compatible</option>
+              </select>
+            </div>
+            <div class="flex flex-col gap-1">
+              <label class="text-[12px] font-medium text-[var(--text-secondary)]">Model</label>
+              <input
+                type="text"
+                x-model="settings.openaiAgentsModel"
+                @change="saveSettings()"
+                placeholder="gpt-4o"
+                class="w-full bg-black/30 border border-[var(--glass-border)] rounded-[10px] py-2 px-3 text-[13px] text-white focus:outline-none focus:border-[var(--accent-color)] focus:bg-black/40 transition-all placeholder-white/40"
+              />
+            </div>
+            <div class="flex flex-col gap-1">
+              <label class="text-[12px] font-medium text-[var(--text-secondary)]">Max Turns</label>
+              <input
+                type="number"
+                x-model="settings.openaiAgentsMaxTurns"
+                @change="saveSettings()"
+                min="0"
+                max="500"
+                class="w-full bg-black/30 border border-[var(--glass-border)] rounded-[10px] py-2 px-3 text-[13px] text-white focus:outline-none focus:border-[var(--accent-color)] focus:bg-black/40 transition-all"
+              />
+            </div>
+          </div>
+
+          <!-- Google ADK Settings -->
+          <div
+            x-show="settings.agentBackend === 'google_adk'"
+            x-transition
+            class="flex flex-col gap-3 pl-4 border-l-2 border-[var(--accent-color)]/30"
+          >
+            <div class="flex flex-col gap-1">
+              <label class="text-[12px] font-medium text-[var(--text-secondary)]">Model</label>
+              <input
+                type="text"
+                x-model="settings.googleAdkModel"
+                @change="saveSettings()"
+                placeholder="gemini-2.5-flash"
+                class="w-full bg-black/30 border border-[var(--glass-border)] rounded-[10px] py-2 px-3 text-[13px] text-white focus:outline-none focus:border-[var(--accent-color)] focus:bg-black/40 transition-all placeholder-white/40"
+              />
+            </div>
+          </div>
+
+          <!-- Codex CLI Settings -->
+          <div
+            x-show="settings.agentBackend === 'codex_cli'"
+            x-transition
+            class="flex flex-col gap-3 pl-4 border-l-2 border-[var(--accent-color)]/30"
+          >
+            <div class="flex flex-col gap-1">
+              <label class="text-[12px] font-medium text-[var(--text-secondary)]">Model</label>
+              <input
+                type="text"
+                x-model="settings.codexCliModel"
+                @change="saveSettings()"
+                placeholder="gpt-4o"
+                class="w-full bg-black/30 border border-[var(--glass-border)] rounded-[10px] py-2 px-3 text-[13px] text-white focus:outline-none focus:border-[var(--accent-color)] focus:bg-black/40 transition-all placeholder-white/40"
+              />
+            </div>
+          </div>
+
+          <!-- OpenCode Settings -->
+          <div
+            x-show="settings.agentBackend === 'opencode'"
+            x-transition
+            class="flex flex-col gap-3 pl-4 border-l-2 border-[var(--accent-color)]/30"
+          >
+            <div class="flex flex-col gap-1">
+              <label class="text-[12px] font-medium text-[var(--text-secondary)]">Server URL</label>
+              <input
+                type="text"
+                x-model="settings.opencodeBaseUrl"
+                @change="saveSettings()"
+                placeholder="http://localhost:4096"
+                class="w-full bg-black/30 border border-[var(--glass-border)] rounded-[10px] py-2 px-3 text-[13px] text-white focus:outline-none focus:border-[var(--accent-color)] focus:bg-black/40 transition-all placeholder-white/40"
+              />
+            </div>
+            <div class="flex flex-col gap-1">
+              <label class="text-[12px] font-medium text-[var(--text-secondary)]">Model</label>
+              <input
+                type="text"
+                x-model="settings.opencodeModel"
+                @change="saveSettings()"
+                placeholder="server default"
+                class="w-full bg-black/30 border border-[var(--glass-border)] rounded-[10px] py-2 px-3 text-[13px] text-white focus:outline-none focus:border-[var(--accent-color)] focus:bg-black/40 transition-all placeholder-white/40"
+              />
+            </div>
+          </div>
+
+          <!-- Copilot SDK Settings -->
+          <div
+            x-show="settings.agentBackend === 'copilot_sdk'"
+            x-transition
+            class="flex flex-col gap-3 pl-4 border-l-2 border-[var(--accent-color)]/30"
+          >
+            <div class="flex flex-col gap-1">
+              <label class="text-[12px] font-medium text-[var(--text-secondary)]">Provider</label>
+              <select
+                x-model="settings.copilotSdkProvider"
+                @change="saveSettings()"
+                class="w-full appearance-none bg-black/30 border border-[var(--glass-border)] rounded-[10px] py-2 px-3 text-[13px] text-white focus:outline-none focus:border-[var(--accent-color)] focus:bg-black/40 transition-all"
+              >
+                <option value="copilot">Copilot</option>
+                <option value="openai">OpenAI</option>
+                <option value="azure">Azure</option>
+                <option value="anthropic">Anthropic</option>
+              </select>
+            </div>
+            <div class="flex flex-col gap-1">
+              <label class="text-[12px] font-medium text-[var(--text-secondary)]">Model</label>
+              <input
+                type="text"
+                x-model="settings.copilotSdkModel"
+                @change="saveSettings()"
+                placeholder="gpt-4o"
+                class="w-full bg-black/30 border border-[var(--glass-border)] rounded-[10px] py-2 px-3 text-[13px] text-white focus:outline-none focus:border-[var(--accent-color)] focus:bg-black/40 transition-all placeholder-white/40"
+              />
             </div>
           </div>
 
@@ -1291,6 +1468,9 @@
                 placeholder="claude-haiku-4-5-20251001"
                 class="w-full bg-black/30 border border-[var(--glass-border)] rounded-[10px] py-2 px-3 text-[13px] text-white focus:outline-none focus:border-[var(--accent-color)] focus:bg-black/40 transition-all placeholder-white/40"
               />
+              <small class="text-white/50 text-[11px]"
+                >Model name only (example: llama3.2). Do not put URL here.</small
+              >
             </div>
 
             <!-- Embedder Provider -->
@@ -1330,6 +1510,9 @@
                 placeholder="text-embedding-3-small"
                 class="w-full bg-black/30 border border-[var(--glass-border)] rounded-[10px] py-2 px-3 text-[13px] text-white focus:outline-none focus:border-[var(--accent-color)] focus:bg-black/40 transition-all placeholder-white/40"
               />
+              <small class="text-white/50 text-[11px]"
+                >Model name only (example: nomic-embed-text). Do not put URL here.</small
+              >
             </div>
 
             <!-- Vector Store -->
@@ -1369,9 +1552,12 @@
                 type="text"
                 x-model="settings.mem0OllamaBaseUrl"
                 @change="saveSettings()"
-                placeholder="http://localhost:11434"
+                placeholder="http://localhost:11434 (endpoint URL)"
                 class="w-full bg-black/30 border border-[var(--glass-border)] rounded-[10px] py-2 px-3 text-[13px] text-white focus:outline-none focus:border-[var(--accent-color)] focus:bg-black/40 transition-all placeholder-white/40"
               />
+              <small class="text-white/50 text-[11px]"
+                >Endpoint URL only (example: http://localhost:11434). Do not put model name here.</small
+              >
             </div>
           </div>
         </div>

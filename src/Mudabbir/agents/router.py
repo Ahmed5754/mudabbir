@@ -15,6 +15,7 @@ from collections.abc import AsyncIterator
 from Mudabbir.agents.registry import (
     create_backend,
     get_backend_info,
+    install_hint_text,
     normalize_backend_name,
 )
 from Mudabbir.config import Settings
@@ -69,9 +70,10 @@ class AgentRouter:
             self._agent = create_backend(backend, self.settings)
             logger.info("🚀 Backend loaded: %s (%s)", info.display_name, info.name)
         except ImportError as exc:
+            hint_text = install_hint_text(info)
             logger.error(
                 f"Could not load '{backend}' backend — missing dependency: {exc}. "
-                f"Install it with: {info.install_hint}"
+                f"Install hint: {hint_text}"
             )
             if backend != "claude_agent_sdk":
                 fallback = "claude_agent_sdk"
@@ -82,11 +84,12 @@ class AgentRouter:
                     self._agent = create_backend(fallback, self.settings)
                     logger.info("🚀 Backend loaded: %s (%s)", fallback_info.display_name, fallback)
                 except ImportError as fallback_exc:
+                    fallback_hint = install_hint_text(fallback_info)
                     logger.error(
-                        "Fallback backend '%s' failed to load: %s. Install with: %s",
+                        "Fallback backend '%s' failed to load: %s. Install hint: %s",
                         fallback,
                         fallback_exc,
-                        fallback_info.install_hint,
+                        fallback_hint,
                     )
         except Exception as exc:
             logger.error("Could not initialize backend '%s': %s", backend, exc)
