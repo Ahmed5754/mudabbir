@@ -268,11 +268,28 @@ def test_resolve_startup_disable_extracts_name() -> None:
         ("تحديث الصفحة", "browser_control", "reload"),
         ("قائمة المهام المجدولة", "task_tools", "list"),
         ("تشغيل مهمة مجدولة BackupTask", "task_tools", "run"),
+        ("إنهاء مهمة مجدولة BackupTask", "task_tools", "end"),
+        ("تمكين مهمة مجدولة BackupTask", "task_tools", "enable"),
+        ("تعطيل مهمة مجدولة BackupTask", "task_tools", "disable"),
         ("قائمة المستخدمين", "user_tools", "list"),
         ("حذف مستخدم TestUser", "user_tools", "delete"),
     ],
 )
 def test_resolve_browser_task_user_aliases(message: str, action: str, mode: str) -> None:
+    result = resolve_windows_intent(message)
+    assert result.matched is True
+    assert result.action == action
+    assert result.params.get("mode") == mode
+
+
+@pytest.mark.parametrize(
+    ("message", "action", "mode"),
+    [
+        ("آخر أخطاء النظام", "dev_tools", "event_errors"),
+        ("تحليل شاشة الموت", "dev_tools", "analyze_bsod"),
+    ],
+)
+def test_resolve_event_log_and_bsod_aliases(message: str, action: str, mode: str) -> None:
     result = resolve_windows_intent(message)
     assert result.matched is True
     assert result.action == action

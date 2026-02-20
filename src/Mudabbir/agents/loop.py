@@ -723,12 +723,18 @@ class AgentLoop:
             task_msgs_ar = {
                 "list": "تم جلب قائمة المهام المجدولة.",
                 "run": f"تم تشغيل المهمة المجدولة: {name or 'المحددة'}.",
+                "end": f"تم إنهاء المهمة المجدولة: {name or 'المحددة'}.",
+                "enable": f"تم تمكين المهمة المجدولة: {name or 'المحددة'}.",
+                "disable": f"تم تعطيل المهمة المجدولة: {name or 'المحددة'}.",
                 "delete": f"تم حذف المهمة المجدولة: {name or 'المحددة'}.",
                 "create": f"تم إنشاء مهمة مجدولة: {name or 'جديدة'}.",
             }
             task_msgs_en = {
                 "list": "Fetched scheduled tasks list.",
                 "run": f"Ran scheduled task: {name or 'target task'}.",
+                "end": f"Stopped scheduled task: {name or 'target task'}.",
+                "enable": f"Enabled scheduled task: {name or 'target task'}.",
+                "disable": f"Disabled scheduled task: {name or 'target task'}.",
                 "delete": f"Deleted scheduled task: {name or 'target task'}.",
                 "create": f"Created scheduled task: {name or 'new task'}.",
             }
@@ -1073,6 +1079,8 @@ class AgentLoop:
                 "open_local_users_groups": "تم فتح المستخدمين والمجموعات المحلية.",
                 "open_local_security_policy": "تم فتح سياسة الأمان المحلية.",
                 "open_print_management": "تم فتح إدارة الطباعة.",
+                "event_errors": "تم جلب أحدث أخطاء سجل الأحداث.",
+                "analyze_bsod": "تم تحليل أحداث انهيار النظام (BSOD).",
             }
             dev_msgs_en = {
                 "open_services": "Opened Services console.",
@@ -1081,6 +1089,8 @@ class AgentLoop:
                 "open_local_users_groups": "Opened Local Users and Groups.",
                 "open_local_security_policy": "Opened Local Security Policy.",
                 "open_print_management": "Opened Print Management.",
+                "event_errors": "Fetched recent event log errors.",
+                "analyze_bsod": "Analyzed recent BSOD/system crash events.",
             }
             if mode:
                 msg = dev_msgs_ar.get(mode) if arabic else dev_msgs_en.get(mode)

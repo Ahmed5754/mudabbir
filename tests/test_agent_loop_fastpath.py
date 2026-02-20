@@ -304,7 +304,7 @@ async def test_global_fastpath_browser_task_user_replies(
                 assert kwargs.get("mode") == "new_tab"
                 return '{"ok": true}'
             if action == "task_tools":
-                assert kwargs.get("mode") == "run"
+                assert kwargs.get("mode") in {"run", "end", "enable", "disable"}
                 assert kwargs.get("name") == "BackupTask"
                 return '{"ok": true}'
             if action == "user_tools":
@@ -327,6 +327,24 @@ async def test_global_fastpath_browser_task_user_replies(
     )
     assert handled_task is True
     assert "BackupTask" in str(reply_task)
+
+    handled_task_end, reply_task_end = await loop._try_global_windows_fastpath(
+        text="إنهاء مهمة مجدولة BackupTask", session_key="s17e"
+    )
+    assert handled_task_end is True
+    assert "BackupTask" in str(reply_task_end)
+
+    handled_task_enable, reply_task_enable = await loop._try_global_windows_fastpath(
+        text="تمكين مهمة مجدولة BackupTask", session_key="s17en"
+    )
+    assert handled_task_enable is True
+    assert "BackupTask" in str(reply_task_enable)
+
+    handled_task_disable, reply_task_disable = await loop._try_global_windows_fastpath(
+        text="تعطيل مهمة مجدولة BackupTask", session_key="s17d"
+    )
+    assert handled_task_disable is True
+    assert "BackupTask" in str(reply_task_disable)
 
     handled_user, reply_user = await loop._try_global_windows_fastpath(
         text="حذف مستخدم TestUser", session_key="s18"
@@ -527,6 +545,32 @@ async def test_global_fastpath_control_panel_and_mmc_replies(
     )
     assert handled_dev is True
     assert "المهام" in str(reply_dev) or "scheduler" in str(reply_dev).lower()
+
+
+@pytest.mark.asyncio
+async def test_global_fastpath_event_errors_and_bsod_replies(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class DummyDesktopTool:
+        async def execute(self, action: str, **kwargs):
+            assert action == "dev_tools"
+            assert kwargs.get("mode") in {"event_errors", "analyze_bsod"}
+            return '{"ok": true}'
+
+    monkeypatch.setattr("Mudabbir.tools.builtin.desktop.DesktopTool", DummyDesktopTool)
+    loop = AgentLoop()
+
+    handled_events, reply_events = await loop._try_global_windows_fastpath(
+        text="آخر أخطاء النظام", session_key="s33e"
+    )
+    assert handled_events is True
+    assert "خط" in str(reply_events) or "event" in str(reply_events).lower()
+
+    handled_bsod, reply_bsod = await loop._try_global_windows_fastpath(
+        text="تحليل شاشة الموت", session_key="s33b"
+    )
+    assert handled_bsod is True
+    assert "bsod" in str(reply_bsod).lower() or "انهيار" in str(reply_bsod)
 
 
 @pytest.mark.asyncio

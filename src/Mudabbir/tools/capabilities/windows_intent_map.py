@@ -506,8 +506,13 @@ RULES: tuple[IntentRule, ...] = (
     IntentRule("browser.save_pdf", "browser_control", "save_pdf", "safe", ("save page pdf", "حفظ الصفحة pdf")),
     IntentRule("tasks.list", "task_tools", "list", "safe", ("task scheduler list", "قائمة المهام المجدولة")),
     IntentRule("tasks.run", "task_tools", "run", "safe", ("run scheduled task", "تشغيل مهمة مجدولة"), params=("name",)),
+    IntentRule("tasks.end", "task_tools", "end", "safe", ("end scheduled task", "انهاء مهمة مجدولة", "إنهاء مهمة مجدولة"), params=("name",)),
+    IntentRule("tasks.enable", "task_tools", "enable", "safe", ("enable scheduled task", "تمكين مهمة مجدولة"), params=("name",)),
+    IntentRule("tasks.disable", "task_tools", "disable", "safe", ("disable scheduled task", "تعطيل مهمة مجدولة"), params=("name",)),
     IntentRule("tasks.delete", "task_tools", "delete", "destructive", ("delete scheduled task", "حذف مهمة مجدولة"), params=("name",)),
     IntentRule("tasks.create", "task_tools", "create", "elevated", ("create scheduled task", "انشاء مهمة مجدولة", "إنشاء مهمة مجدولة"), params=("name", "command", "trigger")),
+    IntentRule("dev.event_errors", "dev_tools", "event_errors", "safe", ("event errors", "system event errors", "latest system errors", "اخر اخطاء النظام", "آخر أخطاء النظام")),
+    IntentRule("dev.bsod_analyze", "dev_tools", "analyze_bsod", "safe", ("analyze bsod", "bsod analysis", "تحليل شاشة الموت", "تحليل bsod", "تحليل انهيارات النظام")),
     IntentRule("users.list", "user_tools", "list", "safe", ("list users", "قائمة المستخدمين")),
     IntentRule("users.create", "user_tools", "create", "destructive", ("create user", "انشاء مستخدم", "إنشاء مستخدم"), params=("username", "password")),
     IntentRule("users.delete", "user_tools", "delete", "destructive", ("delete user", "حذف مستخدم"), params=("username",)),
@@ -911,11 +916,14 @@ def _build_params(rule: IntentRule, raw_text: str, normalized: str) -> dict[str,
         )
         if q:
             params["name"] = q
-    if rule.capability_id in {"tasks.run", "tasks.delete", "tasks.create"}:
+    if rule.capability_id in {"tasks.run", "tasks.end", "tasks.enable", "tasks.disable", "tasks.delete", "tasks.create"}:
         q = _extract_named_value(
             raw_text,
             (
                 r"(?:run scheduled task|تشغيل مهمة مجدولة)\s+(.+)$",
+                r"(?:end scheduled task|انهاء مهمة مجدولة|إنهاء مهمة مجدولة)\s+(.+)$",
+                r"(?:enable scheduled task|تمكين مهمة مجدولة)\s+(.+)$",
+                r"(?:disable scheduled task|تعطيل مهمة مجدولة)\s+(.+)$",
                 r"(?:delete scheduled task|حذف مهمة مجدولة)\s+(.+)$",
                 r"(?:create scheduled task|انشاء مهمة مجدولة|إنشاء مهمة مجدولة)\s+(.+)$",
             ),

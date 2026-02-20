@@ -4503,6 +4503,15 @@ $obj | ConvertTo-Json -Compress
         if mode_norm == "run":
             ok, out = _run_powershell(f"Start-ScheduledTask -TaskName '{task_name}'", timeout=15)
             return _json({"ok": True, "mode": "run", "name": task_name}) if ok else self._error(out or "run task failed")
+        if mode_norm == "end":
+            ok, out = _run_powershell(f"Stop-ScheduledTask -TaskName '{task_name}'", timeout=15)
+            return _json({"ok": True, "mode": "end", "name": task_name}) if ok else self._error(out or "end task failed")
+        if mode_norm == "enable":
+            ok, out = _run_powershell(f"Enable-ScheduledTask -TaskName '{task_name}'", timeout=15)
+            return _json({"ok": True, "mode": "enable", "name": task_name}) if ok else self._error(out or "enable task failed")
+        if mode_norm == "disable":
+            ok, out = _run_powershell(f"Disable-ScheduledTask -TaskName '{task_name}'", timeout=15)
+            return _json({"ok": True, "mode": "disable", "name": task_name}) if ok else self._error(out or "disable task failed")
         if mode_norm == "delete":
             ok, out = _run_powershell(f"Unregister-ScheduledTask -TaskName '{task_name}' -Confirm:$false", timeout=20)
             return _json({"ok": True, "mode": "delete", "name": task_name}) if ok else self._error(out or "delete task failed")
