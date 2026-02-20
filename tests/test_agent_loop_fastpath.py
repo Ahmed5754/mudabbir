@@ -741,6 +741,18 @@ async def test_global_fastpath_app_tools_extra_replies(
     assert handled_mic is True
     assert "microphone" in str(reply_mic).lower() or "الميكروفون" in str(reply_mic)
 
+    handled_inetcpl, reply_inetcpl = await loop._try_global_windows_fastpath(
+        text="inetcpl.cpl", session_key="s35i"
+    )
+    assert handled_inetcpl is True
+    assert "internet" in str(reply_inetcpl).lower() or "الإنترنت" in str(reply_inetcpl) or "الانترنت" in str(reply_inetcpl)
+
+    handled_deskcpl, reply_deskcpl = await loop._try_global_windows_fastpath(
+        text="desk.cpl", session_key="s35d"
+    )
+    assert handled_deskcpl is True
+    assert "display" in str(reply_deskcpl).lower() or "العرض" in str(reply_deskcpl)
+
     handled_appwiz, reply_appwiz = await loop._try_global_windows_fastpath(
         text="appwiz.cpl", session_key="s36"
     )
@@ -770,6 +782,24 @@ async def test_global_fastpath_app_tools_extra_replies(
     )
     assert handled_users is True
     assert "user" in str(reply_users).lower() or "حساب" in str(reply_users)
+
+    handled_admintools, reply_admintools = await loop._try_global_windows_fastpath(
+        text="control admintools", session_key="s36a"
+    )
+    assert handled_admintools is True
+    assert "administrative" in str(reply_admintools).lower() or "اداري" in str(reply_admintools) or "إداري" in str(reply_admintools)
+
+    handled_schedtasks, reply_schedtasks = await loop._try_global_windows_fastpath(
+        text="control schedtasks", session_key="s36s"
+    )
+    assert handled_schedtasks is True
+    assert "task" in str(reply_schedtasks).lower() or "المهام" in str(reply_schedtasks)
+
+    handled_netconn, reply_netconn = await loop._try_global_windows_fastpath(
+        text="control netconnections", session_key="s36n"
+    )
+    assert handled_netconn is True
+    assert "network" in str(reply_netconn).lower() or "الشبكة" in str(reply_netconn)
 
     handled_folders, reply_folders = await loop._try_global_windows_fastpath(
         text="control folders", session_key="s36f"

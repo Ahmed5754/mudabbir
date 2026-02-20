@@ -350,10 +350,15 @@ RULES: tuple[IntentRule, ...] = (
     IntentRule("apps.open_add_remove", "app_tools", "open_add_remove_programs", "safe", ("add remove programs", "appwiz.cpl", "اضافه او ازاله البرامج")),
     IntentRule("apps.open_sound_cpl", "app_tools", "open_sound_cpl", "safe", ("mmsys.cpl", "sound settings classic", "اعدادات الصوت الكلاسيكية", "اعدادات الصوت الكلاسيكيه")),
     IntentRule("apps.open_network_connections", "app_tools", "open_network_connections", "safe", ("ncpa.cpl", "network connections", "اتصالات الشبكة", "اتصالات الشبكه")),
+    IntentRule("apps.open_netconnections_cpl", "app_tools", "open_netconnections_cpl", "safe", ("control netconnections", "network connections control panel", "لوحة اتصالات الشبكة")),
     IntentRule("apps.open_time_date", "app_tools", "open_time_date", "safe", ("timedate.cpl", "time and date", "الوقت والتاريخ")),
     IntentRule("apps.open_system_properties", "app_tools", "open_system_properties", "safe", ("sysdm.cpl", "system properties", "خصائص النظام")),
     IntentRule("apps.open_power_options", "app_tools", "open_power_options", "safe", ("powercfg.cpl", "power options", "خيارات الطاقة")),
     IntentRule("apps.open_firewall_cpl", "app_tools", "open_firewall_cpl", "safe", ("firewall.cpl", "windows firewall", "جدار الحماية", "جدار الحمايه")),
+    IntentRule("apps.open_internet_options_cpl", "app_tools", "open_internet_options_cpl", "safe", ("inetcpl.cpl", "internet options", "خصائص الانترنت", "خصائص الإنترنت")),
+    IntentRule("apps.open_display_cpl", "app_tools", "open_display_cpl", "safe", ("desk.cpl", "display settings classic", "اعدادات العرض الكلاسيكية", "إعدادات العرض الكلاسيكية")),
+    IntentRule("apps.open_admin_tools_cpl", "app_tools", "open_admin_tools_cpl", "safe", ("control admintools", "administrative tools", "ادوات ادارية", "أدوات إدارية")),
+    IntentRule("apps.open_schedtasks_cpl", "app_tools", "open_schedtasks_cpl", "safe", ("control schedtasks", "scheduled tasks control panel", "لوحة المهام المجدولة")),
     IntentRule("apps.open_mouse_cpl", "app_tools", "open_mouse_cpl", "safe", ("main.cpl", "control mouse", "mouse properties", "خصائص الفاره", "خصائص الفأرة")),
     IntentRule("apps.open_keyboard_cpl", "app_tools", "open_keyboard_cpl", "safe", ("control keyboard", "keyboard settings classic", "لوحة المفاتيح", "اعدادات الكيبورد الكلاسيكية")),
     IntentRule("apps.open_fonts_cpl", "app_tools", "open_fonts_cpl", "safe", ("control fonts", "fonts control panel", "لوحة الخطوط", "لوحه الخطوط")),
@@ -1027,6 +1032,30 @@ def resolve_windows_intent(message: str) -> IntentResolution:
             capability_id="apps.open_user_accounts_cpl",
             action="app_tools",
             params={"mode": "open_user_accounts_cpl"},
+            risk_level="safe",
+        )
+    if _contains_any(normalized, ("control admintools", "administrative tools", "ادوات ادارية", "أدوات إدارية")):
+        return IntentResolution(
+            matched=True,
+            capability_id="apps.open_admin_tools_cpl",
+            action="app_tools",
+            params={"mode": "open_admin_tools_cpl"},
+            risk_level="safe",
+        )
+    if _contains_any(normalized, ("control schedtasks", "scheduled tasks control panel", "لوحة المهام المجدولة")):
+        return IntentResolution(
+            matched=True,
+            capability_id="apps.open_schedtasks_cpl",
+            action="app_tools",
+            params={"mode": "open_schedtasks_cpl"},
+            risk_level="safe",
+        )
+    if _contains_any(normalized, ("control netconnections", "network connections control panel", "لوحة اتصالات الشبكة")):
+        return IntentResolution(
+            matched=True,
+            capability_id="apps.open_netconnections_cpl",
+            action="app_tools",
+            params={"mode": "open_netconnections_cpl"},
             risk_level="safe",
         )
     if _contains_any(normalized, ("control folders", "folder options", "خيارات المجلدات")):
