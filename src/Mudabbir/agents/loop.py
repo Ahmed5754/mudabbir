@@ -870,6 +870,80 @@ class AgentLoop:
             if msg:
                 return True, msg
 
+        if action == "browser_deep_tools":
+            mode = str(params.get("mode", "")).lower()
+            deep_msgs_ar = {
+                "multi_open": "تم فتح مجموعة الروابط.",
+                "clear_chrome_cache": "تم مسح كاش Chrome.",
+                "clear_edge_cache": "تم مسح كاش Edge.",
+            }
+            deep_msgs_en = {
+                "multi_open": "Opened multiple URLs.",
+                "clear_chrome_cache": "Cleared Chrome cache.",
+                "clear_edge_cache": "Cleared Edge cache.",
+            }
+            msg = deep_msgs_ar.get(mode) if arabic else deep_msgs_en.get(mode)
+            if msg:
+                return True, msg
+
+        if action == "office_tools":
+            mode = str(params.get("mode", "")).lower()
+            office_msgs_ar = {
+                "open_word_new": "تم فتح ملف Word جديد.",
+                "docx_to_pdf": "تم تنفيذ تحويل DOCX إلى PDF.",
+                "silent_print": "تم إرسال الملف للطباعة.",
+            }
+            office_msgs_en = {
+                "open_word_new": "Opened a new Word document.",
+                "docx_to_pdf": "Executed DOCX to PDF conversion.",
+                "silent_print": "Sent file to printer.",
+            }
+            msg = office_msgs_ar.get(mode) if arabic else office_msgs_en.get(mode)
+            if msg:
+                return True, msg
+
+        if action == "driver_tools":
+            mode = str(params.get("mode", "")).lower()
+            driver_msgs_ar = {
+                "drivers_list": "تم جلب قائمة التعريفات المثبتة.",
+                "drivers_backup": "تم بدء أخذ نسخة احتياطية للتعريفات.",
+                "updates_pending": "تم جلب التحديثات المعلقة.",
+                "drivers_issues": "تم جلب التعريفات التي فيها مشاكل.",
+            }
+            driver_msgs_en = {
+                "drivers_list": "Fetched installed drivers list.",
+                "drivers_backup": "Started drivers backup.",
+                "updates_pending": "Fetched pending updates.",
+                "drivers_issues": "Fetched problematic drivers.",
+            }
+            msg = driver_msgs_ar.get(mode) if arabic else driver_msgs_en.get(mode)
+            if msg:
+                return True, msg
+
+        if action == "info_tools":
+            mode = str(params.get("mode", "")).lower()
+            info_msgs_ar = {
+                "windows_product_key": "تم جلب مفتاح تفعيل ويندوز.",
+                "model_info": "تم جلب موديل الجهاز والشركة المصنعة.",
+                "system_language": "تم جلب لغة النظام الحالية.",
+                "timezone_get": "تم جلب المنطقة الزمنية الحالية.",
+                "timezone_set": "تم تعديل المنطقة الزمنية.",
+                "windows_install_date": "تم جلب تاريخ تثبيت ويندوز.",
+                "refresh_rate": "تم جلب معدل تحديث الشاشة.",
+            }
+            info_msgs_en = {
+                "windows_product_key": "Fetched Windows product key.",
+                "model_info": "Fetched device model/manufacturer.",
+                "system_language": "Fetched current system language.",
+                "timezone_get": "Fetched current timezone.",
+                "timezone_set": "Updated timezone.",
+                "windows_install_date": "Fetched Windows install date.",
+                "refresh_rate": "Fetched display refresh rate.",
+            }
+            msg = info_msgs_ar.get(mode) if arabic else info_msgs_en.get(mode)
+            if msg:
+                return True, msg
+
         if action == "window_control":
             mode = str(params.get("mode", "")).lower()
             window_msgs_ar = {

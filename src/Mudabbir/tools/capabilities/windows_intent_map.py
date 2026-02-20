@@ -505,6 +505,23 @@ RULES: tuple[IntentRule, ...] = (
     IntentRule("web.weather", "web_tools", "weather", "safe", ("weather city", "حالة الطقس", "طقس"), params=("city",)),
     IntentRule("api.currency", "api_tools", "currency", "safe", ("currency prices", "اسعار العملات", "أسعار العملات"), params=("target",)),
     IntentRule("api.translate", "api_tools", "translate_quick", "safe", ("translate text", "ترجمة كلمة", "ترجمة نص"), params=("text",)),
+    IntentRule("browserdeep.multi_open", "browser_deep_tools", "multi_open", "safe", ("open multiple links", "فتح مجموعة روابط"), params=("urls",)),
+    IntentRule("browserdeep.clear_chrome_cache", "browser_deep_tools", "clear_chrome_cache", "safe", ("clear chrome cache", "مسح الكاش لمتصفح chrome")),
+    IntentRule("browserdeep.clear_edge_cache", "browser_deep_tools", "clear_edge_cache", "safe", ("clear edge cache", "مسح الكاش لمتصفح edge")),
+    IntentRule("office.open_word_new", "office_tools", "open_word_new", "safe", ("open word new", "فتح ملف word جديد")),
+    IntentRule("office.docx_to_pdf", "office_tools", "docx_to_pdf", "safe", ("docx to pdf", "تحويل docx الى pdf", "تحويل docx إلى pdf"), params=("path", "target")),
+    IntentRule("office.silent_print", "office_tools", "silent_print", "elevated", ("silent print", "طباعة ملف فورا", "طباعة ملف فوراً"), params=("path",)),
+    IntentRule("drivers.list", "driver_tools", "drivers_list", "safe", ("drivers list", "قائمة التعريفات المثبتة")),
+    IntentRule("drivers.backup", "driver_tools", "drivers_backup", "elevated", ("backup drivers", "نسخة احتياطية للتعريفات", "اخذ نسخة احتياطية من التعريفات")),
+    IntentRule("drivers.pending_updates", "driver_tools", "updates_pending", "safe", ("pending updates", "التحديثات المعلقة")),
+    IntentRule("drivers.issues", "driver_tools", "drivers_issues", "safe", ("drivers issues", "تعريفات فيها مشاكل", "التعريفات التي فيها مشاكل")),
+    IntentRule("info.product_key", "info_tools", "windows_product_key", "safe", ("windows product key", "مفتاح تفعيل الويندوز")),
+    IntentRule("info.model", "info_tools", "model_info", "safe", ("laptop model", "موديل اللابتوب", "الشركة المصنعة")),
+    IntentRule("info.system_language", "info_tools", "system_language", "safe", ("system language", "لغة النظام الحالية")),
+    IntentRule("info.timezone_get", "info_tools", "timezone_get", "safe", ("current timezone", "المنطقة الزمنية الحالية")),
+    IntentRule("info.timezone_set", "info_tools", "timezone_set", "elevated", ("set timezone", "تعديل المنطقة الزمنية"), params=("timezone",)),
+    IntentRule("info.install_date", "info_tools", "windows_install_date", "safe", ("windows install date", "تاريخ تثبيت الويندوز")),
+    IntentRule("info.refresh_rate", "info_tools", "refresh_rate", "safe", ("refresh rate", "سرعة استجابة الشاشة")),
 )
 
 
@@ -657,6 +674,15 @@ def _build_params(rule: IntentRule, raw_text: str, normalized: str) -> dict[str,
             params["pattern"] = q
     if "size_mb" in rule.params and "size_mb" not in params and value is not None:
         params["size_mb"] = max(1, min(1024 * 100, abs(value)))
+    if "timezone" in rule.params and "timezone" not in params:
+        q = _extract_named_value(raw_text, (r"(?:timezone|المنطقة الزمنية)\s*[:=]?\s*(.+)$",))
+        if q:
+            params["timezone"] = q
+    if "urls" in rule.params and "urls" not in params:
+        found = re.findall(r"https?://\S+", raw_text or "", re.IGNORECASE)
+        cleaned = [u.strip(" ,)") for u in found if u]
+        if cleaned:
+            params["urls"] = cleaned[:20]
     if "text" in rule.params:
         quoted = _extract_quoted_chunks(raw_text)
         if quoted:

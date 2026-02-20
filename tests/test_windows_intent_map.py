@@ -340,3 +340,40 @@ def test_resolve_port_owner_extracts_port() -> None:
     assert result.action == "network_tools"
     assert result.params.get("mode") == "port_owner"
     assert result.params.get("port") == 3389
+
+
+@pytest.mark.parametrize(
+    ("message", "action", "mode"),
+    [
+        ("مسح الكاش لمتصفح chrome", "browser_deep_tools", "clear_chrome_cache"),
+        ("مسح الكاش لمتصفح edge", "browser_deep_tools", "clear_edge_cache"),
+        ("فتح مجموعة روابط https://a.com https://b.com", "browser_deep_tools", "multi_open"),
+        ("فتح ملف word جديد", "office_tools", "open_word_new"),
+        ("قائمة التعريفات المثبتة", "driver_tools", "drivers_list"),
+        ("اخذ نسخة احتياطية من التعريفات", "driver_tools", "drivers_backup"),
+        ("التعريفات التي فيها مشاكل", "driver_tools", "drivers_issues"),
+        ("مفتاح تفعيل الويندوز", "info_tools", "windows_product_key"),
+        ("موديل اللابتوب", "info_tools", "model_info"),
+        ("لغة النظام الحالية", "info_tools", "system_language"),
+        ("تاريخ تثبيت الويندوز", "info_tools", "windows_install_date"),
+        ("سرعة استجابة الشاشة", "info_tools", "refresh_rate"),
+    ],
+)
+def test_resolve_browserdeep_office_driver_info_aliases(
+    message: str, action: str, mode: str
+) -> None:
+    result = resolve_windows_intent(message)
+    assert result.matched is True
+    assert result.action == action
+    assert result.params.get("mode") == mode
+
+
+def test_resolve_docx_to_pdf_extracts_paths() -> None:
+    result = resolve_windows_intent(
+        'تحويل docx الى pdf "C:\\tmp\\a.docx" "C:\\tmp\\a.pdf"'
+    )
+    assert result.matched is True
+    assert result.action == "office_tools"
+    assert result.params.get("mode") == "docx_to_pdf"
+    assert str(result.params.get("path", "")).endswith("a.docx")
+    assert str(result.params.get("target", "")).endswith("a.pdf")

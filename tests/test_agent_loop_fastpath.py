@@ -418,3 +418,51 @@ async def test_global_fastpath_network_security_search_web_api_replies(
     )
     assert handled_api is True
     assert "عملات" in str(reply_api) or "currency" in str(reply_api).lower()
+
+
+@pytest.mark.asyncio
+async def test_global_fastpath_browserdeep_office_driver_info_replies(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class DummyDesktopTool:
+        async def execute(self, action: str, **kwargs):
+            if action == "browser_deep_tools":
+                assert kwargs.get("mode") == "clear_chrome_cache"
+                return '{"ok": true}'
+            if action == "office_tools":
+                assert kwargs.get("mode") == "open_word_new"
+                return '{"ok": true}'
+            if action == "driver_tools":
+                assert kwargs.get("mode") == "drivers_list"
+                return '{"ok": true}'
+            if action == "info_tools":
+                assert kwargs.get("mode") == "system_language"
+                return '{"ok": true}'
+            return '{"ok": true}'
+
+    monkeypatch.setattr("Mudabbir.tools.builtin.desktop.DesktopTool", DummyDesktopTool)
+    loop = AgentLoop()
+
+    handled_deep, reply_deep = await loop._try_global_windows_fastpath(
+        text="مسح الكاش لمتصفح chrome", session_key="s28"
+    )
+    assert handled_deep is True
+    assert "chrome" in str(reply_deep).lower() or "كاش" in str(reply_deep)
+
+    handled_office, reply_office = await loop._try_global_windows_fastpath(
+        text="فتح ملف word جديد", session_key="s29"
+    )
+    assert handled_office is True
+    assert "word" in str(reply_office).lower() or "ورد" in str(reply_office)
+
+    handled_driver, reply_driver = await loop._try_global_windows_fastpath(
+        text="قائمة التعريفات المثبتة", session_key="s30"
+    )
+    assert handled_driver is True
+    assert "تعريفات" in str(reply_driver) or "driver" in str(reply_driver).lower()
+
+    handled_info, reply_info = await loop._try_global_windows_fastpath(
+        text="لغة النظام الحالية", session_key="s31"
+    )
+    assert handled_info is True
+    assert "لغة" in str(reply_info) or "language" in str(reply_info).lower()
