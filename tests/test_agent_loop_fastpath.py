@@ -154,17 +154,29 @@ async def test_global_fastpath_network_diagnostics_replies(
     class DummyDesktopTool:
         async def execute(self, action: str, **kwargs):
             assert action == "network_tools"
-            assert kwargs.get("mode") in {"tracert", "nslookup", "netstat_active", "display_dns"}
+            assert kwargs.get("mode") in {"ipconfig_all", "tracert", "pathping", "nslookup", "netstat_active", "display_dns"}
             return '{"ok": true}'
 
     monkeypatch.setattr("Mudabbir.tools.builtin.desktop.DesktopTool", DummyDesktopTool)
     loop = AgentLoop()
+
+    handled_ipall, reply_ipall = await loop._try_global_windows_fastpath(
+        text="ipconfig /all", session_key="s7i"
+    )
+    assert handled_ipall is True
+    assert "شبك" in str(reply_ipall) or "network" in str(reply_ipall).lower()
 
     handled_tracert, reply_tracert = await loop._try_global_windows_fastpath(
         text="تتبع المسار google.com", session_key="s7t"
     )
     assert handled_tracert is True
     assert "تتبع" in str(reply_tracert) or "trace" in str(reply_tracert).lower()
+
+    handled_pathping, reply_pathping = await loop._try_global_windows_fastpath(
+        text="pathping google.com", session_key="s7p"
+    )
+    assert handled_pathping is True
+    assert "فقدان" in str(reply_pathping) or "path ping" in str(reply_pathping).lower()
 
     handled_nslookup, reply_nslookup = await loop._try_global_windows_fastpath(
         text="nslookup google.com", session_key="s7n"

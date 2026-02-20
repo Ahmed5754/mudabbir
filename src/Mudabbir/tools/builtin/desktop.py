@@ -2676,6 +2676,9 @@ $obj | ConvertTo-Json -Compress
             if ok and out:
                 return _json({"ok": True, "mode": "ip_external", "data": json.loads(out)})
             return self._error(out or "external ip lookup failed")
+        if mode_norm in {"ipconfig_all"}:
+            ok, out = _run_powershell("ipconfig /all", timeout=18)
+            return _json({"ok": True, "mode": "ipconfig_all", "output": out[:3000]}) if ok else self._error(out or "ipconfig all failed")
         if mode_norm in {"flush_dns"}:
             ok, out = _run_powershell("ipconfig /flushdns", timeout=10)
             if ok:
@@ -2736,6 +2739,10 @@ $obj | ConvertTo-Json -Compress
             target = (host or "").strip() or "8.8.8.8"
             ok, out = _run_powershell(f"tracert -d {target}", timeout=35)
             return _json({"ok": True, "mode": "tracert", "host": target, "output": out[:2500]}) if ok else self._error(out or "tracert failed")
+        if mode_norm in {"pathping"}:
+            target = (host or "").strip() or "8.8.8.8"
+            ok, out = _run_powershell(f"pathping -n {target}", timeout=45)
+            return _json({"ok": True, "mode": "pathping", "host": target, "output": out[:3000]}) if ok else self._error(out or "pathping failed")
         if mode_norm in {"nslookup", "dns_lookup"}:
             target = (host or "").strip() or "google.com"
             ok, out = _run_powershell(f"nslookup {target}", timeout=15)

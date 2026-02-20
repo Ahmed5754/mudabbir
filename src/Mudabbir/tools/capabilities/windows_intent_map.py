@@ -285,6 +285,7 @@ RULES: tuple[IntentRule, ...] = (
     IntentRule("network.wifi_passwords", "network_tools", "wifi_passwords", "elevated", ("wifi passwords", "كلمات سر الواي فاي")),
     IntentRule("network.ip_internal", "network_tools", "ip_internal", "safe", ("internal ip", "local ip", "ip الداخلي")),
     IntentRule("network.ip_external", "network_tools", "ip_external", "safe", ("external ip", "public ip", "ip الخارجي")),
+    IntentRule("network.ipconfig_all", "network_tools", "ipconfig_all", "safe", ("ipconfig all", "ipconfig /all", "معلومات الشبكة", "تفاصيل الشبكه")),
     IntentRule("network.renew_ip", "network_tools", "renew_ip", "elevated", ("renew ip", "release renew", "تجديد الip")),
     IntentRule("network.flush_dns", "network_tools", "flush_dns", "safe", ("flush dns", "مسح dns", "افراغ dns", "إفراغ dns")),
     IntentRule("network.ping", "network_tools", "ping", "safe", ("ping", "اختبار اتصال", "بينق"), params=("host",)),
@@ -303,6 +304,7 @@ RULES: tuple[IntentRule, ...] = (
     IntentRule("network.port_owner", "network_tools", "port_owner", "safe", ("port owner", "من يستخدم المنفذ", "البرنامج الذي يستخدم منفذ"), params=("port",)),
     IntentRule("network.route_table", "network_tools", "route_table", "safe", ("route table", "جدول التوجيه")),
     IntentRule("network.tracert", "network_tools", "tracert", "safe", ("tracert", "trace route", "تتبع المسار", "تتبع الطريق"), params=("host",)),
+    IntentRule("network.pathping", "network_tools", "pathping", "safe", ("pathping", "اختبار فقدان الشبكة", "اختبار فقدان الشبكه"), params=("host",)),
     IntentRule("network.nslookup", "network_tools", "nslookup", "safe", ("nslookup", "dns lookup", "استعلام dns"), params=("host",)),
     IntentRule("network.netstat", "network_tools", "netstat_active", "safe", ("netstat", "الاتصالات النشطة", "الاتصالات النشطه")),
     IntentRule("network.display_dns", "network_tools", "display_dns", "safe", ("display dns", "ipconfig displaydns", "عرض dns", "عرض ذاكرة dns")),
@@ -602,6 +604,7 @@ def _build_params(rule: IntentRule, raw_text: str, normalized: str) -> dict[str,
                     r"(?:connect(?: to)? wifi|الاتصال بشبكه|الاتصال بشبكة|اتصل بشبكه|اتصل بشبكة)\s+(.+)$",
                     r"(?:network|شبكه|شبكة)\s+(.+)$",
                     r"(?:tracert|trace route|تتبع المسار|تتبع الطريق)\s+(.+)$",
+                    r"(?:pathping|اختبار فقدان الشبكة|اختبار فقدان الشبكه)\s+(.+)$",
                     r"(?:nslookup|dns lookup|استعلام dns)\s+(.+)$",
                     r"(?:server online|فحص توافر خادم|هل السيرفر شغال)\s+(.+)$",
                 ),
@@ -963,6 +966,27 @@ def resolve_windows_intent(message: str) -> IntentResolution:
     normalized = _normalize_text(raw)
     if not normalized:
         return IntentResolution(matched=False)
+
+    # Priority disambiguation for network diagnostics tokens that contain "ping".
+    if _contains_any(normalized, ("pathping", "اختبار فقدان الشبكه", "اختبار فقدان الشبكة")):
+        params = {
+            "mode": "pathping",
+        }
+        host = _extract_named_value(
+            raw,
+            (
+                r"(?:pathping|اختبار فقدان الشبكة|اختبار فقدان الشبكه)\s+(.+)$",
+            ),
+        ) or _extract_app_query(raw)
+        if host:
+            params["host"] = host
+        return IntentResolution(
+            matched=True,
+            capability_id="network.pathping",
+            action="network_tools",
+            params=params,
+            risk_level="safe",
+        )
 
     # Contextual override for percentage-based audio/brightness set.
     if _contains_any(normalized, ("تمنع", "منع", "blocking", "wake lock")) and _contains_any(
