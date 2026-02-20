@@ -371,6 +371,8 @@ def test_resolve_browserdeep_office_driver_info_aliases(
 @pytest.mark.parametrize(
     ("message", "action", "mode"),
     [
+        ("control /name Microsoft.System", "app_tools", "open_control_panel"),
+        ("control /name Microsoft.NetworkAndSharingCenter", "app_tools", "open_control_panel"),
         ("appwiz.cpl", "app_tools", "open_add_remove_programs"),
         ("افتح mmsys.cpl", "app_tools", "open_sound_cpl"),
         ("اتصالات الشبكة", "app_tools", "open_network_connections"),
