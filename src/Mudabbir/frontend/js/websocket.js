@@ -185,6 +185,15 @@ class MudabbirSocket {
         this.send('chat', { message });
     }
 
+    stopChat() {
+        this.send('stop_chat');
+    }
+
+    // Backward-compatible alias
+    stopResponse() {
+        this.stopChat();
+    }
+
     saveSettings(settings) {
         this.send('settings', {
             agent_backend: settings.agentBackend,

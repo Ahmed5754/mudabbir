@@ -68,10 +68,17 @@ class AgentLoop:
 
         # Concurrency controls
         self._session_locks: dict[str, asyncio.Lock] = {}
+        self._session_tasks: dict[str, asyncio.Task] = {}
         self._global_semaphore = asyncio.Semaphore(self.settings.max_concurrent_conversations)
         self._background_tasks: set[asyncio.Task] = set()
 
         self._running = False
+        get_command_handler().set_on_settings_changed(self._on_settings_changed)
+
+    def _on_settings_changed(self) -> None:
+        """Reload settings-sensitive runtime pieces after slash command updates."""
+        self.settings = Settings.load()
+        self.reset_router()
 
     def _get_router(self) -> AgentRouter:
         """Get or create the agent router (lazy initialization)."""
@@ -178,19 +185,29 @@ class AgentLoop:
 
         # Resolve alias so two chats aliased to the same session serialize correctly
         resolved_key = await self.memory.resolve_session_key(session_key)
+        task = asyncio.current_task()
+        if task is not None:
+            self._session_tasks[resolved_key] = task
 
-        # Global concurrency limit — blocks until a slot is available
-        async with self._global_semaphore:
-            # Per-session lock — serializes messages within the same session
-            if resolved_key not in self._session_locks:
-                self._session_locks[resolved_key] = asyncio.Lock()
-            lock = self._session_locks[resolved_key]
-            async with lock:
-                await self._process_message_inner(message, resolved_key)
+        try:
+            # Global concurrency limit — blocks until a slot is available
+            async with self._global_semaphore:
+                # Per-session lock — serializes messages within the same session
+                if resolved_key not in self._session_locks:
+                    self._session_locks[resolved_key] = asyncio.Lock()
+                lock = self._session_locks[resolved_key]
+                async with lock:
+                    await self._process_message_inner(message, resolved_key)
 
-            # Clean up lock if no one else is waiting on it
-            if not lock.locked():
-                self._session_locks.pop(resolved_key, None)
+                # Clean up lock if no one else is waiting on it
+                if not lock.locked():
+                    self._session_locks.pop(resolved_key, None)
+        except asyncio.CancelledError:
+            logger.info("⏹️ Cancelled in-flight response for %s", resolved_key)
+            raise
+        finally:
+            if task is not None and self._session_tasks.get(resolved_key) is task:
+                self._session_tasks.pop(resolved_key, None)
 
     _WELCOME_EXCLUDED = frozenset({Channel.WEBSOCKET, Channel.CLI, Channel.SYSTEM})
 
@@ -515,6 +532,8 @@ class AgentLoop:
                     is_stream_end=True,
                 )
             )
+        except asyncio.CancelledError:
+            raise
         except Exception as e:
             logger.exception(f"❌ Error processing message: {e}")
             # Kill the backend on error
@@ -568,6 +587,23 @@ class AgentLoop:
                 logger.debug("Auto-learned %d facts from %s", extracted, session_key)
         except Exception:
             logger.debug("Auto-learn background task failed", exc_info=True)
+
+    async def cancel_session(self, session_key: str) -> bool:
+        """Cancel the current in-flight message task for a session key."""
+        resolved_key = await self.memory.resolve_session_key(session_key)
+        task = self._session_tasks.get(resolved_key)
+        if task is None or task.done():
+            return False
+        task.cancel()
+        try:
+            await asyncio.wait_for(asyncio.shield(task), timeout=2.0)
+        except asyncio.TimeoutError:
+            logger.warning("Timed out waiting for cancelled task to finish: %s", resolved_key)
+        except asyncio.CancelledError:
+            pass
+        except Exception:
+            logger.debug("Cancelled task finished with non-cancel exception", exc_info=True)
+        return True
 
     def reset_router(self) -> None:
         """Reset the router to pick up new settings."""

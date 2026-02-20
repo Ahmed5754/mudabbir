@@ -33,7 +33,25 @@ class StartDeepWorkRequest(BaseModel):
     )
     research_depth: str = Field(
         default="standard",
-        description="Research thoroughness: 'none' (skip entirely), 'quick', 'standard', or 'deep'",
+        description=(
+            "Research thoroughness: 'auto', 'none' (skip), 'quick', 'standard', or 'deep'"
+        ),
+    )
+    goal_analysis: dict[str, Any] | None = Field(
+        default=None,
+        description="Optional structured goal analysis from /analyze-goal.",
+    )
+    skip_analysis: bool = Field(
+        default=False,
+        description="Set true when user chooses to skip analysis and start immediately.",
+    )
+
+
+class AnalyzeGoalRequest(BaseModel):
+    """Request body for goal analysis step."""
+
+    description: str = Field(
+        ..., min_length=10, max_length=5000, description="Natural language project description"
     )
 
 
@@ -55,6 +73,16 @@ def _enrich_project_dict(project_dict: dict) -> dict:
     return project_dict
 
 
+@router.post("/analyze-goal")
+async def analyze_goal(request: AnalyzeGoalRequest) -> dict[str, Any]:
+    """Analyze a project goal before planning starts."""
+    from Mudabbir.deep_work.goal_parser import GoalParser
+
+    parser = GoalParser()
+    analysis = await parser.parse(request.description)
+    return {"success": True, "goal_analysis": analysis.to_dict()}
+
+
 @router.post("/start")
 async def start_deep_work(request: StartDeepWorkRequest) -> dict[str, Any]:
     """Submit a new project for Deep Work planning.
@@ -64,10 +92,22 @@ async def start_deep_work(request: StartDeepWorkRequest) -> dict[str, Any]:
     events (dw_planning_phase, dw_planning_complete).
     """
     from Mudabbir.deep_work import get_deep_work_session
+    from Mudabbir.deep_work.goal_parser import GoalAnalysis
     from Mudabbir.deep_work.models import ProjectStatus
     from Mudabbir.mission_control.manager import get_mission_control_manager
 
     manager = get_mission_control_manager()
+    provided_analysis = (
+        GoalAnalysis.from_dict(request.goal_analysis) if request.goal_analysis else None
+    )
+    effective_research_depth = (request.research_depth or "standard").strip().lower()
+    if effective_research_depth == "auto":
+        if provided_analysis:
+            effective_research_depth = provided_analysis.suggested_research_depth
+        else:
+            effective_research_depth = "standard"
+    if effective_research_depth not in {"none", "quick", "standard", "deep"}:
+        effective_research_depth = "standard"
 
     # Create project immediately so we can return the ID
     project = await manager.create_project(
@@ -76,6 +116,10 @@ async def start_deep_work(request: StartDeepWorkRequest) -> dict[str, Any]:
         creator_id="human",
     )
     project.status = ProjectStatus.PLANNING
+    if provided_analysis:
+        project.metadata["goal_analysis"] = provided_analysis.to_dict()
+    project.metadata["analysis_skipped"] = bool(request.skip_analysis)
+    project.metadata["research_depth"] = effective_research_depth
     await manager.update_project(project)
 
     # Run planning in background — frontend tracks via WebSocket events
@@ -85,7 +129,7 @@ async def start_deep_work(request: StartDeepWorkRequest) -> dict[str, Any]:
             await session.plan_existing_project(
                 project.id,
                 request.description,
-                research_depth=request.research_depth,
+                research_depth=effective_research_depth,
             )
         except Exception as e:
             logger.exception(f"Background planning failed for {project.id}: {e}")

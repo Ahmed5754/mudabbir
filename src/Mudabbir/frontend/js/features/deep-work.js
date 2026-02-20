@@ -30,6 +30,9 @@ window.Mudabbir.DeepWork = {
                 showProjectDetail: false,      // Full project detail sheet
                 projectInput: '',              // Natural language project input
                 researchDepth: 'standard',     // 'none' | 'quick' | 'standard' | 'deep'
+                goalAnalysis: null,            // Goal analysis payload from /analyze-goal
+                goalAnalyzing: false,          // Loading state while goal parser runs
+                goalAnalysisStep: 'input',     // 'input' | 'review'
                 projectStarting: false,        // Loading state while planner runs
                 planningPhase: '',             // Current phase: research, prd, tasks, team
                 planningMessage: '',           // Phase progress message
@@ -63,6 +66,60 @@ window.Mudabbir.DeepWork = {
             },
 
             /**
+             * Analyze goal before planning (step 1 in two-step flow)
+             */
+            async analyzeGoal() {
+                const input = this.missionControl.projectInput.trim();
+                if (!input || input.length < 10) {
+                    this.showToast('Please describe your project (at least 10 characters)', 'error');
+                    return;
+                }
+
+                this.missionControl.goalAnalyzing = true;
+                this.missionControl.goalAnalysis = null;
+
+                try {
+                    const res = await fetch('/api/deep-work/analyze-goal', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ description: input })
+                    });
+
+                    if (res.ok) {
+                        const data = await res.json();
+                        this.missionControl.goalAnalysis = data.goal_analysis || null;
+                        this.missionControl.goalAnalysisStep = 'review';
+                        const suggested = this.missionControl.goalAnalysis?.suggested_research_depth;
+                        if (['none', 'quick', 'standard', 'deep'].includes(suggested)) {
+                            this.missionControl.researchDepth = suggested;
+                        }
+                    } else {
+                        const err = await res.json();
+                        this.showToast(err.detail || 'Goal analysis failed', 'error');
+                    }
+                } catch (e) {
+                    console.error('Failed to analyze goal:', e);
+                    this.showToast('Goal analysis failed — you can still start directly', 'error');
+                } finally {
+                    this.missionControl.goalAnalyzing = false;
+                    this.$nextTick(() => { if (window.refreshIcons) window.refreshIcons(); });
+                }
+            },
+
+            /**
+             * Reset analysis step (optionally keep analysis on soft close)
+             */
+            resetGoalAnalysis(soft = false) {
+                if (!soft) {
+                    this.missionControl.goalAnalysis = null;
+                }
+                this.missionControl.goalAnalysisStep = this.missionControl.goalAnalysis ? 'review' : 'input';
+                if (!this.missionControl.goalAnalysis) {
+                    this.missionControl.researchDepth = 'standard';
+                }
+            },
+
+            /**
              * Start a new Deep Work project from natural language input
              */
             async startDeepWork() {
@@ -77,13 +134,18 @@ window.Mudabbir.DeepWork = {
                 this.missionControl.planningMessage = 'Initializing project...';
 
                 try {
+                    const body = {
+                        description: input,
+                        research_depth: this.missionControl.researchDepth,
+                        skip_analysis: !this.missionControl.goalAnalysis
+                    };
+                    if (this.missionControl.goalAnalysis) {
+                        body.goal_analysis = this.missionControl.goalAnalysis;
+                    }
                     const res = await fetch('/api/deep-work/start', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            description: input,
-                            research_depth: this.missionControl.researchDepth
-                        })
+                        body: JSON.stringify(body)
                     });
 
                     if (res.ok) {
@@ -92,6 +154,8 @@ window.Mudabbir.DeepWork = {
                         this.missionControl.projects.unshift(project);
                         this.missionControl.projectInput = '';
                         this.missionControl.showStartProject = false;
+                        this.missionControl.goalAnalysis = null;
+                        this.missionControl.goalAnalysisStep = 'input';
 
                         // Set planningProjectId IMMEDIATELY so WebSocket phase
                         // events can be tracked (planning runs in background)
@@ -393,12 +457,42 @@ window.Mudabbir.DeepWork = {
             getPlanningPhaseInfo() {
                 const phases = {
                     'starting': { label: 'Initializing', icon: 'loader', step: 0 },
-                    'research': { label: 'Researching', icon: 'search', step: 1 },
-                    'prd': { label: 'Writing PRD', icon: 'file-text', step: 2 },
-                    'tasks': { label: 'Breaking Down Tasks', icon: 'list-checks', step: 3 },
-                    'team': { label: 'Assembling Team', icon: 'users', step: 4 }
+                    'goal_analysis': { label: 'Analyzing Goal', icon: 'target', step: 1 },
+                    'research': { label: 'Researching', icon: 'search', step: 2 },
+                    'prd': { label: 'Writing PRD', icon: 'file-text', step: 3 },
+                    'tasks': { label: 'Breaking Down Tasks', icon: 'list-checks', step: 4 },
+                    'team': { label: 'Assembling Team', icon: 'users', step: 5 }
                 };
                 return phases[this.missionControl.planningPhase] || { label: 'Working', icon: 'loader', step: 0 };
+            },
+
+            /**
+             * Get domain display info for goal analysis
+             */
+            getDomainInfo(domain) {
+                const domains = {
+                    code: { label: 'Software & Code', icon: 'code-2', color: 'text-blue-400 bg-blue-500/10' },
+                    business: { label: 'Business & Strategy', icon: 'briefcase', color: 'text-amber-400 bg-amber-500/10' },
+                    creative: { label: 'Creative & Content', icon: 'palette', color: 'text-purple-400 bg-purple-500/10' },
+                    education: { label: 'Learning & Education', icon: 'graduation-cap', color: 'text-green-400 bg-green-500/10' },
+                    events: { label: 'Events & Logistics', icon: 'calendar', color: 'text-pink-400 bg-pink-500/10' },
+                    home: { label: 'Home & Physical', icon: 'home', color: 'text-orange-400 bg-orange-500/10' },
+                    hybrid: { label: 'Multi-Domain', icon: 'layers', color: 'text-cyan-400 bg-cyan-500/10' }
+                };
+                return domains[domain] || { label: domain || 'Unknown', icon: 'circle', color: 'text-white/40 bg-white/5' };
+            },
+
+            /**
+             * Get complexity color label for goal analysis
+             */
+            getComplexityInfo(complexity) {
+                const levels = {
+                    S: { label: 'Small', color: 'text-green-400 bg-green-500/10 border-green-500/20' },
+                    M: { label: 'Medium', color: 'text-blue-400 bg-blue-500/10 border-blue-500/20' },
+                    L: { label: 'Large', color: 'text-amber-400 bg-amber-500/10 border-amber-500/20' },
+                    XL: { label: 'Extra Large', color: 'text-red-400 bg-red-500/10 border-red-500/20' }
+                };
+                return levels[complexity] || { label: complexity || 'Unknown', color: 'text-white/40 bg-white/5 border-white/10' };
             },
 
             /**

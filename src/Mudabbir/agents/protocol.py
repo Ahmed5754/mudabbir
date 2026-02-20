@@ -4,8 +4,9 @@ Created: 2026-02-02
 Changes: 2026-02-02 - Added ExecutorProtocol and OrchestratorProtocol for 2-layer architecture.
 """
 
+from enum import Flag, auto
 from dataclasses import dataclass, field
-from typing import Any, AsyncIterator, Protocol, Optional
+from typing import Any, AsyncIterator, Protocol
 
 
 @dataclass
@@ -26,6 +27,29 @@ class AgentEvent:
     type: str
     content: Any
     metadata: dict = field(default_factory=dict)
+
+
+class Capability(Flag):
+    """Capability flags that describe what a backend supports."""
+
+    NONE = 0
+    STREAMING = auto()
+    TOOLS = auto()
+    MCP = auto()
+    MULTI_TURN = auto()
+    CUSTOM_SYSTEM_PROMPT = auto()
+
+
+@dataclass(frozen=True)
+class BackendInfo:
+    """Static metadata for a backend implementation."""
+
+    name: str
+    display_name: str
+    description: str
+    capabilities: Capability = Capability.NONE
+    aliases: tuple[str, ...] = ()
+    install_hint: str = "pip install Mudabbir"
 
 
 # =============================================================================

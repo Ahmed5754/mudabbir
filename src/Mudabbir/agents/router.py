@@ -12,12 +12,14 @@ Changes:
 import logging
 from collections.abc import AsyncIterator
 
+from Mudabbir.agents.registry import (
+    create_backend,
+    get_backend_info,
+    normalize_backend_name,
+)
 from Mudabbir.config import Settings
 
 logger = logging.getLogger(__name__)
-
-# Backends that are currently DISABLED (kept for future integration)
-DISABLED_BACKENDS = {"claude_code"}  # claude_agent_sdk is now ENABLED!
 
 
 class AgentRouter:
@@ -41,12 +43,12 @@ class AgentRouter:
         """Initialize the selected agent backend."""
         from Mudabbir.llm.client import resolve_llm_client
 
-        backend = self.settings.agent_backend
-
-        # Check if backend is disabled
-        if backend in DISABLED_BACKENDS:
-            logger.warning(f"⚠️ Backend '{backend}' disabled → using claude_agent_sdk")
-            backend = "claude_agent_sdk"
+        requested_backend = self.settings.agent_backend
+        backend = normalize_backend_name(requested_backend)
+        self.settings.agent_backend = backend
+        info = get_backend_info(backend)
+        if requested_backend and requested_backend != backend:
+            logger.warning("⚠️ Backend '%s' normalized to '%s'", requested_backend, backend)
 
         # Log Ollama usage
         llm = resolve_llm_client(self.settings)
@@ -64,44 +66,30 @@ class AgentRouter:
             )
 
         try:
-            if backend == "claude_agent_sdk":
-                from Mudabbir.agents.claude_sdk import ClaudeAgentSDKWrapper
-
-                self._agent = ClaudeAgentSDKWrapper(self.settings)
-                logger.info(
-                    "🚀 [bold green]Claude Agent SDK[/] ─ Bash, WebSearch, WebFetch, Read, Write"
-                )
-
-            elif backend == "Mudabbir_native":
-                from Mudabbir.agents.mudabbir_native import MudabbirOrchestrator
-
-                self._agent = MudabbirOrchestrator(self.settings)
-                logger.info("🧠 [bold blue]Mudabbir Native[/] ─ Anthropic + Open Interpreter")
-
-            elif backend == "open_interpreter":
-                from Mudabbir.agents.open_interpreter import OpenInterpreterAgent
-
-                self._agent = OpenInterpreterAgent(self.settings)
-                logger.info(
-                    "🤖 [bold yellow]Open Interpreter[/] ─ Local/Cloud LLMs [dim](experimental)[/]"
-                )
-
-            else:
-                logger.warning(f"Unknown backend: {backend} → using claude_agent_sdk")
-                from Mudabbir.agents.claude_sdk import ClaudeAgentSDKWrapper
-
-                self._agent = ClaudeAgentSDKWrapper(self.settings)
+            self._agent = create_backend(backend, self.settings)
+            logger.info("🚀 Backend loaded: %s (%s)", info.display_name, info.name)
         except ImportError as exc:
-            install_hints = {
-                "claude_agent_sdk": "pip install claude-agent-sdk",
-                "Mudabbir_native": "pip install 'Mudabbir[native]'",
-                "open_interpreter": "pip install 'Mudabbir[native]'",
-            }
-            hint = install_hints.get(backend, "pip install Mudabbir")
             logger.error(
                 f"Could not load '{backend}' backend — missing dependency: {exc}. "
-                f"Install it with: {hint}"
+                f"Install it with: {info.install_hint}"
             )
+            if backend != "claude_agent_sdk":
+                fallback = "claude_agent_sdk"
+                fallback_info = get_backend_info(fallback)
+                logger.warning("Falling back to '%s'", fallback)
+                self.settings.agent_backend = fallback
+                try:
+                    self._agent = create_backend(fallback, self.settings)
+                    logger.info("🚀 Backend loaded: %s (%s)", fallback_info.display_name, fallback)
+                except ImportError as fallback_exc:
+                    logger.error(
+                        "Fallback backend '%s' failed to load: %s. Install with: %s",
+                        fallback,
+                        fallback_exc,
+                        fallback_info.install_hint,
+                    )
+        except Exception as exc:
+            logger.error("Could not initialize backend '%s': %s", backend, exc)
 
     async def run(
         self,
