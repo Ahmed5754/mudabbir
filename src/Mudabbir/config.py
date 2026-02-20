@@ -170,6 +170,16 @@ def get_token_path() -> Path:
     return get_config_dir() / "access_token"
 
 
+def _normalize_backend_name(name: str | None) -> str:
+    """Normalize backend aliases to canonical names."""
+    try:
+        from Mudabbir.agents.registry import normalize_backend_name
+
+        return normalize_backend_name(name)
+    except Exception:
+        return (name or "claude_agent_sdk").strip() or "claude_agent_sdk"
+
+
 class Settings(BaseSettings):
     """Mudabbir settings with env and file support."""
 
@@ -626,7 +636,7 @@ class Settings(BaseSettings):
             "telegram_bot_token": self.telegram_bot_token or existing.get("telegram_bot_token"),
             "telegram_autostart": self.telegram_autostart,
             "allowed_user_id": self.allowed_user_id or existing.get("allowed_user_id"),
-            "agent_backend": self.agent_backend,
+            "agent_backend": _normalize_backend_name(self.agent_backend),
             "claude_sdk_model": self.claude_sdk_model,
             "claude_sdk_max_turns": self.claude_sdk_max_turns,
             "memory_backend": self.memory_backend,
@@ -817,6 +827,9 @@ class Settings(BaseSettings):
             if field in secrets and secrets[field]:
                 data[field] = secrets[field]
             # data[field] may already be set from config.json — keep it as fallback
+
+        if "agent_backend" in data:
+            data["agent_backend"] = _normalize_backend_name(data.get("agent_backend"))
 
         if data:
             try:

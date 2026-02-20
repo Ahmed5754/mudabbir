@@ -2330,6 +2330,22 @@ async def websocket_endpoint(
                 # Actually, let's treat 'chat' as input to the Bus.
                 await ws_adapter.handle_message(chat_id, data)
 
+            # Stop in-flight response for current WebSocket session
+            elif action in {"stop_chat", "stop"}:
+                session_key = f"websocket:{chat_id}"
+                cancelled = await agent_loop.cancel_session(session_key)
+                await websocket.send_json({"type": "stream_end"})
+                await websocket.send_json(
+                    {
+                        "type": "notification",
+                        "content": (
+                            "Stopped current response."
+                            if cancelled
+                            else "No active response to stop."
+                        ),
+                    }
+                )
+
             # Session switching
             elif action == "switch_session":
                 session_id = data.get("session_id", "")

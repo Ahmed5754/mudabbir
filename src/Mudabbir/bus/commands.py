@@ -9,6 +9,7 @@ responses without invoking the agent backend.
 import logging
 import re
 import uuid
+from collections.abc import Callable
 
 from Mudabbir.bus.events import InboundMessage, OutboundMessage
 from Mudabbir.memory import get_memory_manager
@@ -16,8 +17,29 @@ from Mudabbir.memory import get_memory_manager
 logger = logging.getLogger(__name__)
 
 _COMMANDS = frozenset(
-    {"/new", "/sessions", "/resume", "/help", "/clear", "/rename", "/status", "/delete"}
+    {
+        "/new",
+        "/sessions",
+        "/resume",
+        "/help",
+        "/clear",
+        "/rename",
+        "/status",
+        "/delete",
+        "/backend",
+        "/backends",
+        "/model",
+        "/tools",
+    }
 )
+
+_PROVIDER_MODEL_FIELDS: dict[str, str] = {
+    "anthropic": "anthropic_model",
+    "openai": "openai_model",
+    "ollama": "ollama_model",
+    "gemini": "gemini_model",
+    "openai_compatible": "openai_compatible_model",
+}
 
 # Matches "/cmd" or "!cmd" (with optional @BotName suffix) and trailing args.
 # The "!" prefix is a fallback for channels where "/" is intercepted client-side
@@ -39,6 +61,15 @@ class CommandHandler:
         # Per-session-key cache of the last shown session list
         # so /resume <n> can reference by number
         self._last_shown: dict[str, list[dict]] = {}
+        self._on_settings_changed: Callable[[], None] | None = None
+
+    def set_on_settings_changed(self, callback: Callable[[], None]) -> None:
+        """Register a callback invoked after commands mutate settings."""
+        self._on_settings_changed = callback
+
+    def _notify_settings_changed(self) -> None:
+        if self._on_settings_changed is not None:
+            self._on_settings_changed()
 
     def is_command(self, content: str) -> bool:
         """Check if the message content is a recognised command."""
@@ -79,6 +110,14 @@ class CommandHandler:
             return await self._cmd_status(message, session_key)
         elif cmd == "/delete":
             return await self._cmd_delete(message, session_key)
+        elif cmd == "/backends":
+            return self._cmd_backends(message)
+        elif cmd == "/backend":
+            return self._cmd_backend(message, args)
+        elif cmd == "/model":
+            return self._cmd_model(message, args)
+        elif cmd == "/tools":
+            return self._cmd_tools(message, args)
         elif cmd == "/help":
             return self._cmd_help(message)
         return None
@@ -337,6 +376,177 @@ class CommandHandler:
         )
 
     # ------------------------------------------------------------------
+    # /backends
+    # ------------------------------------------------------------------
+
+    def _capability_labels(self, flags) -> str:
+        names: list[str] = []
+        for name in ("STREAMING", "TOOLS", "MCP", "MULTI_TURN", "CUSTOM_SYSTEM_PROMPT"):
+            cap = getattr(type(flags), name, None)
+            if cap and cap in flags:
+                names.append(name.lower().replace("_", " "))
+        return ", ".join(names) if names else "none"
+
+    def _cmd_backends(self, message: InboundMessage) -> OutboundMessage:
+        """List all registered backends with status and capabilities."""
+        from Mudabbir.agents.registry import list_backend_infos
+        from Mudabbir.config import get_settings
+
+        settings = get_settings()
+        active = settings.agent_backend
+
+        lines = ["**Available Backends:**\n"]
+        for info in list_backend_infos():
+            marker = " (active)" if info.name == active else ""
+            caps = self._capability_labels(info.capabilities)
+            lines.append(f"- **{info.display_name}** (`{info.name}`){marker} — {caps}")
+            lines.append(f"  {info.description}")
+
+        lines.append("\nUse /backend <name> to switch.")
+        return OutboundMessage(
+            channel=message.channel,
+            chat_id=message.chat_id,
+            content="\n".join(lines),
+        )
+
+    # ------------------------------------------------------------------
+    # /backend
+    # ------------------------------------------------------------------
+
+    def _cmd_backend(self, message: InboundMessage, args: str) -> OutboundMessage:
+        """Show or switch the active backend."""
+        from Mudabbir.agents.registry import get_backend_info, list_backend_names, normalize_backend_name
+        from Mudabbir.config import Settings, get_settings
+
+        settings = get_settings()
+
+        if not args:
+            info = get_backend_info(settings.agent_backend)
+            return OutboundMessage(
+                channel=message.channel,
+                chat_id=message.chat_id,
+                content=(
+                    f"Current backend: **{info.display_name}** (`{info.name}`)\n"
+                    f"Capabilities: {self._capability_labels(info.capabilities)}"
+                ),
+            )
+
+        requested = args.strip()
+        normalized = normalize_backend_name(requested, fallback="")
+        if not normalized or normalized not in list_backend_names():
+            choices = ", ".join(f"`{name}`" for name in list_backend_names())
+            return OutboundMessage(
+                channel=message.channel,
+                chat_id=message.chat_id,
+                content=f"Unknown backend `{requested}`. Available: {choices}",
+            )
+
+        if normalized == settings.agent_backend:
+            return OutboundMessage(
+                channel=message.channel,
+                chat_id=message.chat_id,
+                content=f"Already using `{normalized}`.",
+            )
+
+        settings.agent_backend = normalized
+        settings.save()
+        get_settings.cache_clear()
+        self._notify_settings_changed()
+
+        refreshed = Settings.load()
+        info = get_backend_info(refreshed.agent_backend)
+        return OutboundMessage(
+            channel=message.channel,
+            chat_id=message.chat_id,
+            content=f"Switched backend to **{info.display_name}** (`{info.name}`).",
+        )
+
+    # ------------------------------------------------------------------
+    # /model
+    # ------------------------------------------------------------------
+
+    def _resolve_model_field(self, llm_provider: str) -> str:
+        """Return the settings field name for model override by active provider."""
+        return _PROVIDER_MODEL_FIELDS.get(llm_provider, "anthropic_model")
+
+    def _cmd_model(self, message: InboundMessage, args: str) -> OutboundMessage:
+        """Show or update model for the active LLM provider."""
+        from Mudabbir.config import Settings, get_settings
+
+        settings = get_settings()
+        provider = settings.llm_provider
+        field_name = self._resolve_model_field(provider)
+        current = str(getattr(settings, field_name, "") or "")
+
+        if not args:
+            display = f"`{current}`" if current else "default"
+            return OutboundMessage(
+                channel=message.channel,
+                chat_id=message.chat_id,
+                content=(
+                    f"Current model for provider `{provider}`: {display}\n"
+                    f"(field: `{field_name}`)"
+                ),
+            )
+
+        new_model = args.strip()
+        setattr(settings, field_name, new_model)
+        settings.save()
+        get_settings.cache_clear()
+        self._notify_settings_changed()
+
+        refreshed = Settings.load()
+        saved_value = str(getattr(refreshed, field_name, "") or "")
+        return OutboundMessage(
+            channel=message.channel,
+            chat_id=message.chat_id,
+            content=(
+                f"Model for provider `{provider}` updated to **{saved_value}** "
+                f"(field: `{field_name}`)."
+            ),
+        )
+
+    # ------------------------------------------------------------------
+    # /tools
+    # ------------------------------------------------------------------
+
+    def _cmd_tools(self, message: InboundMessage, args: str) -> OutboundMessage:
+        """Show backend capabilities and current tool policy profile."""
+        from Mudabbir.agents.registry import get_backend_info
+        from Mudabbir.config import get_settings
+        from Mudabbir.tools.policy import TOOL_PROFILES
+
+        settings = get_settings()
+        info = get_backend_info(settings.agent_backend)
+
+        # Optional shortcut: /tools <profile> updates profile
+        if args:
+            requested = args.strip().lower()
+            if requested not in TOOL_PROFILES:
+                profiles = ", ".join(f"`{name}`" for name in TOOL_PROFILES)
+                return OutboundMessage(
+                    channel=message.channel,
+                    chat_id=message.chat_id,
+                    content=f"Unknown tool profile `{requested}`. Available: {profiles}",
+                )
+            settings.tool_profile = requested
+            settings.save()
+            get_settings.cache_clear()
+            self._notify_settings_changed()
+
+        profiles = ", ".join(f"`{name}`" for name in TOOL_PROFILES)
+        return OutboundMessage(
+            channel=message.channel,
+            chat_id=message.chat_id,
+            content=(
+                f"Backend: **{info.display_name}** (`{info.name}`)\n"
+                f"Capabilities: {self._capability_labels(info.capabilities)}\n"
+                f"Tool profile: **{settings.tool_profile}**\n"
+                f"Profiles: {profiles}"
+            ),
+        )
+
+    # ------------------------------------------------------------------
     # /help
     # ------------------------------------------------------------------
 
@@ -352,6 +562,10 @@ class CommandHandler:
             "/rename <title> — Rename the current session\n"
             "/status — Show current session info\n"
             "/delete — Delete the current session\n"
+            "/backend — Show or switch agent backend\n"
+            "/backends — List available backends\n"
+            "/model — Show or set model for active provider\n"
+            "/tools — Show backend capabilities and tool profile\n"
             "/help — Show this help message\n\n"
             "_Tip: Use !command instead of /command on channels"
             " where / is intercepted (e.g. Matrix)._"

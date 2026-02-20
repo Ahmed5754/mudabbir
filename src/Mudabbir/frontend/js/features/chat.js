@@ -184,16 +184,21 @@ window.Mudabbir.Chat = {
                 if (text.startsWith('/')) {
                     const parts = text.slice(1).split(' ');
                     const skillName = parts[0];
-                    const args = parts.slice(1).join(' ');
+                    const isSkill = (this.skills || []).some(
+                        (s) => (s.name || '').toLowerCase() === skillName.toLowerCase()
+                    );
 
-                    // Add user message
-                    this.addMessage('user', text);
-                    this.inputText = '';
+                    // Only intercept installed skills. Other slash commands are
+                    // forwarded to backend CommandHandler (/backend, /model, ...)
+                    if (isSkill) {
+                        const args = parts.slice(1).join(' ');
 
-                    // Run the skill
-                    socket.send('run_skill', { name: skillName, args });
-                    this.log(`Running skill: /${skillName} ${args}`, 'info');
-                    return;
+                        this.addMessage('user', text);
+                        this.inputText = '';
+                        socket.send('run_skill', { name: skillName, args });
+                        this.log(`Running skill: /${skillName} ${args}`, 'info');
+                        return;
+                    }
                 }
 
                 // Add user message
@@ -207,6 +212,15 @@ window.Mudabbir.Chat = {
                 socket.chat(text);
 
                 this.log(`You: ${text}`, 'info');
+            },
+
+            /**
+             * Stop an in-flight streaming response
+             */
+            stopStreamingResponse() {
+                if (!this.isStreaming) return;
+                socket.stopChat();
+                this.log('Stop requested', 'info');
             },
 
             /**
