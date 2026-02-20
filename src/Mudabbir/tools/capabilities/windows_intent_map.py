@@ -434,6 +434,30 @@ RULES: tuple[IntentRule, ...] = (
     IntentRule("shell.refresh", "shell_tools", "refresh", "safe", ("refresh desktop", "تحديث سطح المكتب")),
     IntentRule("shell.quick_link_menu", "shell_tools", "quick_link_menu", "safe", ("win x", "quick link menu", "قائمه الارتباط السريع")),
     IntentRule("shell.narrator_toggle", "shell_tools", "narrator_toggle", "safe", ("narrator", "الراوي")),
+    IntentRule("browser.new_tab", "browser_control", "new_tab", "safe", ("new tab", "فتح تبويب جديد")),
+    IntentRule("browser.close_tab", "browser_control", "close_tab", "safe", ("close tab", "اغلاق التبويب الحالي", "إغلاق التبويب الحالي")),
+    IntentRule("browser.reopen_tab", "browser_control", "reopen_tab", "safe", ("reopen closed tab", "اعادة فتح التبويب المغلق", "إعادة فتح التبويب المغلق")),
+    IntentRule("browser.next_tab", "browser_control", "next_tab", "safe", ("next tab", "التبويب التالي")),
+    IntentRule("browser.prev_tab", "browser_control", "prev_tab", "safe", ("previous tab", "التبويب السابق")),
+    IntentRule("browser.reload", "browser_control", "reload", "safe", ("reload page", "تحديث الصفحة")),
+    IntentRule("browser.incognito", "browser_control", "incognito", "safe", ("incognito", "private window", "التصفح الخفي")),
+    IntentRule("browser.home", "browser_control", "home", "safe", ("browser home", "صفحة البداية")),
+    IntentRule("browser.history", "browser_control", "history", "safe", ("browser history", "سجل التصفح")),
+    IntentRule("browser.downloads", "browser_control", "downloads", "safe", ("browser downloads", "تنزيلات المتصفح")),
+    IntentRule("browser.find", "browser_control", "find", "safe", ("find in page", "البحث داخل الصفحة")),
+    IntentRule("browser.zoom_in", "browser_control", "zoom_in", "safe", ("zoom in", "تكبير الصفحة")),
+    IntentRule("browser.zoom_out", "browser_control", "zoom_out", "safe", ("zoom out", "تصغير الصفحة")),
+    IntentRule("browser.zoom_reset", "browser_control", "zoom_reset", "safe", ("zoom 100", "الحجم الطبيعي", "ارجاع الزوم 100")),
+    IntentRule("browser.save_pdf", "browser_control", "save_pdf", "safe", ("save page pdf", "حفظ الصفحة pdf")),
+    IntentRule("tasks.list", "task_tools", "list", "safe", ("task scheduler list", "قائمة المهام المجدولة")),
+    IntentRule("tasks.run", "task_tools", "run", "safe", ("run scheduled task", "تشغيل مهمة مجدولة"), params=("name",)),
+    IntentRule("tasks.delete", "task_tools", "delete", "destructive", ("delete scheduled task", "حذف مهمة مجدولة"), params=("name",)),
+    IntentRule("tasks.create", "task_tools", "create", "elevated", ("create scheduled task", "انشاء مهمة مجدولة", "إنشاء مهمة مجدولة"), params=("name", "command", "trigger")),
+    IntentRule("users.list", "user_tools", "list", "safe", ("list users", "قائمة المستخدمين")),
+    IntentRule("users.create", "user_tools", "create", "destructive", ("create user", "انشاء مستخدم", "إنشاء مستخدم"), params=("username", "password")),
+    IntentRule("users.delete", "user_tools", "delete", "destructive", ("delete user", "حذف مستخدم"), params=("username",)),
+    IntentRule("users.set_password", "user_tools", "set_password", "destructive", ("change user password", "تغيير كلمة سر مستخدم"), params=("username", "password")),
+    IntentRule("users.set_type", "user_tools", "set_type", "elevated", ("set user type", "تغيير نوع المستخدم", "admin standard"), params=("username", "group")),
 )
 
 
@@ -496,6 +520,43 @@ def _build_params(rule: IntentRule, raw_text: str, normalized: str) -> dict[str,
             q = _extract_app_query(raw_text)
         if q:
             params["name"] = q
+    if "username" in rule.params:
+        q = _extract_named_value(
+            raw_text,
+            (
+                r"(?:create user|delete user|change user password|set user type|انشاء مستخدم|إنشاء مستخدم|حذف مستخدم|تغيير نوع المستخدم)\s+([A-Za-z0-9._-]+)",
+                r"(?:user|username|المستخدم)\s+([A-Za-z0-9._-]+)",
+            ),
+        )
+        if q:
+            params["username"] = q
+    if "password" in rule.params:
+        q = _extract_named_value(
+            raw_text,
+            (
+                r"(?:password|كلمه السر|كلمة السر)\s*[:=]?\s*([^\s]+)",
+            ),
+        )
+        if q:
+            params["password"] = q
+    if "group" in rule.params:
+        if _contains_any(normalized, ("admin", "administrator", "ادمن", "مسؤول")):
+            params["group"] = "admin"
+        elif _contains_any(normalized, ("standard", "user", "عادي")):
+            params["group"] = "users"
+    if "command" in rule.params:
+        q = _extract_named_value(
+            raw_text,
+            (
+                r"(?:command|الامر|الأمر)\s*[:=]?\s*(.+)$",
+            ),
+        )
+        if q:
+            params["command"] = q
+    if "trigger" in rule.params:
+        q = _extract_named_value(raw_text, (r"(?:trigger|الجدوله|الجدولة)\s*[:=]?\s*(.+)$",))
+        if q:
+            params["trigger"] = q
     if "opacity" in rule.params and value is not None:
         params["opacity"] = max(20, min(100, value))
     if "x" in rule.params and "y" in rule.params:
@@ -646,6 +707,17 @@ def _build_params(rule: IntentRule, raw_text: str, normalized: str) -> dict[str,
             (
                 r"(?:disable startup|تعطيل برنامج من بدء التشغيل)\s+(.+)$",
                 r"(?:enable startup|تفعيل برنامج في بدء التشغيل)\s+(.+)$",
+            ),
+        )
+        if q:
+            params["name"] = q
+    if rule.capability_id in {"tasks.run", "tasks.delete", "tasks.create"}:
+        q = _extract_named_value(
+            raw_text,
+            (
+                r"(?:run scheduled task|تشغيل مهمة مجدولة)\s+(.+)$",
+                r"(?:delete scheduled task|حذف مهمة مجدولة)\s+(.+)$",
+                r"(?:create scheduled task|انشاء مهمة مجدولة|إنشاء مهمة مجدولة)\s+(.+)$",
             ),
         )
         if q:

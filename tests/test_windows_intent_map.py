@@ -228,3 +228,31 @@ def test_resolve_startup_disable_extracts_name() -> None:
     assert result.action == "startup_tools"
     assert result.params.get("mode") == "disable"
     assert result.params.get("name") == "OneDrive"
+
+
+@pytest.mark.parametrize(
+    ("message", "action", "mode"),
+    [
+        ("فتح تبويب جديد", "browser_control", "new_tab"),
+        ("اغلاق التبويب الحالي", "browser_control", "close_tab"),
+        ("تحديث الصفحة", "browser_control", "reload"),
+        ("قائمة المهام المجدولة", "task_tools", "list"),
+        ("تشغيل مهمة مجدولة BackupTask", "task_tools", "run"),
+        ("قائمة المستخدمين", "user_tools", "list"),
+        ("حذف مستخدم TestUser", "user_tools", "delete"),
+    ],
+)
+def test_resolve_browser_task_user_aliases(message: str, action: str, mode: str) -> None:
+    result = resolve_windows_intent(message)
+    assert result.matched is True
+    assert result.action == action
+    assert result.params.get("mode") == mode
+
+
+def test_resolve_user_set_type_extracts_username_and_group() -> None:
+    result = resolve_windows_intent("set user type Ahmed admin")
+    assert result.matched is True
+    assert result.action == "user_tools"
+    assert result.params.get("mode") == "set_type"
+    assert result.params.get("username") == "Ahmed"
+    assert result.params.get("group") == "admin"

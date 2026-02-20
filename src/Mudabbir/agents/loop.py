@@ -616,6 +616,86 @@ class AgentLoop:
             if msg:
                 return True, msg
 
+        if action == "browser_control":
+            mode = str(params.get("mode", "")).lower()
+            browser_msgs_ar = {
+                "new_tab": "تم فتح تبويب جديد.",
+                "close_tab": "تم إغلاق التبويب الحالي.",
+                "reopen_tab": "تمت إعادة فتح آخر تبويب مغلق.",
+                "next_tab": "تم الانتقال للتبويب التالي.",
+                "prev_tab": "تم الانتقال للتبويب السابق.",
+                "reload": "تم تحديث الصفحة.",
+                "incognito": "تم فتح نافذة التصفح الخفي.",
+                "home": "تم الذهاب إلى صفحة البداية.",
+                "history": "تم فتح سجل التصفح.",
+                "downloads": "تم فتح تنزيلات المتصفح.",
+                "find": "تم فتح البحث داخل الصفحة.",
+                "zoom_in": "تم تكبير الصفحة.",
+                "zoom_out": "تم تصغير الصفحة.",
+                "zoom_reset": "تمت إعادة الزوم إلى 100%.",
+                "save_pdf": "تم فتح نافذة حفظ الصفحة PDF.",
+            }
+            browser_msgs_en = {
+                "new_tab": "Opened a new browser tab.",
+                "close_tab": "Closed current browser tab.",
+                "reopen_tab": "Reopened last closed tab.",
+                "next_tab": "Moved to next tab.",
+                "prev_tab": "Moved to previous tab.",
+                "reload": "Reloaded page.",
+                "incognito": "Opened incognito/private window.",
+                "home": "Opened browser home page.",
+                "history": "Opened browser history.",
+                "downloads": "Opened browser downloads.",
+                "find": "Opened Find in page.",
+                "zoom_in": "Zoomed in.",
+                "zoom_out": "Zoomed out.",
+                "zoom_reset": "Reset zoom to 100%.",
+                "save_pdf": "Opened save as PDF flow.",
+            }
+            msg = browser_msgs_ar.get(mode) if arabic else browser_msgs_en.get(mode)
+            if msg:
+                return True, msg
+
+        if action == "task_tools":
+            mode = str(params.get("mode", "")).lower()
+            name = str(params.get("name", "") or "").strip()
+            task_msgs_ar = {
+                "list": "تم جلب قائمة المهام المجدولة.",
+                "run": f"تم تشغيل المهمة المجدولة: {name or 'المحددة'}.",
+                "delete": f"تم حذف المهمة المجدولة: {name or 'المحددة'}.",
+                "create": f"تم إنشاء مهمة مجدولة: {name or 'جديدة'}.",
+            }
+            task_msgs_en = {
+                "list": "Fetched scheduled tasks list.",
+                "run": f"Ran scheduled task: {name or 'target task'}.",
+                "delete": f"Deleted scheduled task: {name or 'target task'}.",
+                "create": f"Created scheduled task: {name or 'new task'}.",
+            }
+            msg = task_msgs_ar.get(mode) if arabic else task_msgs_en.get(mode)
+            if msg:
+                return True, msg
+
+        if action == "user_tools":
+            mode = str(params.get("mode", "")).lower()
+            uname = str(params.get("username", "") or "").strip()
+            user_msgs_ar = {
+                "list": "تم جلب قائمة المستخدمين.",
+                "create": f"تم إنشاء المستخدم: {uname or 'الجديد'}.",
+                "delete": f"تم حذف المستخدم: {uname or 'المحدد'}.",
+                "set_password": f"تم تغيير كلمة مرور المستخدم: {uname or 'المحدد'}.",
+                "set_type": f"تم تحديث نوع المستخدم: {uname or 'المحدد'}.",
+            }
+            user_msgs_en = {
+                "list": "Fetched users list.",
+                "create": f"Created user: {uname or 'new user'}.",
+                "delete": f"Deleted user: {uname or 'target user'}.",
+                "set_password": f"Updated password for user: {uname or 'target user'}.",
+                "set_type": f"Updated user type for: {uname or 'target user'}.",
+            }
+            msg = user_msgs_ar.get(mode) if arabic else user_msgs_en.get(mode)
+            if msg:
+                return True, msg
+
         if action == "window_control":
             mode = str(params.get("mode", "")).lower()
             window_msgs_ar = {

@@ -261,3 +261,49 @@ async def test_global_fastpath_startup_background_and_performance_replies(
     )
     assert handled_perf is True
     assert "41.2" in str(reply_perf)
+
+
+@pytest.mark.asyncio
+async def test_global_fastpath_browser_task_user_replies(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class DummyDesktopTool:
+        async def execute(self, action: str, **kwargs):
+            if action == "browser_control":
+                assert kwargs.get("mode") == "new_tab"
+                return '{"ok": true}'
+            if action == "task_tools":
+                assert kwargs.get("mode") == "run"
+                assert kwargs.get("name") == "BackupTask"
+                return '{"ok": true}'
+            if action == "user_tools":
+                assert kwargs.get("mode") == "delete"
+                assert kwargs.get("username") == "TestUser"
+                return '{"ok": true}'
+            return '{"ok": true}'
+
+    monkeypatch.setattr("Mudabbir.tools.builtin.desktop.DesktopTool", DummyDesktopTool)
+    loop = AgentLoop()
+
+    handled_browser, reply_browser = await loop._try_global_windows_fastpath(
+        text="فتح تبويب جديد", session_key="s16"
+    )
+    assert handled_browser is True
+    assert "تبويب" in str(reply_browser)
+
+    handled_task, reply_task = await loop._try_global_windows_fastpath(
+        text="تشغيل مهمة مجدولة BackupTask", session_key="s17"
+    )
+    assert handled_task is True
+    assert "BackupTask" in str(reply_task)
+
+    handled_user, reply_user = await loop._try_global_windows_fastpath(
+        text="حذف مستخدم TestUser", session_key="s18"
+    )
+    assert handled_user is True
+    assert "خط" in str(reply_user) or "yes" in str(reply_user).lower()
+    handled_user_confirm, reply_user_confirm = await loop._try_global_windows_fastpath(
+        text="نعم", session_key="s18"
+    )
+    assert handled_user_confirm is True
+    assert "TestUser" in str(reply_user_confirm)
