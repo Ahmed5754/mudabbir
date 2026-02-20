@@ -439,7 +439,7 @@ PRs welcome. Come build with us.
 
 ## License
 
-MIT &copy; Ahmed Muhammad
+MIT &copy; [Ahmed Muhammad](https://t.me/K_6_3)
 
 <p align="center">
   <img src="Mudabbir.png" alt="Mudabbir" width="80">
