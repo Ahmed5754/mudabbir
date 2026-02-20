@@ -29,8 +29,15 @@ from Mudabbir.security.injection_scanner import ThreatLevel, get_injection_scann
 
 logger = logging.getLogger(__name__)
 
+FIRST_RESPONSE_TIMEOUT_SECONDS = 90
+STREAM_CHUNK_TIMEOUT_SECONDS = 120
 
-async def _iter_with_timeout(aiter, first_timeout=30, timeout=120):
+
+async def _iter_with_timeout(
+    aiter,
+    first_timeout=FIRST_RESPONSE_TIMEOUT_SECONDS,
+    timeout=STREAM_CHUNK_TIMEOUT_SECONDS,
+):
     """Yield items from an async iterator with per-item timeouts.
 
     Uses a shorter timeout for the first item (to detect dead/hung backends
@@ -327,7 +334,11 @@ class AgentLoop:
 
             run_iter = router.run(content, system_prompt=system_prompt, history=history)
             try:
-                async for chunk in _iter_with_timeout(run_iter):
+                async for chunk in _iter_with_timeout(
+                    run_iter,
+                    first_timeout=FIRST_RESPONSE_TIMEOUT_SECONDS,
+                    timeout=STREAM_CHUNK_TIMEOUT_SECONDS,
+                ):
                     chunk_type = chunk.get("type", "")
                     content = chunk.get("content", "")
                     metadata = chunk.get("metadata") or {}
@@ -498,7 +509,35 @@ class AgentLoop:
                     task.add_done_callback(self._background_tasks.discard)
 
         except TimeoutError:
-            logger.error("Agent backend timed out")
+            llm_provider = str(getattr(self.settings, "llm_provider", "auto") or "auto")
+            llm_model = "unknown"
+            try:
+                from Mudabbir.llm.client import resolve_llm_client
+
+                llm = resolve_llm_client(self.settings)
+                llm_provider = llm.provider
+                llm_model = llm.model
+            except Exception:
+                provider_model_map = {
+                    "gemini": str(getattr(self.settings, "gemini_model", "") or "unknown"),
+                    "openai": str(getattr(self.settings, "openai_model", "") or "unknown"),
+                    "anthropic": str(getattr(self.settings, "anthropic_model", "") or "unknown"),
+                    "ollama": str(getattr(self.settings, "ollama_model", "") or "unknown"),
+                    "openai_compatible": str(
+                        getattr(self.settings, "openai_compatible_model", "") or "unknown"
+                    ),
+                }
+                llm_model = provider_model_map.get(llm_provider, "unknown")
+
+            logger.error(
+                "Agent backend timed out (session=%s backend=%s provider=%s model=%s first_timeout=%ss chunk_timeout=%ss)",
+                session_key,
+                self.settings.agent_backend,
+                llm_provider,
+                llm_model,
+                FIRST_RESPONSE_TIMEOUT_SECONDS,
+                STREAM_CHUNK_TIMEOUT_SECONDS,
+            )
             # Kill the hung backend so it releases resources
             try:
                 await router.stop()

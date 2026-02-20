@@ -3802,7 +3802,9 @@ def run_dashboard(
         except Exception:
             local_ip = "<your-server-ip>"
         print(f"\nOpen http://{local_ip}:{port} in your browser")
+        print(f"Open http://localhost:{port} in your browser")
         print(f"   (listening on all interfaces - {host}:{port})\n")
+        logger.info("Local dashboard URL: http://localhost:%s", port)
     else:
         print(f"\nOpen http://localhost:{port} in your browser\n")
 

@@ -994,6 +994,12 @@ class OpenInterpreterAgent:
                 interpreter.llm.model = model_name
                 interpreter.llm.api_key = llm.api_key
                 interpreter.llm.api_base = llm.openai_compatible_base_url
+                if str(llm.model).lower().startswith("gemini-3"):
+                    # Gemini 3 models are more stable at temperature=1.0.
+                    try:
+                        interpreter.llm.temperature = 1.0
+                    except Exception:
+                        pass
                 # Some dependency stacks read these keys directly.
                 os.environ.setdefault("GOOGLE_API_KEY", llm.api_key)
                 os.environ.setdefault("GEMINI_API_KEY", llm.api_key)
@@ -1398,13 +1404,17 @@ class OpenInterpreterAgent:
                 else:
                     client = llm.create_openai_client(timeout=30.0, max_retries=1)
 
+                request_temperature = max(0.0, min(1.0, float(temperature)))
+                if llm.is_gemini and str(llm.model).lower().startswith("gemini-3"):
+                    request_temperature = 1.0
+
                 response = await client.chat.completions.create(
                     model=llm.model,
                     messages=[
                         {"role": "system", "content": system_prompt},
                         {"role": "user", "content": user_prompt},
                     ],
-                    temperature=max(0.0, min(1.0, float(temperature))),
+                    temperature=request_temperature,
                     max_tokens=int(max(80, min(1200, max_tokens))),
                 )
                 message = response.choices[0].message if response and response.choices else None

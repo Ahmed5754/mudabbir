@@ -429,7 +429,9 @@ Full documentation lives in [`documentation/`](documentation/README.md):
 - Twitter: Coming Soon
 - Discord: Coming Soon
 - Email: 0a1h2m3e4d5123321@gmail.com
-- Telegram: [@K_6_3](https://t.me/K_6_3)
+- Telegram
+- Developer: [@K_6_3](https://t.me/K_6_3)
+- Discussion Group: [@MudabbirAi](https://t.me/MudabbirAi)
 
 PRs welcome. Come build with us.
 

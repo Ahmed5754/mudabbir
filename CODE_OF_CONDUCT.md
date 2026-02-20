@@ -14,6 +14,8 @@ Personal developer profile for quick introduction in both English and Arabic.
 - **Currently Building:** I am currently a high school student and learning by building small projects.
 - **Location:** Syria 🇸🇾
 - **Contact Email:** 0a1h2m3e4d5123321@gmail.com
+- **Telegram  group for the project:**  [@MudabbirAi](https://t.me/MudabbirAi)
+
 
 ## من أنا؟
 
@@ -24,3 +26,4 @@ Personal developer profile for quick introduction in both English and Arabic.
 - **أعمل حاليًا على:** طالب ثانوي
 - **الموقع:** سوريا 🇸🇾
 - **البريد الإلكتروني:** 0a1h2m3e4d5123321@gmail.com
+- **مجموعة تليجرام للمشروع**  [@MudabbirAi](https://t.me/MudabbirAi)

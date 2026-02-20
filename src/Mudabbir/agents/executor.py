@@ -55,6 +55,12 @@ class OpenInterpreterExecutor:
                 interpreter.llm.model = model_name
                 interpreter.llm.api_key = llm.api_key
                 interpreter.llm.api_base = llm.openai_compatible_base_url
+                if str(llm.model).lower().startswith("gemini-3"):
+                    # Gemini 3 models are more stable at temperature=1.0.
+                    try:
+                        interpreter.llm.temperature = 1.0
+                    except Exception:
+                        pass
                 os.environ.setdefault("GOOGLE_API_KEY", llm.api_key)
                 os.environ.setdefault("GEMINI_API_KEY", llm.api_key)
             elif llm.api_key:
