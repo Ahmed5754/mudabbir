@@ -255,6 +255,14 @@ Mudabbir now includes a large Windows desktop skillset covering your requested c
 - `39. Dev Integration`: `dev_tools` (`open_editor`, `env_vars`, `runtime_versions`, `git_last_log`, `create_batch` via `text_tools`) + `interpret_powershell`
 - `AI Add-ons`: `vision_tools` (screen description + OCR), `threat_tools` (`behavior_scan`, `vt_lookup`, file hash), `file_tools` semantic organization and smart content rename, `content_tools` (email/Word drafts + text-to-Excel)
 
+### Deterministic-First Windows Routing
+
+- Windows desktop/system requests are now matched against a deterministic intent map first.
+- If a request is mapped, Mudabbir executes the prebuilt `DesktopTool` action directly.
+- `Open Interpreter` generative execution is used only as fallback for unmapped requests.
+- Destructive commands (for example shutdown/restart/delete/registry/service-stop) use a one-step confirmation gate before execution.
+- Unsupported commands return explicit "not supported yet" responses instead of guessing.
+
 ---
 
 ## Architecture
@@ -325,6 +333,8 @@ Config lives in `~/.Mudabbir/config.json`. API keys and tokens are automatically
   "anthropic_api_key": "sk-ant-...",
   "anthropic_model": "claude-sonnet-4-5-20250929",
   "tool_profile": "full",
+  "oi_deterministic_desktop_first": true,
+  "oi_ai_desktop_planner": true,
   "memory_backend": "file",
   "smart_routing_enabled": false,
   "plan_mode": false,
