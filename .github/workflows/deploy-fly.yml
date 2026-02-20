@@ -1,4 +1,5 @@
 name: Deploy to Fly.io
+# Note: path-filtered by design; touching this workflow file also triggers deploy.
 
 on:
   push:
