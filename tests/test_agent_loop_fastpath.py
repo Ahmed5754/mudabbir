@@ -356,3 +356,65 @@ async def test_global_fastpath_update_remote_disk_registry_replies(
     )
     assert handled_reg is True
     assert "سجل" in str(reply_reg) or "registry" in str(reply_reg).lower()
+
+
+@pytest.mark.asyncio
+async def test_global_fastpath_network_security_search_web_api_replies(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class DummyDesktopTool:
+        async def execute(self, action: str, **kwargs):
+            if action == "network_tools":
+                assert kwargs.get("mode") == "open_ports"
+                return '{"ok": true}'
+            if action == "security_tools":
+                assert kwargs.get("mode") == "disable_usb"
+                return '{"ok": true}'
+            if action == "search_tools":
+                assert kwargs.get("mode") == "find_images"
+                return '{"ok": true, "count": 12}'
+            if action == "web_tools":
+                assert kwargs.get("mode") == "open_url"
+                return '{"ok": true}'
+            if action == "api_tools":
+                assert kwargs.get("mode") == "currency"
+                return '{"ok": true}'
+            return '{"ok": true}'
+
+    monkeypatch.setattr("Mudabbir.tools.builtin.desktop.DesktopTool", DummyDesktopTool)
+    loop = AgentLoop()
+
+    handled_network, reply_network = await loop._try_global_windows_fastpath(
+        text="المنافذ المفتوحة", session_key="s23"
+    )
+    assert handled_network is True
+    assert "منافذ" in str(reply_network) or "ports" in str(reply_network).lower()
+
+    handled_security, reply_security = await loop._try_global_windows_fastpath(
+        text="تعطيل منافذ usb", session_key="s24"
+    )
+    assert handled_security is True
+    assert "خط" in str(reply_security) or "destructive" in str(reply_security).lower()
+    handled_security_confirm, reply_security_confirm = await loop._try_global_windows_fastpath(
+        text="نعم", session_key="s24"
+    )
+    assert handled_security_confirm is True
+    assert "usb" in str(reply_security_confirm).lower() or "منافذ" in str(reply_security_confirm)
+
+    handled_search, reply_search = await loop._try_global_windows_fastpath(
+        text="ايجاد جميع الصور", session_key="s25"
+    )
+    assert handled_search is True
+    assert "الصور" in str(reply_search) or "image" in str(reply_search).lower()
+
+    handled_web, reply_web = await loop._try_global_windows_fastpath(
+        text="افتح رابط https://example.com", session_key="s26"
+    )
+    assert handled_web is True
+    assert "رابط" in str(reply_web) or "url" in str(reply_web).lower()
+
+    handled_api, reply_api = await loop._try_global_windows_fastpath(
+        text="اسعار العملات", session_key="s27"
+    )
+    assert handled_api is True
+    assert "عملات" in str(reply_api) or "currency" in str(reply_api).lower()

@@ -295,6 +295,15 @@ RULES: tuple[IntentRule, ...] = (
     IntentRule("network.settings_open", "open_settings_page", "network", "safe", ("open network settings", "فتح إعدادات الشبكة", "فتح اعدادات الشبكه", "افتح الشبكة", "اعدادات النت", "إعدادات النت"), params=("page",)),
     IntentRule("network.disconnect", "network_tools", "disconnect_current_network", "safe", ("disconnect network", "قطع الاتصال بالشبكه", "افصل الشبكه", "افصل النت")),
     IntentRule("network.connect_named", "network_tools", "connect_wifi", "safe", ("connect wifi", "الاتصال بشبكه"), params=("host",)),
+    IntentRule("network.open_ports", "network_tools", "open_ports", "safe", ("open ports", "المنافذ المفتوحة", "اظهار المنافذ المفتوحة")),
+    IntentRule("network.port_owner", "network_tools", "port_owner", "safe", ("port owner", "من يستخدم المنفذ", "البرنامج الذي يستخدم منفذ"), params=("port",)),
+    IntentRule("network.route_table", "network_tools", "route_table", "safe", ("route table", "جدول التوجيه")),
+    IntentRule("network.net_scan", "network_tools", "net_scan", "safe", ("net scan", "الاجهزة المتصلة بالشبكة", "الاجهزة المتصله بالشبكه")),
+    IntentRule("network.file_sharing_on", "network_tools", "file_sharing_on", "elevated", ("file sharing on", "تشغيل مشاركة الملفات")),
+    IntentRule("network.file_sharing_off", "network_tools", "file_sharing_off", "elevated", ("file sharing off", "ايقاف مشاركة الملفات")),
+    IntentRule("network.shared_folders", "network_tools", "shared_folders", "safe", ("shared folders", "المجلدات المشاركة", "قائمة المجلدات المشاركة")),
+    IntentRule("network.server_online", "network_tools", "server_online", "safe", ("server online", "فحص توافر خادم", "هل السيرفر شغال"), params=("host",)),
+    IntentRule("network.last_login_events", "network_tools", "last_login_events", "safe", ("last login attempts", "اخر محاولات الدخول", "آخر محاولات الدخول")),
     IntentRule("apps.open_browser", "app_tools", "open_default_browser", "safe", ("open browser", "افتح المتصفح")),
     IntentRule("apps.open_chrome", "app_tools", "open_chrome", "safe", ("open chrome", "افتح كروم")),
     IntentRule("apps.open_notepad", "app_tools", "open_notepad", "safe", ("open notepad", "افتح المفكره", "افتح المفكرة")),
@@ -332,6 +341,12 @@ RULES: tuple[IntentRule, ...] = (
     IntentRule("security.firewall_status", "security_tools", "firewall_status", "safe", ("firewall status", "حالة الجدار الناري", "هل الجدار الناري شغال", "هل جدار الحمايه شغال")),
     IntentRule("security.firewall_enable", "security_tools", "firewall_enable", "elevated", ("enable firewall", "تفعيل الجدار الناري", "تشغيل الجدار الناري")),
     IntentRule("security.firewall_disable", "security_tools", "firewall_disable", "destructive", ("disable firewall", "تعطيل الجدار الناري", "ايقاف الجدار الناري")),
+    IntentRule("security.block_port", "security_tools", "block_port", "destructive", ("block port", "اغلاق منفذ", "إغلاق منفذ"), params=("port", "rule_name")),
+    IntentRule("security.unblock_rule", "security_tools", "unblock_rule", "elevated", ("remove firewall rule", "حذف قاعدة جدار الحماية", "مسح قاعدة جدار الحماية"), params=("rule_name",)),
+    IntentRule("security.disable_usb", "security_tools", "disable_usb", "destructive", ("disable usb", "تعطيل منافذ usb")),
+    IntentRule("security.enable_usb", "security_tools", "enable_usb", "elevated", ("enable usb", "تفعيل منافذ usb")),
+    IntentRule("security.disable_camera", "security_tools", "disable_camera", "destructive", ("disable camera", "تعطيل الكاميرا")),
+    IntentRule("security.enable_camera", "security_tools", "enable_camera", "elevated", ("enable camera", "تفعيل الكاميرا")),
     IntentRule("security.clear_recent_files", "security_tools", "recent_files_clear", "safe", ("clear recent files", "مسح الملفات المفتوحة مؤخرا", "مسح الملفات المفتوحه مؤخرا")),
     IntentRule("security.recent_files", "security_tools", "recent_files_list", "safe", ("recent files", "الملفات المفتوحة مؤخرا", "الملفات المفتوحه مؤخرا")),
     IntentRule("security.close_remote_sessions", "security_tools", "close_remote_sessions", "elevated", ("close remote sessions", "اغلاق الجلسات عن بعد", "إغلاق الجلسات عن بعد")),
@@ -478,6 +493,18 @@ RULES: tuple[IntentRule, ...] = (
     IntentRule("registry.set_value", "registry_tools", "set_value", "destructive", ("registry set value", "تعديل قيمة في السجل", "registry dword"), params=("key", "value_name", "value_data", "value_type")),
     IntentRule("registry.backup", "registry_tools", "backup", "safe", ("registry backup", "نسخة احتياطية للسجل"), params=("key",)),
     IntentRule("registry.restore", "registry_tools", "restore", "destructive", ("registry restore", "استعادة نسخة السجل"), params=("key", "value_data")),
+    IntentRule("search.text", "search_tools", "search_text", "safe", ("search text in files", "البحث عن نص داخل الملفات"), params=("folder", "pattern")),
+    IntentRule("search.big_files", "search_tools", "files_larger_than", "safe", ("files larger than", "ملفات اكبر من", "ملفات أكبر من"), params=("folder", "size_mb")),
+    IntentRule("search.modified_today", "search_tools", "modified_today", "safe", ("files modified today", "ملفات تم تعديلها اليوم"), params=("folder",)),
+    IntentRule("search.images", "search_tools", "find_images", "safe", ("find all images", "ايجاد جميع الصور", "إيجاد جميع الصور"), params=("folder",)),
+    IntentRule("search.videos", "search_tools", "find_videos", "safe", ("find all videos", "ايجاد جميع الفيديوهات", "إيجاد جميع الفيديوهات"), params=("folder",)),
+    IntentRule("search.count_files", "search_tools", "count_files", "safe", ("count files", "احصاء عدد الملفات", "إحصاء عدد الملفات"), params=("folder",)),
+    IntentRule("search.windows_text", "search_tools", "search_windows_content", "safe", ("search in open windows", "البحث عن كلمة في النوافذ المفتوحة"), params=("pattern",)),
+    IntentRule("web.open_url", "web_tools", "open_url", "safe", ("open url", "افتح رابط", "فتح رابط"), params=("url",)),
+    IntentRule("web.download_file", "web_tools", "download_file", "safe", ("download file", "تحميل ملف من رابط"), params=("url",)),
+    IntentRule("web.weather", "web_tools", "weather", "safe", ("weather city", "حالة الطقس", "طقس"), params=("city",)),
+    IntentRule("api.currency", "api_tools", "currency", "safe", ("currency prices", "اسعار العملات", "أسعار العملات"), params=("target",)),
+    IntentRule("api.translate", "api_tools", "translate_quick", "safe", ("translate text", "ترجمة كلمة", "ترجمة نص"), params=("text",)),
 )
 
 
@@ -606,6 +633,30 @@ def _build_params(rule: IntentRule, raw_text: str, normalized: str) -> dict[str,
         ext = _extract_extension(raw_text)
         if ext:
             params["ext"] = ext
+    if "url" in rule.params and "url" not in params:
+        u = _extract_url(raw_text)
+        if u:
+            params["url"] = u
+    if "city" in rule.params and "city" not in params:
+        q = _extract_named_value(raw_text, (r"(?:city|مدينة|مدينه)\s*[:=]?\s*(.+)$",))
+        if q:
+            params["city"] = q
+    if "folder" in rule.params and "folder" not in params:
+        found_paths = _extract_paths(raw_text)
+        if found_paths:
+            params["folder"] = found_paths[0]
+    if "pattern" in rule.params and "pattern" not in params:
+        q = _extract_named_value(
+            raw_text,
+            (
+                r"(?:search(?: text)?|ابحث(?: عن)?|البحث عن)\s+(.+)$",
+                r"(?:pattern|كلمة|نص)\s*[:=]?\s*(.+)$",
+            ),
+        )
+        if q:
+            params["pattern"] = q
+    if "size_mb" in rule.params and "size_mb" not in params and value is not None:
+        params["size_mb"] = max(1, min(1024 * 100, abs(value)))
     if "text" in rule.params:
         quoted = _extract_quoted_chunks(raw_text)
         if quoted:

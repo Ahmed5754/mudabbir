@@ -434,6 +434,15 @@ class AgentLoop:
                 "ip_internal": "تم جلب عنوان IP الداخلي.",
                 "ip_external": "تم جلب عنوان IP الخارجي.",
                 "ping": "تم تنفيذ اختبار الاتصال (Ping).",
+                "open_ports": "تم جلب المنافذ المفتوحة.",
+                "port_owner": "تم جلب البرنامج الذي يستخدم المنفذ.",
+                "route_table": "تم جلب جدول التوجيه.",
+                "net_scan": "تم جلب الأجهزة المتصلة على الشبكة المحلية.",
+                "file_sharing_on": "تم تشغيل مشاركة الملفات.",
+                "file_sharing_off": "تم إيقاف مشاركة الملفات.",
+                "shared_folders": "تم جلب قائمة المجلدات المشاركة.",
+                "server_online": "تم فحص توافر الخادم.",
+                "last_login_events": "تم جلب سجل آخر محاولات الدخول.",
             }
             network_msgs_en = {
                 "wifi_on": "Wi-Fi turned on.",
@@ -445,6 +454,15 @@ class AgentLoop:
                 "ip_internal": "Fetched internal IP.",
                 "ip_external": "Fetched external IP.",
                 "ping": "Ping test executed.",
+                "open_ports": "Fetched open ports.",
+                "port_owner": "Fetched process using the selected port.",
+                "route_table": "Fetched route table.",
+                "net_scan": "Fetched local network scan results.",
+                "file_sharing_on": "Enabled file sharing.",
+                "file_sharing_off": "Disabled file sharing.",
+                "shared_folders": "Fetched shared folders.",
+                "server_online": "Checked server availability.",
+                "last_login_events": "Fetched latest login attempt events.",
             }
             msg = network_msgs_ar.get(mode) if arabic else network_msgs_en.get(mode)
             if msg:
@@ -515,6 +533,12 @@ class AgentLoop:
                 "firewall_status": "تم جلب حالة جدار الحماية.",
                 "firewall_enable": "تم تفعيل جدار الحماية.",
                 "firewall_disable": "تم تعطيل جدار الحماية.",
+                "block_port": "تم إضافة قاعدة حظر منفذ في الجدار الناري.",
+                "unblock_rule": "تم حذف قاعدة من الجدار الناري.",
+                "disable_usb": "تم تعطيل منافذ USB.",
+                "enable_usb": "تم تفعيل منافذ USB.",
+                "disable_camera": "تم تعطيل الكاميرا.",
+                "enable_camera": "تم تفعيل الكاميرا.",
                 "recent_files_list": "تم جلب قائمة الملفات المفتوحة مؤخراً.",
                 "recent_files_clear": "تم مسح قائمة الملفات المفتوحة مؤخراً.",
                 "close_remote_sessions": "تم تنفيذ إغلاق الجلسات البعيدة.",
@@ -524,6 +548,12 @@ class AgentLoop:
                 "firewall_status": "Fetched firewall status.",
                 "firewall_enable": "Firewall enabled.",
                 "firewall_disable": "Firewall disabled.",
+                "block_port": "Added firewall block-port rule.",
+                "unblock_rule": "Removed firewall rule.",
+                "disable_usb": "USB ports disabled.",
+                "enable_usb": "USB ports enabled.",
+                "disable_camera": "Camera disabled.",
+                "enable_camera": "Camera enabled.",
                 "recent_files_list": "Fetched recent files list.",
                 "recent_files_clear": "Cleared recent files list.",
                 "close_remote_sessions": "Executed remote sessions close.",
@@ -781,6 +811,62 @@ class AgentLoop:
                 "restore": "Executed registry restore.",
             }
             msg = reg_msgs_ar.get(mode) if arabic else reg_msgs_en.get(mode)
+            if msg:
+                return True, msg
+
+        if action == "search_tools":
+            mode = str(params.get("mode", "")).lower()
+            search_msgs_ar = {
+                "search_text": "تم البحث عن النص داخل الملفات.",
+                "files_larger_than": "تم جلب الملفات الأكبر من الحجم المطلوب.",
+                "modified_today": "تم جلب الملفات المعدلة اليوم.",
+                "find_images": "تم جلب الصور الموجودة في المسار.",
+                "find_videos": "تم جلب الفيديوهات الموجودة في المسار.",
+                "count_files": "تم حساب عدد الملفات.",
+                "search_windows_content": "تم البحث في محتوى النوافذ المفتوحة.",
+            }
+            search_msgs_en = {
+                "search_text": "Searched text inside files.",
+                "files_larger_than": "Fetched files larger than requested size.",
+                "modified_today": "Fetched files modified today.",
+                "find_images": "Fetched image files in target path.",
+                "find_videos": "Fetched video files in target path.",
+                "count_files": "Counted files in target path.",
+                "search_windows_content": "Searched in open windows content.",
+            }
+            msg = search_msgs_ar.get(mode) if arabic else search_msgs_en.get(mode)
+            if msg:
+                return True, msg
+
+        if action == "web_tools":
+            mode = str(params.get("mode", "")).lower()
+            web_msgs_ar = {
+                "open_url": "تم فتح الرابط.",
+                "download_file": "تم بدء تنزيل الملف.",
+                "weather": "تم جلب حالة الطقس.",
+            }
+            web_msgs_en = {
+                "open_url": "Opened URL.",
+                "download_file": "Started file download.",
+                "weather": "Fetched weather information.",
+            }
+            msg = web_msgs_ar.get(mode) if arabic else web_msgs_en.get(mode)
+            if msg:
+                return True, msg
+
+        if action == "api_tools":
+            mode = str(params.get("mode", "")).lower()
+            api_msgs_ar = {
+                "currency": "تم جلب أسعار العملات.",
+                "weather_city": "تم جلب حالة الطقس للمدينة.",
+                "translate_quick": "تم تنفيذ الترجمة السريعة.",
+            }
+            api_msgs_en = {
+                "currency": "Fetched currency prices.",
+                "weather_city": "Fetched city weather.",
+                "translate_quick": "Executed quick translation.",
+            }
+            msg = api_msgs_ar.get(mode) if arabic else api_msgs_en.get(mode)
             if msg:
                 return True, msg
 

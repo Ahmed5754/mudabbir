@@ -300,3 +300,43 @@ def test_resolve_registry_set_value_extracts_fields() -> None:
     assert result.params.get("value_name") == "Theme"
     assert result.params.get("value_data") == "Dark"
     assert result.params.get("value_type") == "REG_DWORD"
+
+
+@pytest.mark.parametrize(
+    ("message", "action", "mode"),
+    [
+        ("المنافذ المفتوحة", "network_tools", "open_ports"),
+        ("جدول التوجيه", "network_tools", "route_table"),
+        ("الاجهزة المتصلة بالشبكة", "network_tools", "net_scan"),
+        ("تشغيل مشاركة الملفات", "network_tools", "file_sharing_on"),
+        ("المجلدات المشاركة", "network_tools", "shared_folders"),
+        ("اغلاق منفذ 445", "security_tools", "block_port"),
+        ("تعطيل منافذ usb", "security_tools", "disable_usb"),
+        ("تفعيل الكاميرا", "security_tools", "enable_camera"),
+        ("البحث عن نص داخل الملفات error", "search_tools", "search_text"),
+        ("ملفات اكبر من 500", "search_tools", "files_larger_than"),
+        ("ملفات تم تعديلها اليوم", "search_tools", "modified_today"),
+        ("ايجاد جميع الصور", "search_tools", "find_images"),
+        ("احصاء عدد الملفات", "search_tools", "count_files"),
+        ("افتح رابط https://example.com", "web_tools", "open_url"),
+        ("تحميل ملف من رابط https://example.com/a.zip", "web_tools", "download_file"),
+        ("حالة الطقس مدينة Amman", "web_tools", "weather"),
+        ("اسعار العملات", "api_tools", "currency"),
+        ("ترجمة نص hello world", "api_tools", "translate_quick"),
+    ],
+)
+def test_resolve_network_security_search_web_api_aliases(
+    message: str, action: str, mode: str
+) -> None:
+    result = resolve_windows_intent(message)
+    assert result.matched is True
+    assert result.action == action
+    assert result.params.get("mode") == mode
+
+
+def test_resolve_port_owner_extracts_port() -> None:
+    result = resolve_windows_intent("من يستخدم المنفذ 3389")
+    assert result.matched is True
+    assert result.action == "network_tools"
+    assert result.params.get("mode") == "port_owner"
+    assert result.params.get("port") == 3389
