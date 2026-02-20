@@ -93,20 +93,61 @@ jobs:
       contents: read
     env:
       PYPI_API_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
+      PYPI_TOKEN: ${{ secrets.PYPI_TOKEN }}
 
     steps:
+      - name: Resolve token
+        id: token
+        shell: bash
+        run: |
+          TOK="${PYPI_API_TOKEN:-${PYPI_TOKEN:-}}"
+          if [ -n "$TOK" ]; then
+            echo "has_token=true" >> "$GITHUB_OUTPUT"
+            echo "token=$TOK" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_token=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Download distributions
+        if: steps.token.outputs.has_token == 'true'
         uses: actions/download-artifact@v4
         with:
           name: python-package-distributions
           path: dist/
 
       - name: Publish to PyPI via API token
-        if: env.PYPI_API_TOKEN != ''
+        if: steps.token.outputs.has_token == 'true'
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           user: __token__
-          password: ${{ env.PYPI_API_TOKEN }}
+          password: ${{ steps.token.outputs.token }}
+
+      - name: Fail when no fallback token is configured
+        if: steps.token.outputs.has_token != 'true'
+        run: |
+          echo "Trusted publishing failed and no fallback token is configured."
+          echo "Set repository secret PYPI_API_TOKEN (or PYPI_TOKEN), or fix PyPI Trusted Publisher."
+          exit 1
+
+  publish-status:
+    name: Publish Status Gate
+    needs:
+      - publish-to-pypi
+      - publish-to-pypi-token-on-failure
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    steps:
+      - name: Ensure at least one publish path succeeded
+        shell: bash
+        run: |
+          TRUSTED='${{ needs.publish-to-pypi.result }}'
+          FALLBACK='${{ needs.publish-to-pypi-token-on-failure.result }}'
+          if [ "$TRUSTED" = "success" ] || [ "$FALLBACK" = "success" ] || [ "$FALLBACK" = "skipped" -a "$TRUSTED" = "success" ]; then
+            echo "Publish path succeeded. trusted=$TRUSTED fallback=$FALLBACK"
+            exit 0
+          fi
+          echo "No successful PyPI publish path. trusted=$TRUSTED fallback=$FALLBACK"
+          exit 1
 
   publish-to-testpypi:
     name: Publish to TestPyPI
