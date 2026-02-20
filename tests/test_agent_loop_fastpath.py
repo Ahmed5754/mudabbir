@@ -171,3 +171,54 @@ async def test_global_fastpath_media_and_window_replies(monkeypatch: pytest.Monk
     )
     assert handled_window is True
     assert "تصغير" in str(reply_window)
+
+
+@pytest.mark.asyncio
+async def test_global_fastpath_process_top_cpu_human_reply(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class DummyDesktopTool:
+        async def execute(self, action: str, **kwargs):
+            assert action == "process_tools"
+            assert kwargs.get("mode") == "top_cpu"
+            return '{"ok": true, "mode": "top_cpu", "items": [{"pid": 1234, "name": "chrome.exe", "cpu": 67.5}]}'
+
+    monkeypatch.setattr("Mudabbir.tools.builtin.desktop.DesktopTool", DummyDesktopTool)
+    loop = AgentLoop()
+    handled, reply = await loop._try_global_windows_fastpath(
+        text="اكثر العمليات استهلاكا للمعالج", session_key="s10"
+    )
+    assert handled is True
+    assert "chrome.exe" in str(reply)
+    assert "1234" in str(reply)
+
+
+@pytest.mark.asyncio
+async def test_global_fastpath_service_and_security_replies(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class DummyDesktopTool:
+        async def execute(self, action: str, **kwargs):
+            if action == "service_tools":
+                assert kwargs.get("mode") == "restart"
+                assert kwargs.get("name") == "Spooler"
+                return '{"ok": true}'
+            if action == "security_tools":
+                assert kwargs.get("mode") == "firewall_status"
+                return '{"ok": true, "mode": "firewall_status"}'
+            return '{"ok": true}'
+
+    monkeypatch.setattr("Mudabbir.tools.builtin.desktop.DesktopTool", DummyDesktopTool)
+    loop = AgentLoop()
+
+    handled_service, reply_service = await loop._try_global_windows_fastpath(
+        text="اعادة تشغيل خدمة Spooler", session_key="s11"
+    )
+    assert handled_service is True
+    assert "Spooler" in str(reply_service)
+
+    handled_security, reply_security = await loop._try_global_windows_fastpath(
+        text="حالة الجدار الناري", session_key="s12"
+    )
+    assert handled_security is True
+    assert "جدار" in str(reply_security)

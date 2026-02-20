@@ -466,6 +466,73 @@ class AgentLoop:
             if msg:
                 return True, msg
 
+        if action == "process_tools":
+            mode = str(params.get("mode", "")).lower()
+            if mode in {"top_cpu", "top_ram"} and isinstance(parsed, dict):
+                items = parsed.get("items") if isinstance(parsed.get("items"), list) else []
+                top = items[0] if items else {}
+                name = str(top.get("name") or "").strip()
+                pid = top.get("pid")
+                value = top.get("cpu" if mode == "top_cpu" else "ram_mb")
+                if name and value is not None:
+                    if arabic:
+                        metric = "CPU" if mode == "top_cpu" else "RAM"
+                        unit = "%" if mode == "top_cpu" else " MB"
+                        return True, f"أعلى عملية حالياً: {name} (PID: {pid}) - {metric}: {value}{unit}."
+                    metric = "CPU" if mode == "top_cpu" else "RAM"
+                    unit = "%" if mode == "top_cpu" else " MB"
+                    return True, f"Top process now: {name} (PID: {pid}) - {metric}: {value}{unit}."
+            process_msgs_ar = {
+                "restart_explorer": "تمت إعادة تشغيل واجهة ويندوز (Explorer).",
+            }
+            process_msgs_en = {
+                "restart_explorer": "Windows Explorer has been restarted.",
+            }
+            msg = process_msgs_ar.get(mode) if arabic else process_msgs_en.get(mode)
+            if msg:
+                return True, msg
+
+        if action == "service_tools":
+            mode = str(params.get("mode", "")).lower()
+            svc = str(params.get("name", "") or "").strip()
+            service_msgs_ar = {
+                "start": f"تم تشغيل الخدمة: {svc or 'المحددة'}.",
+                "stop": f"تم إيقاف الخدمة: {svc or 'المحددة'}.",
+                "restart": f"تمت إعادة تشغيل الخدمة: {svc or 'المحددة'}.",
+            }
+            service_msgs_en = {
+                "start": f"Service started: {svc or 'target service'}.",
+                "stop": f"Service stopped: {svc or 'target service'}.",
+                "restart": f"Service restarted: {svc or 'target service'}.",
+            }
+            msg = service_msgs_ar.get(mode) if arabic else service_msgs_en.get(mode)
+            if msg:
+                return True, msg
+
+        if action == "security_tools":
+            mode = str(params.get("mode", "")).lower()
+            security_msgs_ar = {
+                "firewall_status": "تم جلب حالة جدار الحماية.",
+                "firewall_enable": "تم تفعيل جدار الحماية.",
+                "firewall_disable": "تم تعطيل جدار الحماية.",
+                "recent_files_list": "تم جلب قائمة الملفات المفتوحة مؤخراً.",
+                "recent_files_clear": "تم مسح قائمة الملفات المفتوحة مؤخراً.",
+                "close_remote_sessions": "تم تنفيذ إغلاق الجلسات البعيدة.",
+                "intrusion_summary": "تم تجهيز ملخص محاولات الدخول الفاشلة.",
+            }
+            security_msgs_en = {
+                "firewall_status": "Fetched firewall status.",
+                "firewall_enable": "Firewall enabled.",
+                "firewall_disable": "Firewall disabled.",
+                "recent_files_list": "Fetched recent files list.",
+                "recent_files_clear": "Cleared recent files list.",
+                "close_remote_sessions": "Executed remote sessions close.",
+                "intrusion_summary": "Prepared failed-login intrusion summary.",
+            }
+            msg = security_msgs_ar.get(mode) if arabic else security_msgs_en.get(mode)
+            if msg:
+                return True, msg
+
         if action == "window_control":
             mode = str(params.get("mode", "")).lower()
             window_msgs_ar = {

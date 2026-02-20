@@ -312,8 +312,8 @@ RULES: tuple[IntentRule, ...] = (
     IntentRule("apps.open_mail", "app_tools", "open_mail", "safe", ("open mail", "فتح البريد")),
     IntentRule("dev.open_cmd_admin", "dev_tools", "open_cmd_admin", "elevated", ("cmd as admin", "فتح cmd كمسؤول")),
     IntentRule("dev.open_powershell_admin", "dev_tools", "open_powershell_admin", "elevated", ("powershell as admin", "فتح powershell كمسؤول")),
-    IntentRule("dev.top_cpu", "process_tools", "top_cpu", "safe", ("top cpu", "اكثر العمليات استهلاكا للمعالج")),
-    IntentRule("dev.top_ram", "process_tools", "top_ram", "safe", ("top ram", "اكثر العمليات استهلاكا للرام")),
+    IntentRule("dev.top_cpu", "process_tools", "top_cpu", "safe", ("top cpu", "اكثر العمليات استهلاكا للمعالج", "اعلى استهلاك cpu", "اعملي اعلى cpu")),
+    IntentRule("dev.top_ram", "process_tools", "top_ram", "safe", ("top ram", "اكثر العمليات استهلاكا للرام", "اعلى استهلاك رام", "اعلى استهلاك ذاكره")),
     IntentRule("dev.sfc_scan", "dev_tools", "sfc_scan", "elevated", ("sfc scan", "فحص ملفات النظام")),
     IntentRule("dev.chkdsk", "dev_tools", "chkdsk", "elevated", ("chkdsk", "فحص القرص")),
     IntentRule("dev.disk_management", "dev_tools", "open_disk_management", "safe", ("disk management", "اداره الاقراص")),
@@ -324,8 +324,18 @@ RULES: tuple[IntentRule, ...] = (
     IntentRule("dev.disk_health", "disk_tools", "smart_status", "safe", ("disk health", "health check", "فحص حالة القرص الصلب", "فحص حاله القرص الصلب")),
     IntentRule("dev.shortcuts", "shell_tools", "list_shortcuts", "safe", ("all shortcuts", "مفاتيح الاختصار المتاحة", "مفاتيح الاختصار المتاحه")),
     IntentRule("dev.rdp", "remote_tools", "rdp_open", "elevated", ("remote desktop", "تشغيل remote desktop")),
-    IntentRule("services.stop", "service_tools", "stop", "destructive", ("stop service", "ايقاف خدمه"), params=("name",)),
+    IntentRule("services.stop", "service_tools", "stop", "destructive", ("stop service", "ايقاف خدمه", "ايقاف خدمة"), params=("name",)),
+    IntentRule("services.restart", "service_tools", "restart", "elevated", ("restart service", "اعادة تشغيل خدمة", "اعاده تشغيل خدمة", "إعادة تشغيل خدمة"), params=("name",)),
+    IntentRule("services.start", "service_tools", "start", "elevated", ("start service", "تشغيل خدمة", "تشغيل خدمه", "شغل خدمة", "شغل خدمه"), params=("name",)),
     IntentRule("services.open", "dev_tools", "open_services", "safe", ("open services", "فتح الخدمات")),
+    IntentRule("process.restart_explorer", "process_tools", "restart_explorer", "elevated", ("restart explorer", "restart explorer.exe", "اعادة تشغيل explorer", "إعادة تشغيل واجهة الويندوز")),
+    IntentRule("security.firewall_status", "security_tools", "firewall_status", "safe", ("firewall status", "حالة الجدار الناري", "هل الجدار الناري شغال", "هل جدار الحمايه شغال")),
+    IntentRule("security.firewall_enable", "security_tools", "firewall_enable", "elevated", ("enable firewall", "تفعيل الجدار الناري", "تشغيل الجدار الناري")),
+    IntentRule("security.firewall_disable", "security_tools", "firewall_disable", "destructive", ("disable firewall", "تعطيل الجدار الناري", "ايقاف الجدار الناري")),
+    IntentRule("security.clear_recent_files", "security_tools", "recent_files_clear", "safe", ("clear recent files", "مسح الملفات المفتوحة مؤخرا", "مسح الملفات المفتوحه مؤخرا")),
+    IntentRule("security.recent_files", "security_tools", "recent_files_list", "safe", ("recent files", "الملفات المفتوحة مؤخرا", "الملفات المفتوحه مؤخرا")),
+    IntentRule("security.close_remote_sessions", "security_tools", "close_remote_sessions", "elevated", ("close remote sessions", "اغلاق الجلسات عن بعد", "إغلاق الجلسات عن بعد")),
+    IntentRule("security.intrusion_summary", "security_tools", "intrusion_summary", "safe", ("intrusion summary", "ملخص محاولات الاختراق", "كشف محاولات الاختراق الفاشلة")),
     IntentRule("window.minimize", "window_control", "minimize", "safe", ("minimize window", "تصغير النافذه", "تصغير النافذة")),
     IntentRule("window.maximize", "window_control", "maximize", "safe", ("maximize window", "تكبير النافذه", "تكبير النافذة")),
     IntentRule("window.restore", "window_control", "restore", "safe", ("restore window", "استعاده النافذه", "استعادة النافذة")),
@@ -594,6 +604,16 @@ def _build_params(rule: IntentRule, raw_text: str, normalized: str) -> dict[str,
                 break
     if rule.capability_id == "services.stop" and not params.get("name"):
         q = _extract_named_value(raw_text, (r"(?:stop service|ايقاف خدمه|إيقاف خدمة)\s+(.+)$",))
+        if q:
+            params["name"] = q
+    if rule.capability_id in {"services.start", "services.restart"}:
+        q = _extract_named_value(
+            raw_text,
+            (
+                r"(?:restart service|اعاده تشغيل خدمة|إعادة تشغيل خدمة)\s+(.+)$",
+                r"(?:start service|تشغيل خدمه|تشغيل خدمة|شغل خدمة|شغل خدمه)\s+(.+)$",
+            ),
+        )
         if q:
             params["name"] = q
     if rule.capability_id == "window.rename_title" and not params.get("text"):

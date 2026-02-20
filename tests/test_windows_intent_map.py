@@ -169,3 +169,31 @@ def test_resolve_more_common_arabic_phrases(message: str, action: str, mode: str
     assert result.matched is True
     assert result.action == action
     assert result.params.get("mode") == mode
+
+
+@pytest.mark.parametrize(
+    ("message", "action", "mode"),
+    [
+        ("شغل خدمة Spooler", "service_tools", "start"),
+        ("اعادة تشغيل خدمة Spooler", "service_tools", "restart"),
+        ("حالة الجدار الناري", "security_tools", "firewall_status"),
+        ("مسح الملفات المفتوحة مؤخرا", "security_tools", "recent_files_clear"),
+        ("كشف محاولات الاختراق الفاشلة", "security_tools", "intrusion_summary"),
+        ("اعادة تشغيل واجهة الويندوز", "process_tools", "restart_explorer"),
+    ],
+)
+def test_resolve_services_security_and_process_arabic_aliases(
+    message: str, action: str, mode: str
+) -> None:
+    result = resolve_windows_intent(message)
+    assert result.matched is True
+    assert result.action == action
+    assert result.params.get("mode") == mode
+
+
+def test_resolve_service_name_extraction_start() -> None:
+    result = resolve_windows_intent("start service WinRM")
+    assert result.matched is True
+    assert result.action == "service_tools"
+    assert result.params.get("mode") == "start"
+    assert result.params.get("name") == "WinRM"
