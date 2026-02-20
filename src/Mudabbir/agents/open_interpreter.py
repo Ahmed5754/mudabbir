@@ -21,6 +21,10 @@ from pathlib import Path
 from typing import Any
 
 from Mudabbir.config import Settings
+from Mudabbir.tools.capabilities.windows_intent_map import (
+    is_confirmation_message,
+    resolve_windows_intent,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -1044,6 +1048,7 @@ class OpenInterpreterAgent:
         self._interpreter = None
         self._stop_flag = False
         self._semaphore = asyncio.Semaphore(1)
+        self._pending_dangerous_intent: dict[str, Any] | None = None
         self._desktop_context_cache: dict | None = None
         self._desktop_context_cache_at: float = 0.0
         if not self.AI_DESKTOP_ACTIONS:
@@ -1853,6 +1858,135 @@ Required JSON schema:
                     }
                 )
         return outputs
+
+    async def _try_intent_map_desktop_response(self, message: str) -> dict | None:
+        """Deterministic intent-map route for Windows desktop/system commands."""
+        if not bool(getattr(self.settings, "oi_deterministic_desktop_first", True)):
+            return None
+
+        text = message or ""
+        arabic = _contains_arabic(text)
+        normalized = _normalize_text_for_match(text)
+        cancel_tokens = ("cancel", "stop", "no", "لا", "الغاء", "إلغاء", "وقف")
+
+        if self._pending_dangerous_intent:
+            pending = self._pending_dangerous_intent
+            if is_confirmation_message(text):
+                self._pending_dangerous_intent = None
+                resolution = pending
+            elif any(tok in normalized for tok in cancel_tokens):
+                self._pending_dangerous_intent = None
+                return {
+                    "type": "result",
+                    "content": (
+                        "تم إلغاء العملية الخطرة."
+                        if arabic
+                        else "Canceled the pending dangerous operation."
+                    ),
+                    "metadata": {
+                        "capability_id": pending.get("capability_id", "unknown"),
+                        "risk_level": pending.get("risk_level", "destructive"),
+                        "facts": {"status": "canceled"},
+                    },
+                }
+            else:
+                return {
+                    "type": "result",
+                    "content": (
+                        "لدي عملية خطرة بانتظار التأكيد. اكتب 'نعم' للتنفيذ أو 'إلغاء' للإلغاء."
+                        if arabic
+                        else "A dangerous operation is pending. Reply 'yes' to execute or 'cancel' to abort."
+                    ),
+                    "metadata": {
+                        "capability_id": pending.get("capability_id", "unknown"),
+                        "risk_level": pending.get("risk_level", "destructive"),
+                        "facts": {"status": "awaiting_confirmation"},
+                    },
+                }
+        else:
+            resolved = resolve_windows_intent(text)
+            if not resolved.matched:
+                return None
+            resolution = {
+                "capability_id": resolved.capability_id,
+                "action": resolved.action,
+                "params": dict(resolved.params or {}),
+                "risk_level": resolved.risk_level,
+                "unsupported": resolved.unsupported,
+                "unsupported_reason": resolved.unsupported_reason,
+            }
+
+        if bool(resolution.get("unsupported")):
+            return {
+                "type": "result",
+                "content": str(
+                    resolution.get("unsupported_reason")
+                    or "Requested capability is not supported yet."
+                ),
+                "metadata": {
+                    "capability_id": resolution.get("capability_id", "unknown"),
+                    "risk_level": resolution.get("risk_level", "safe"),
+                    "facts": {"status": "unsupported"},
+                },
+            }
+
+        risk_level = str(resolution.get("risk_level", "safe"))
+        if risk_level == "destructive" and not is_confirmation_message(text):
+            self._pending_dangerous_intent = resolution
+            return {
+                "type": "result",
+                "content": (
+                    "هذا أمر خطِر. للتأكيد اكتب: نعم. للإلغاء اكتب: إلغاء."
+                    if arabic
+                    else "This is a destructive command. Reply 'yes' to confirm or 'cancel' to abort."
+                ),
+                "metadata": {
+                    "capability_id": resolution.get("capability_id", "unknown"),
+                    "risk_level": "destructive",
+                    "facts": {"status": "awaiting_confirmation"},
+                    "resolved_action": resolution.get("action"),
+                    "resolved_params": resolution.get("params", {}),
+                },
+            }
+
+        action = str(resolution.get("action", "")).strip()
+        params = resolution.get("params", {})
+        if not action:
+            return None
+
+        from Mudabbir.tools.builtin.desktop import DesktopTool
+
+        raw = await DesktopTool().execute(action=action, **(params if isinstance(params, dict) else {}))
+        if isinstance(raw, str) and raw.lower().startswith("error:"):
+            return {
+                "type": "result",
+                "content": raw,
+                "metadata": {
+                    "capability_id": resolution.get("capability_id", "unknown"),
+                    "risk_level": risk_level,
+                    "facts": {"ok": False},
+                    "resolved_action": action,
+                    "resolved_params": params,
+                },
+            }
+        parsed: Any = raw
+        if isinstance(raw, str):
+            try:
+                parsed = json.loads(raw)
+            except Exception:
+                parsed = raw
+        return {
+            "type": "result",
+            "content": f"Executed: {action}",
+            "metadata": {
+                "capability_id": resolution.get("capability_id", "unknown"),
+                "risk_level": risk_level,
+                "facts": {"ok": True},
+                "resolved_action": action,
+                "resolved_params": params,
+                "result": parsed,
+            },
+        }
 
     async def _try_ai_desktop_response(
         self, message: str, history: list[dict] | None = None
@@ -4557,6 +4691,11 @@ Required JSON schema:
             direct_result = await self._try_direct_task_manager_response(user_request)
             if direct_result is not None:
                 yield direct_result
+                return
+
+            intent_map_result = await self._try_intent_map_desktop_response(user_request)
+            if intent_map_result is not None:
+                yield intent_map_result
                 return
 
             ai_desktop_result = await self._try_ai_desktop_response(

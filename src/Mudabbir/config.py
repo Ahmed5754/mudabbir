@@ -286,6 +286,13 @@ class Settings(BaseSettings):
             "Disable if desktop requests produce noisy execute payloads."
         ),
     )
+    oi_deterministic_desktop_first: bool = Field(
+        default=True,
+        description=(
+            "Enable deterministic Windows desktop intent routing before AI planner "
+            "and raw Open Interpreter fallback."
+        ),
+    )
     oi_auto_run: bool = Field(
         default=True,
         description="Open Interpreter auto_run mode",
