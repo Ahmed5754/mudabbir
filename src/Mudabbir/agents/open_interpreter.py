@@ -3751,9 +3751,23 @@ Required JSON schema:
                 )
                 data, err = parse_tool_json(raw)
                 if err:
+                    vision_raw = await DesktopTool().execute(
+                        action="vision_tools",
+                        mode="locate_element",
+                        target=control_name,
+                        window_hint=window_name,
+                        interaction="move",
+                    )
+                    vision_data, vision_err = parse_tool_json(vision_raw)
+                    if not vision_err and isinstance(vision_data, dict) and bool(vision_data.get("ok")):
+                        picked = str(vision_data.get("matched_label") or control_name)
+                        return {
+                            "type": "message",
+                            "content": (f"🎯 تم توجيه الماوس إلى: {picked}" if arabic else f"🎯 Mouse moved to: {picked}"),
+                        }
                     return {
                         "type": "message",
-                        "content": f"ما قدرت أحدد الزر المطلوب: {err}" if arabic else f"Could not target requested UI element: {err}",
+                        "content": f"ما قدرت أحدد العنصر المطلوب." if arabic else "Could not locate that UI element.",
                     }
 
                 data = data if isinstance(data, dict) else {}
@@ -3834,9 +3848,23 @@ Required JSON schema:
                 )
                 data, err = parse_tool_json(raw)
                 if err:
+                    vision_raw = await DesktopTool().execute(
+                        action="vision_tools",
+                        mode="locate_element",
+                        target=control_name,
+                        window_hint=window_name,
+                        interaction="click",
+                    )
+                    vision_data, vision_err = parse_tool_json(vision_raw)
+                    if not vision_err and isinstance(vision_data, dict) and bool(vision_data.get("ok")):
+                        clicked_name = str(vision_data.get("matched_label") or control_name)
+                        return {
+                            "type": "message",
+                            "content": (f"✅ تم الضغط على: {clicked_name}" if arabic else f"✅ Clicked: {clicked_name}"),
+                        }
                     return {
                         "type": "message",
-                        "content": f"ما قدرت اضغط الزر المطلوب: {err}" if arabic else f"Could not click requested button: {err}",
+                        "content": "ما قدرت أضغط العنصر المطلوب." if arabic else "Could not click that UI element.",
                     }
                 data = data if isinstance(data, dict) else {}
                 clicked_name = data.get("control_name") or control_name

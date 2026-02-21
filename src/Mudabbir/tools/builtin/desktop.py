@@ -750,6 +750,9 @@ class DesktopTool(BaseTool):
                     y=params.get("y"),
                     width=params.get("width"),
                     height=params.get("height"),
+                    target=str(params.get("target", "") or ""),
+                    window_hint=str(params.get("window_hint", "") or ""),
+                    interaction=str(params.get("interaction", "") or ""),
                 )
             if action_normalized == "threat_tools":
                 return self._threat_tools(
@@ -7685,6 +7688,9 @@ $obj | ConvertTo-Json -Compress
         y: Any = None,
         width: Any = None,
         height: Any = None,
+        target: str = "",
+        window_hint: str = "",
+        interaction: str = "",
     ) -> str:
         mode_norm = (mode or "").strip().lower()
 
@@ -7852,6 +7858,111 @@ $obj | ConvertTo-Json -Compress
 
             return False, {}, None
 
+        def _locate_with_cloud_vision(
+            img_path: Path,
+            *,
+            target_name: str,
+            hint_window: str,
+        ) -> tuple[bool, dict[str, Any], str | None]:
+            settings = get_settings()
+            provider = str(getattr(settings, "vision_provider", "auto") or "auto").strip().lower()
+            try:
+                from PIL import Image
+
+                with Image.open(img_path) as im:
+                    w, h = im.size
+            except Exception:
+                w, h = 0, 0
+
+            prompt = (
+                "You are locating a requested UI target in a Windows screenshot. "
+                "Return STRICT JSON only with keys: "
+                "found (bool), x (int), y (int), confidence (0..1), matched_label (string), reason (string). "
+                f"Target: {target_name!r}. "
+                f"Window hint: {hint_window!r}. "
+                f"Screenshot size: width={w}, height={h}. "
+                "Coordinates must be absolute pixels inside this screenshot."
+            )
+            image_bytes = img_path.read_bytes()
+            b64 = base64.b64encode(image_bytes).decode("ascii")
+
+            def _parse_json_text(raw_text: str) -> dict[str, Any]:
+                text = str(raw_text or "").strip()
+                if text.startswith("```"):
+                    text = re.sub(r"^```(?:json)?", "", text, flags=re.IGNORECASE).strip()
+                    text = re.sub(r"```$", "", text).strip()
+                parsed = json.loads(text)
+                return parsed if isinstance(parsed, dict) else {}
+
+            if provider in {"openai", "auto"}:
+                api_key = str(getattr(settings, "openai_api_key", "") or "").strip()
+                if api_key:
+                    try:
+                        import httpx
+
+                        model = str(getattr(settings, "vision_model", "gpt-4o") or "gpt-4o")
+                        payload = {
+                            "model": model,
+                            "messages": [
+                                {
+                                    "role": "user",
+                                    "content": [
+                                        {"type": "text", "text": prompt},
+                                        {"type": "image_url", "image_url": {"url": f"data:image/png;base64,{b64}"}},
+                                    ],
+                                }
+                            ],
+                            "temperature": 0.0,
+                            "max_tokens": 220,
+                        }
+                        with httpx.Client(timeout=45.0) as client:
+                            resp = client.post(
+                                "https://api.openai.com/v1/chat/completions",
+                                headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
+                                json=payload,
+                            )
+                            resp.raise_for_status()
+                        data = resp.json()
+                        text_out = ((((data or {}).get("choices") or [{}])[0].get("message") or {}).get("content", ""))
+                        parsed = _parse_json_text(str(text_out))
+                        if parsed:
+                            return True, parsed, "openai"
+                    except Exception:
+                        pass
+
+            if provider in {"gemini", "auto"}:
+                api_key = str(getattr(settings, "google_api_key", "") or "").strip()
+                if api_key:
+                    try:
+                        import httpx
+
+                        model = str(getattr(settings, "vision_model", "gemini-2.5-flash") or "gemini-2.5-flash")
+                        endpoint = (
+                            "https://generativelanguage.googleapis.com/v1beta/models/"
+                            f"{model}:generateContent?key={api_key}"
+                        )
+                        payload = {
+                            "contents": [{"parts": [{"text": prompt}, {"inline_data": {"mime_type": "image/png", "data": b64}}]}],
+                            "generationConfig": {"temperature": 0.0, "maxOutputTokens": 220},
+                        }
+                        with httpx.Client(timeout=45.0) as client:
+                            resp = client.post(endpoint, json=payload)
+                            resp.raise_for_status()
+                        data = resp.json()
+                        candidates = (data or {}).get("candidates") or []
+                        parts = (((candidates[0] if candidates else {}).get("content") or {}).get("parts") or [])
+                        text_out = ""
+                        for p in parts:
+                            if isinstance(p, dict) and p.get("text"):
+                                text_out += str(p.get("text"))
+                        parsed = _parse_json_text(text_out)
+                        if parsed:
+                            return True, parsed, "gemini"
+                    except Exception:
+                        pass
+
+            return False, {}, None
+
         if mode_norm in {"describe_screen"}:
             image_path, err = _capture("ocr_screen")
             if image_path is None:
@@ -7892,6 +8003,61 @@ $obj | ConvertTo-Json -Compress
                     "ocr_engine": engine if ok_ocr else None,
                     "ocr_text_preview": text_out[:800] if ok_ocr else "",
                     "ocr_error": None if ok_ocr else engine,
+                }
+            )
+
+        if mode_norm in {"locate_element", "locate_ui_target"}:
+            target_name = str(target or "").strip()
+            if not target_name:
+                return self._error("target is required")
+            image_path, err = _capture("ocr_screen")
+            if image_path is None:
+                return self._error(err or "screen capture failed")
+            ok_locate, locate_data, vision_engine = _locate_with_cloud_vision(
+                image_path, target_name=target_name, hint_window=str(window_hint or "").strip()
+            )
+            if not ok_locate:
+                return self._error("vision locate failed")
+
+            found = bool(locate_data.get("found"))
+            try:
+                tx = int(locate_data.get("x"))
+                ty = int(locate_data.get("y"))
+            except Exception:
+                tx, ty = 0, 0
+            confidence = locate_data.get("confidence")
+            matched_label = str(locate_data.get("matched_label") or target_name).strip()
+            reason = str(locate_data.get("reason") or "").strip()
+            action_done = "none"
+
+            if found and tx > 0 and ty > 0:
+                try:
+                    import pyautogui
+
+                    pyautogui.FAILSAFE = False
+                    interaction_norm = str(interaction or "").strip().lower()
+                    pyautogui.moveTo(tx, ty, duration=0.2)
+                    action_done = "move"
+                    if interaction_norm in {"click", "left_click"}:
+                        pyautogui.click(tx, ty, button="left")
+                        action_done = "click"
+                except Exception as exc:
+                    return self._error(f"vision target located but action failed: {exc}")
+
+            return _json(
+                {
+                    "ok": bool(found and tx > 0 and ty > 0),
+                    "mode": mode_norm,
+                    "source": "vision",
+                    "vision_engine": vision_engine,
+                    "target": target_name,
+                    "matched_label": matched_label,
+                    "x": tx,
+                    "y": ty,
+                    "confidence": confidence,
+                    "action_done": action_done,
+                    "reason": reason,
+                    "screenshot": str(image_path),
                 }
             )
 
