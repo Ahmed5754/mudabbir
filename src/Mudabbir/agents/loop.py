@@ -1956,6 +1956,16 @@ class AgentLoop:
 
         if action == "shell_tools":
             mode = str(params.get("mode", "")).lower()
+            if mode in {"list_shortcuts", "shortcuts", "hotkeys"} and isinstance(parsed, dict):
+                shortcuts = parsed.get("shortcuts") if isinstance(parsed.get("shortcuts"), dict) else {}
+                keys = list(shortcuts.keys())[:5]
+                if arabic:
+                    if keys:
+                        return True, f"⌨️ عندك {len(shortcuts)} اختصار. أهمها: {', '.join(keys)}."
+                    return True, "⌨️ تم جلب قائمة الاختصارات."
+                if keys:
+                    return True, f"⌨️ Found {len(shortcuts)} shortcuts. Top ones: {', '.join(keys)}."
+                return True, "⌨️ Shortcuts list fetched."
             shell_msgs_ar = {
                 "quick_settings": "تم فتح الإعدادات السريعة.",
                 "notifications": "تم فتح مركز الإشعارات.",
