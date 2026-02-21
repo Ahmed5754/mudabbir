@@ -1235,9 +1235,25 @@ class AgentLoop:
                 return True, f"✅ {resource} reduction executed."
             process_msgs_ar = {
                 "restart_explorer": "تمت إعادة تشغيل واجهة ويندوز (Explorer).",
+                "kill_pid": "تم إنهاء العملية عبر PID.",
+                "path_by_pid": "تم جلب مسار العملية.",
+                "cpu_by_pid": "تم جلب استهلاك CPU للعملية.",
+                "ram_by_pid": "تم جلب استهلاك RAM للعملية.",
+                "threads_by_pid": "تم جلب عدد الخيوط للعملية.",
+                "start_time_by_pid": "تم جلب وقت بدء العملية.",
+                "suspend_pid": "تم تعليق العملية.",
+                "resume_pid": "تم استئناف العملية.",
             }
             process_msgs_en = {
                 "restart_explorer": "Windows Explorer has been restarted.",
+                "kill_pid": "Process terminated by PID.",
+                "path_by_pid": "Fetched process path.",
+                "cpu_by_pid": "Fetched process CPU usage.",
+                "ram_by_pid": "Fetched process RAM usage.",
+                "threads_by_pid": "Fetched process thread count.",
+                "start_time_by_pid": "Fetched process start time.",
+                "suspend_pid": "Process suspended.",
+                "resume_pid": "Process resumed.",
             }
             msg = process_msgs_ar.get(mode) if arabic else process_msgs_en.get(mode)
             if msg:

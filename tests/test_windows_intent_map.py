@@ -356,6 +356,22 @@ def test_resolve_app_memory_total_phrase() -> None:
     assert str(result.params.get("name") or "").lower() == "cursor"
 
 
+def test_resolve_kill_by_pid_phrase() -> None:
+    result = resolve_windows_intent("kill pid 1234")
+    assert result.matched is True
+    assert result.action == "process_tools"
+    assert result.params.get("mode") == "kill_pid"
+    assert result.params.get("pid") == 1234
+
+
+def test_resolve_ram_by_pid_phrase() -> None:
+    result = resolve_windows_intent("ram by pid 4321")
+    assert result.matched is True
+    assert result.action == "process_tools"
+    assert result.params.get("mode") == "ram_by_pid"
+    assert result.params.get("pid") == 4321
+
+
 def test_resolve_app_cpu_total_phrase() -> None:
     result = resolve_windows_intent("اجمالي cpu تطبيق Cursor")
     assert result.matched is True

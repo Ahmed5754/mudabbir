@@ -479,6 +479,14 @@ RULES: tuple[IntentRule, ...] = (
             "اكتر عملية تستهلك رام",
         ),
     ),
+    IntentRule("process.kill_by_pid", "process_tools", "kill_pid", "destructive", ("kill by pid", "kill pid", "انهاء عملية pid", "قتل عملية pid"), params=("pid",)),
+    IntentRule("process.path_by_pid", "process_tools", "path_by_pid", "safe", ("process path by pid", "مسار عملية pid"), params=("pid",)),
+    IntentRule("process.cpu_by_pid", "process_tools", "cpu_by_pid", "safe", ("cpu by pid", "استهلاك cpu لعملية pid"), params=("pid",)),
+    IntentRule("process.ram_by_pid", "process_tools", "ram_by_pid", "safe", ("ram by pid", "استهلاك ram لعملية pid"), params=("pid",)),
+    IntentRule("process.threads_by_pid", "process_tools", "threads_by_pid", "safe", ("threads by pid", "عدد الخيوط لعملية pid"), params=("pid",)),
+    IntentRule("process.start_time_by_pid", "process_tools", "start_time_by_pid", "safe", ("start time by pid", "وقت بدء عملية pid"), params=("pid",)),
+    IntentRule("process.suspend_by_pid", "process_tools", "suspend_pid", "elevated", ("suspend pid", "تعليق عملية pid"), params=("pid",)),
+    IntentRule("process.resume_by_pid", "process_tools", "resume_pid", "elevated", ("resume pid", "استئناف عملية pid"), params=("pid",)),
     IntentRule(
         "process.kill_high_cpu",
         "process_tools",
@@ -1395,6 +1403,8 @@ def _build_params(rule: IntentRule, raw_text: str, normalized: str) -> dict[str,
             params["rule_name"] = q
     if "port" in rule.params and "port" not in params and value is not None:
         params["port"] = max(1, min(65535, abs(value)))
+    if "pid" in rule.params and "pid" not in params and value is not None:
+        params["pid"] = max(1, min(2_147_483_647, abs(value)))
     if rule.capability_id == "services.stop" and not params.get("name"):
         q = _extract_named_value(raw_text, (r"(?:stop service|ايقاف خدمه|إيقاف خدمة)\s+(.+)$",))
         if q:

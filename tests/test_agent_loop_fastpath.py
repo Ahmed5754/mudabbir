@@ -296,6 +296,32 @@ async def test_global_fastpath_process_top_cpu_human_reply(
 
 
 @pytest.mark.asyncio
+async def test_global_fastpath_process_kill_by_pid_human_reply(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class DummyDesktopTool:
+        async def execute(self, action: str, **kwargs):
+            assert action == "process_tools"
+            assert kwargs.get("mode") == "kill_pid"
+            assert kwargs.get("pid") == 1234
+            return '{"ok": true, "mode": "kill_pid", "pid": 1234}'
+
+    monkeypatch.setattr("Mudabbir.tools.builtin.desktop.DesktopTool", DummyDesktopTool)
+    loop = AgentLoop()
+    handled, reply = await loop._try_global_windows_fastpath(
+        text="kill pid 1234", session_key="s10pid"
+    )
+    assert handled is True
+    assert ("yes" in str(reply).lower()) or ("نعم" in str(reply))
+
+    handled2, reply2 = await loop._try_global_windows_fastpath(
+        text="yes", session_key="s10pid"
+    )
+    assert handled2 is True
+    assert ("pid" in str(reply2).lower()) or ("عملية" in str(reply2))
+
+
+@pytest.mark.asyncio
 async def test_global_fastpath_process_app_memory_total_human_reply(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
