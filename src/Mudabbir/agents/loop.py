@@ -348,15 +348,57 @@ class AgentLoop:
         else:
             resolved = resolve_windows_intent(text)
             if not resolved.matched:
-                return False, None
-            resolution = {
-                "capability_id": resolved.capability_id,
-                "action": resolved.action,
-                "params": dict(resolved.params or {}),
-                "risk_level": str(resolved.risk_level or "safe"),
-                "unsupported": bool(resolved.unsupported),
-                "unsupported_reason": resolved.unsupported_reason,
-            }
+                session_state = self._windows_session_state.setdefault(session_key, {})
+                last_app = str(session_state.get("last_app", "")).strip()
+                last_window = str(session_state.get("last_window", "")).strip()
+                # Handle short pronoun follow-ups when intent map has no explicit match.
+                if last_app and normalized in {"سكره", "اغلقه", "اقفله", "close it", "close app"}:
+                    resolution = {
+                        "capability_id": "apps.close_app",
+                        "action": "close_app",
+                        "params": {"process_name": last_app},
+                        "risk_level": "elevated",
+                        "unsupported": False,
+                        "unsupported_reason": "",
+                    }
+                elif last_window and normalized in {"رجعه", "restore it", "show it", "اظهره"}:
+                    resolution = {
+                        "capability_id": "window.show",
+                        "action": "window_control",
+                        "params": {"mode": "show", "query": last_window},
+                        "risk_level": "safe",
+                        "unsupported": False,
+                        "unsupported_reason": "",
+                    }
+                elif last_window and normalized in {"صغره", "minimize it"}:
+                    resolution = {
+                        "capability_id": "window.minimize",
+                        "action": "window_control",
+                        "params": {"mode": "minimize", "query": last_window},
+                        "risk_level": "safe",
+                        "unsupported": False,
+                        "unsupported_reason": "",
+                    }
+                elif last_window and normalized in {"كبره", "maximize it"}:
+                    resolution = {
+                        "capability_id": "window.maximize",
+                        "action": "window_control",
+                        "params": {"mode": "maximize", "query": last_window},
+                        "risk_level": "safe",
+                        "unsupported": False,
+                        "unsupported_reason": "",
+                    }
+                else:
+                    return False, None
+            else:
+                resolution = {
+                    "capability_id": resolved.capability_id,
+                    "action": resolved.action,
+                    "params": dict(resolved.params or {}),
+                    "risk_level": str(resolved.risk_level or "safe"),
+                    "unsupported": bool(resolved.unsupported),
+                    "unsupported_reason": resolved.unsupported_reason,
+                }
 
         if resolution.get("unsupported"):
             return True, str(
