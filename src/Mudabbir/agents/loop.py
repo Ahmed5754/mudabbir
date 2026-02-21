@@ -1658,6 +1658,31 @@ class AgentLoop:
             if msg:
                 return True, msg
 
+        if action == "media_tools":
+            mode = str(params.get("mode", "")).lower()
+            if mode in {"screen_record", "screen_record_short"} and isinstance(parsed, dict):
+                path = str(parsed.get("path") or "").strip()
+                if arabic:
+                    return True, ("🎥 تم تسجيل الشاشة." + (f"\n{path}" if path else ""))
+                return True, ("🎥 Screen recording completed." + (f"\n{path}" if path else ""))
+            media_msgs_ar = {
+                "stop_all_media": "⏸️ تم إيقاف الوسائط.",
+                "youtube_open": "▶️ تم فتح الفيديو.",
+                "media_next": "⏭️ تم تشغيل المقطع التالي.",
+                "media_prev": "⏮️ تم الرجوع للمقطع السابق.",
+                "play_pause": "⏯️ تم تبديل التشغيل/الإيقاف.",
+            }
+            media_msgs_en = {
+                "stop_all_media": "⏸️ Media paused.",
+                "youtube_open": "▶️ Video opened.",
+                "media_next": "⏭️ Skipped to next track.",
+                "media_prev": "⏮️ Went to previous track.",
+                "play_pause": "⏯️ Toggled play/pause.",
+            }
+            msg = media_msgs_ar.get(mode) if arabic else media_msgs_en.get(mode)
+            if msg:
+                return True, msg
+
         if action == "api_tools":
             mode = str(params.get("mode", "")).lower()
             api_msgs_ar = {

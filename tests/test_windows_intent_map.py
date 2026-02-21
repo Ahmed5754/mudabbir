@@ -154,6 +154,14 @@ def test_resolve_mouse_unlock_phrase() -> None:
     assert result.params.get("mode") == "mouse_lock_off"
 
 
+def test_resolve_screen_record_phrase() -> None:
+    result = resolve_windows_intent("سجل الشاشة 5 ثواني")
+    assert result.matched is True
+    assert result.action == "media_tools"
+    assert result.params.get("mode") == "screen_record"
+    assert result.params.get("seconds") == 5
+
+
 def test_resolve_type_current_date_and_time() -> None:
     date_result = resolve_windows_intent("type current date")
     time_result = resolve_windows_intent("type current time")

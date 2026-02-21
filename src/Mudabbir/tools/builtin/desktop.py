@@ -705,6 +705,7 @@ class DesktopTool(BaseTool):
                 return self._media_tools(
                     mode=str(params.get("mode", "stop_all_media") or "stop_all_media"),
                     url=str(params.get("url", "") or ""),
+                    seconds=params.get("seconds"),
                 )
             if action_normalized == "browser_deep_tools":
                 return self._browser_deep_tools(
@@ -7453,7 +7454,7 @@ $obj | ConvertTo-Json -Compress
                 return self._error(f"cpu_popup failed: {exc}")
         return self._error(f"unsupported performance_tools mode: {mode_norm}")
 
-    def _media_tools(self, mode: str, url: str = "") -> str:
+    def _media_tools(self, mode: str, url: str = "", seconds: Any = None) -> str:
         mode_norm = (mode or "").strip().lower()
         if mode_norm == "stop_all_media":
             try:
@@ -7475,6 +7476,52 @@ $obj | ConvertTo-Json -Compress
             return self._media_control("previous")
         if mode_norm == "play_pause":
             return self._media_control("play_pause")
+        if mode_norm in {"screen_record", "screen_record_short"}:
+            try:
+                duration = float(seconds if seconds is not None else 6.0)
+            except Exception:
+                duration = 6.0
+            duration = max(1.0, min(30.0, duration))
+            fps = 8.0
+            frame_delay = 1.0 / fps
+            out_dir = Path.home() / "Videos"
+            out_dir.mkdir(parents=True, exist_ok=True)
+            out_path = out_dir / f"screen_record_{_timestamp_id()}.mp4"
+            try:
+                import cv2
+                import mss
+                import numpy as np
+            except Exception as exc:
+                return self._error(f"screen recording dependencies unavailable: {exc}")
+
+            try:
+                with mss.mss() as sct:
+                    monitor = sct.monitors[1]
+                    width = int(monitor["width"])
+                    height = int(monitor["height"])
+                    fourcc = cv2.VideoWriter_fourcc(*"mp4v")
+                    writer = cv2.VideoWriter(str(out_path), fourcc, fps, (width, height))
+                    if not writer.isOpened():
+                        return self._error("failed to initialize video writer")
+                    start = time.time()
+                    while (time.time() - start) < duration:
+                        shot = sct.grab(monitor)
+                        frame = np.array(shot)
+                        frame_bgr = cv2.cvtColor(frame, cv2.COLOR_BGRA2BGR)
+                        writer.write(frame_bgr)
+                        time.sleep(frame_delay)
+                    writer.release()
+                return _json(
+                    {
+                        "ok": True,
+                        "mode": "screen_record",
+                        "seconds": round(duration, 2),
+                        "fps": fps,
+                        "path": str(out_path),
+                    }
+                )
+            except Exception as exc:
+                return self._error(f"screen recording failed: {exc}")
         return self._error(f"unsupported media_tools mode: {mode_norm}")
 
     def _browser_deep_tools(self, mode: str, urls: Any = None) -> str:

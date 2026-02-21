@@ -1436,6 +1436,25 @@ async def test_global_fastpath_screenshot_window_reply(
 
 
 @pytest.mark.asyncio
+async def test_global_fastpath_screen_record_reply(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class DummyDesktopTool:
+        async def execute(self, action: str, **kwargs):
+            assert action == "media_tools"
+            assert kwargs.get("mode") == "screen_record"
+            return '{"ok": true, "mode": "screen_record", "seconds": 5, "path": "C:/Users/Admin/Videos/screen_record_test.mp4"}'
+
+    monkeypatch.setattr("Mudabbir.tools.builtin.desktop.DesktopTool", DummyDesktopTool)
+    loop = AgentLoop()
+    handled, reply = await loop._try_global_windows_fastpath(
+        text="سجل الشاشة 5 ثواني", session_key="s39rec"
+    )
+    assert handled is True
+    assert "🎥" in str(reply) or "record" in str(reply).lower()
+
+
+@pytest.mark.asyncio
 async def test_global_fastpath_returns_failure_when_tool_ok_false(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
