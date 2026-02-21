@@ -609,14 +609,15 @@ class AgentLoop:
             muted = bool(parsed.get("muted", False))
             if level is not None:
                 if arabic:
-                    return True, f"مستوى الصوت الحالي: {int(level)}% {'(مكتوم)' if muted else ''}".strip()
-                return True, f"Current volume is {int(level)}%{' (muted)' if muted else ''}."
+                    base = f"مستوى الصوت الحالي: {int(level)}% {'(مكتوم)' if muted else ''}".strip()
+                    return True, f"{base} تريد أرفعه أو أخفضه؟"
+                return True, f"Current volume is {int(level)}%{' (muted)' if muted else ''}. Want it higher or lower?"
         if action == "brightness" and str(params.get("mode", "")).lower() == "get" and isinstance(parsed, dict):
             level = parsed.get("brightness_percent")
             if level is not None:
                 if arabic:
-                    return True, f"مستوى السطوع الحالي: {int(level)}%."
-                return True, f"Current brightness is {int(level)}%."
+                    return True, f"مستوى السطوع الحالي: {int(level)}%. تريد أضبطه؟"
+                return True, f"Current brightness is {int(level)}%. Want me to tune it?"
 
         if action == "system_info" and str(params.get("mode", "")).lower() == "battery" and isinstance(parsed, dict):
             available = bool(parsed.get("available", False))
@@ -1201,6 +1202,14 @@ class AgentLoop:
             }
             msg = service_msgs_ar.get(mode) if arabic else service_msgs_en.get(mode)
             if msg:
+                if arabic and mode in {"start", "restart"}:
+                    return True, f"{msg} تريد أتحقق من حالتها؟"
+                if arabic and mode == "stop":
+                    return True, f"{msg} إذا بدك برجع شغلها."
+                if (not arabic) and mode in {"start", "restart"}:
+                    return True, f"{msg} Want me to verify status now?"
+                if (not arabic) and mode == "stop":
+                    return True, f"{msg} I can start it again if you want."
                 return True, msg
 
         if action == "security_tools":
