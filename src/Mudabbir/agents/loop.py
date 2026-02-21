@@ -437,6 +437,24 @@ class AgentLoop:
                         "unsupported": False,
                         "unsupported_reason": "",
                     }
+                elif last_topic == "network" and normalized in {"وصله", "رجعه", "شغله", "connect it", "enable it"}:
+                    resolution = {
+                        "capability_id": "network.wifi_on.implicit",
+                        "action": "network_tools",
+                        "params": {"mode": "wifi_on"},
+                        "risk_level": "safe",
+                        "unsupported": False,
+                        "unsupported_reason": "",
+                    }
+                elif last_topic == "network" and normalized in {"قطعه", "افصله", "طفيه", "disconnect it", "disable it"}:
+                    resolution = {
+                        "capability_id": "network.wifi_off.implicit",
+                        "action": "network_tools",
+                        "params": {"mode": "wifi_off"},
+                        "risk_level": "safe",
+                        "unsupported": False,
+                        "unsupported_reason": "",
+                    }
                 elif last_topic in {"volume", "brightness"} and normalized in {
                     "ارفعه",
                     "عليه",
@@ -583,6 +601,8 @@ class AgentLoop:
                 session_state["last_app"] = top_app
             if action in {"volume", "brightness"}:
                 session_state["last_topic"] = action
+            if action == "network_tools":
+                session_state["last_topic"] = "network"
 
         if action == "volume" and str(params.get("mode", "")).lower() == "get" and isinstance(parsed, dict):
             level = parsed.get("level_percent")
