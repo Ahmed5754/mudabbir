@@ -2377,6 +2377,21 @@ Required JSON schema:
             control_name = re.sub(r"\s+", " ", control_name).strip()
             return control_name, window_name
 
+        def mentions_ui_target_context(raw_text: str) -> bool:
+            """Detect targetable UI element mention without rigid keyword tuples."""
+            candidate = _normalize_text_for_match(str(raw_text or ""))
+            if not candidate:
+                return False
+            if re.search(
+                r"(?:زر|button|control|element|label|icon|ايقون|حقل|input|textbox|field)\b",
+                candidate,
+                re.IGNORECASE,
+            ):
+                return True
+            if re.search(r"(?:على|لعند|to|towards|on)\s+\S+", candidate, re.IGNORECASE):
+                return True
+            return False
+
         def parse_tool_json(raw: str) -> tuple[dict | list | None, str | None]:
             if not isinstance(raw, str):
                 return None, "Unexpected tool response type."
@@ -3711,8 +3726,8 @@ Required JSON schema:
                 }
 
         # Move mouse to a UI element by label/name (e.g. "move mouse to Save button").
-        if has_any(normalized, ("حرك", "move", "hover", "وجّه", "وجه")) and self._wants_pointer_control(text) and has_any(
-            normalized, ("button", "زر", "control", "element", "label", "icon", "ايقونه", "ايقونة")
+        if has_any(normalized, ("حرك", "move", "hover", "وجّه", "وجه")) and self._wants_pointer_control(text) and mentions_ui_target_context(
+            text
         ):
             try:
                 from Mudabbir.tools.builtin.desktop import DesktopTool
@@ -3792,7 +3807,7 @@ Required JSON schema:
             "f12",
         )
         if has_any(normalized, ("اضغط", "اكبس", "انقر", "click", "press")) and (
-            has_any(normalized, ("button", "زر", "control", "element", "label", "icon", "ايقونه", "ايقونة"))
+            mentions_ui_target_context(text)
             or (
                 self._wants_pointer_control(text)
                 and extract_first_two_numbers() is None
