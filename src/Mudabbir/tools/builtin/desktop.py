@@ -3560,12 +3560,75 @@ $obj | ConvertTo-Json -Compress
                     target = gw.getActiveWindow()
                 if target is None:
                     return self._error("no target window found")
+                hwnd_val = int(getattr(target, "_hWnd", 0) or 0)
+
+                def _verify_window_state(expected_mode: str) -> bool | None:
+                    if hwnd_val <= 0:
+                        return None
+                    try:
+                        import win32gui
+
+                        iconic = bool(win32gui.IsIconic(hwnd_val))
+                        zoomed = bool(win32gui.IsZoomed(hwnd_val))
+                        if expected_mode == "minimize":
+                            return iconic
+                        if expected_mode == "maximize":
+                            return (not iconic) and zoomed
+                        if expected_mode == "restore":
+                            return not iconic
+                    except Exception:
+                        return None
+                    return None
+
+                def _apply_window_state_fallback(expected_mode: str) -> bool:
+                    if hwnd_val <= 0:
+                        return False
+                    ncmd = {"minimize": 6, "maximize": 3, "restore": 9}.get(expected_mode)
+                    if not ncmd:
+                        return False
+                    ps = (
+                        "$sig='[DllImport(\"user32.dll\")]public static extern bool ShowWindow(IntPtr hWnd,int nCmdShow);'; "
+                        "Add-Type -Name NativeMethods -Namespace Win32 -MemberDefinition $sig; "
+                        f"$h=[intptr]{hwnd_val}; "
+                        f"[void][Win32.NativeMethods]::ShowWindow($h,{ncmd}); "
+                        "@{ok=$true} | ConvertTo-Json -Compress"
+                    )
+                    ok, _ = _run_powershell(ps, timeout=10)
+                    return bool(ok)
+
                 if mode_norm == "minimize":
-                    target.minimize()
+                    try:
+                        target.minimize()
+                    except Exception:
+                        pass
+                    verified = _verify_window_state("minimize")
+                    if verified is False:
+                        _apply_window_state_fallback("minimize")
+                        verified = _verify_window_state("minimize")
+                    if verified is False:
+                        return self._error("failed to minimize target window")
                 elif mode_norm == "maximize":
-                    target.maximize()
+                    try:
+                        target.maximize()
+                    except Exception:
+                        pass
+                    verified = _verify_window_state("maximize")
+                    if verified is False:
+                        _apply_window_state_fallback("maximize")
+                        verified = _verify_window_state("maximize")
+                    if verified is False:
+                        return self._error("failed to maximize target window")
                 elif mode_norm == "restore":
-                    target.restore()
+                    try:
+                        target.restore()
+                    except Exception:
+                        pass
+                    verified = _verify_window_state("restore")
+                    if verified is False:
+                        _apply_window_state_fallback("restore")
+                        verified = _verify_window_state("restore")
+                    if verified is False:
+                        return self._error("failed to restore target window")
                 elif mode_norm in {"bring_to_front", "set_focus"}:
                     target.activate()
                 elif mode_norm in {"hide", "minimize_to_tray"}:

@@ -1451,3 +1451,50 @@ async def test_global_fastpath_returns_failure_when_tool_ok_false(
     )
     assert handled is True
     assert "فشل التنفيذ" in str(reply) or "failed" in str(reply).lower()
+
+
+@pytest.mark.asyncio
+async def test_global_fastpath_repeat_last_without_history(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class DummyDesktopTool:
+        async def execute(self, action: str, **kwargs):
+            return '{"ok": true}'
+
+    monkeypatch.setattr("Mudabbir.tools.builtin.desktop.DesktopTool", DummyDesktopTool)
+    loop = AgentLoop()
+    handled, reply = await loop._try_global_windows_fastpath(
+        text="كرر", session_key="s39r0"
+    )
+    assert handled is True
+    assert "ما في أمر" in str(reply) or "no previous command" in str(reply).lower()
+
+
+@pytest.mark.asyncio
+async def test_global_fastpath_repeat_last_replays_previous_command(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    calls: list[tuple[str, dict]] = []
+
+    class DummyDesktopTool:
+        async def execute(self, action: str, **kwargs):
+            calls.append((action, dict(kwargs)))
+            return '{"ok": true}'
+
+    monkeypatch.setattr("Mudabbir.tools.builtin.desktop.DesktopTool", DummyDesktopTool)
+    loop = AgentLoop()
+
+    handled1, _reply1 = await loop._try_global_windows_fastpath(
+        text="اكتم الصوت", session_key="s39r1"
+    )
+    handled2, _reply2 = await loop._try_global_windows_fastpath(
+        text="كرر", session_key="s39r1"
+    )
+
+    assert handled1 is True
+    assert handled2 is True
+    assert len(calls) >= 2
+    assert calls[0][0] == "volume"
+    assert calls[1][0] == "volume"
+    assert calls[0][1].get("mode") == "mute"
+    assert calls[1][1].get("mode") == "mute"

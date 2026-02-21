@@ -331,6 +331,37 @@ class AgentLoop:
         normalized = self._normalize_intent_text(text)
         cancel_tokens = ("cancel", "stop", "no", "لا", "الغاء", "إلغاء", "وقف")
 
+        session_state = self._windows_session_state.setdefault(session_key, {})
+        repeat_tokens = {
+            "كرر",
+            "كررها",
+            "عيد",
+            "اعيد",
+            "اعد",
+            "اعدها",
+            "مره ثانيه",
+            "مرة ثانية",
+            "repeat",
+            "again",
+            "same again",
+            "do it again",
+        }
+        if normalized in repeat_tokens:
+            last_resolution = session_state.get("last_resolution")
+            if isinstance(last_resolution, dict) and str(last_resolution.get("action", "")).strip():
+                resolution = {
+                    "capability_id": str(last_resolution.get("capability_id", "repeat.last") or "repeat.last"),
+                    "action": str(last_resolution.get("action", "")).strip(),
+                    "params": dict(last_resolution.get("params", {}) or {}),
+                    "risk_level": str(last_resolution.get("risk_level", "safe") or "safe"),
+                    "unsupported": False,
+                    "unsupported_reason": "",
+                }
+            else:
+                return True, ("ما في أمر سابق أكرره حالياً." if arabic else "No previous command to repeat yet.")
+        else:
+            resolution = None
+
         pending = self._pending_windows_dangerous.get(session_key)
         if pending is not None:
             if self._is_confirmation_message(text):
@@ -346,9 +377,11 @@ class AgentLoop:
                     else "A dangerous operation is pending. Reply 'yes' to execute or 'cancel' to abort."
                 )
         else:
-            resolved = resolve_windows_intent(text)
-            if not resolved.matched:
-                session_state = self._windows_session_state.setdefault(session_key, {})
+            if resolution is None:
+                resolved = resolve_windows_intent(text)
+            else:
+                resolved = None
+            if resolution is None and (not resolved or not resolved.matched):
                 last_app = str(session_state.get("last_app", "")).strip()
                 last_window = str(session_state.get("last_window", "")).strip()
                 last_service = str(session_state.get("last_service", "")).strip()
@@ -503,7 +536,7 @@ class AgentLoop:
                     }
                 else:
                     return False, None
-            else:
+            elif resolution is None:
                 resolution = {
                     "capability_id": resolved.capability_id,
                     "action": resolved.action,
@@ -532,7 +565,6 @@ class AgentLoop:
         params = resolution.get("params", {}) if isinstance(resolution.get("params"), dict) else {}
         if not action:
             return False, None
-        session_state = self._windows_session_state.setdefault(session_key, {})
         mode = str(params.get("mode", "")).lower()
         if (
             action == "process_tools"
@@ -603,6 +635,12 @@ class AgentLoop:
                 session_state["last_topic"] = action
             if action == "network_tools":
                 session_state["last_topic"] = "network"
+            session_state["last_resolution"] = {
+                "capability_id": str(resolution.get("capability_id", "") or ""),
+                "action": action,
+                "params": dict(params),
+                "risk_level": str(resolution.get("risk_level", "safe") or "safe"),
+            }
 
         if action == "volume" and str(params.get("mode", "")).lower() == "get" and isinstance(parsed, dict):
             level = parsed.get("level_percent")
