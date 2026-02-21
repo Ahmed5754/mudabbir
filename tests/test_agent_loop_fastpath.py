@@ -340,6 +340,64 @@ async def test_global_fastpath_process_app_process_count_total_human_reply(
 
 
 @pytest.mark.asyncio
+async def test_global_fastpath_microphone_mute_reply(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class DummyDesktopTool:
+        async def execute(self, action: str, **kwargs):
+            assert action == "microphone_control"
+            assert kwargs.get("mode") == "mute"
+            return '{"ok": true, "mode": "mute", "muted": true}'
+
+    monkeypatch.setattr("Mudabbir.tools.builtin.desktop.DesktopTool", DummyDesktopTool)
+    loop = AgentLoop()
+    handled, reply = await loop._try_global_windows_fastpath(
+        text="كتم الميكروفون", session_key="s10mic"
+    )
+    assert handled is True
+    assert "الميكروفون" in str(reply) or "microphone" in str(reply).lower()
+
+
+@pytest.mark.asyncio
+async def test_global_fastpath_microphone_status_reply(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class DummyDesktopTool:
+        async def execute(self, action: str, **kwargs):
+            assert action == "microphone_control"
+            assert kwargs.get("mode") == "get"
+            return '{"ok": true, "mode": "get", "muted": false}'
+
+    monkeypatch.setattr("Mudabbir.tools.builtin.desktop.DesktopTool", DummyDesktopTool)
+    loop = AgentLoop()
+    handled, reply = await loop._try_global_windows_fastpath(
+        text="حالة الميكروفون", session_key="s10mic2"
+    )
+    assert handled is True
+    assert "microphone" in str(reply).lower() or "الميكروفون" in str(reply)
+
+
+@pytest.mark.asyncio
+async def test_global_fastpath_connect_wifi_verified_reply(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class DummyDesktopTool:
+        async def execute(self, action: str, **kwargs):
+            assert action == "network_tools"
+            assert kwargs.get("mode") == "connect_wifi"
+            assert kwargs.get("host") == "MyWifi"
+            return '{"ok": true, "mode": "connect_wifi", "requested_ssid": "MyWifi", "connected": true, "connected_ssid": "MyWifi"}'
+
+    monkeypatch.setattr("Mudabbir.tools.builtin.desktop.DesktopTool", DummyDesktopTool)
+    loop = AgentLoop()
+    handled, reply = await loop._try_global_windows_fastpath(
+        text="connect wifi MyWifi", session_key="s10wifi"
+    )
+    assert handled is True
+    assert "wifi" in str(reply).lower() or "الشبكة" in str(reply)
+
+
+@pytest.mark.asyncio
 async def test_global_fastpath_process_app_cpu_total_human_reply(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -1356,6 +1414,25 @@ async def test_global_fastpath_vision_describe_screen_reply(
     )
     assert handled is True
     assert "الشاشة" in str(reply) or "screen" in str(reply).lower()
+
+
+@pytest.mark.asyncio
+async def test_global_fastpath_screenshot_window_reply(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class DummyDesktopTool:
+        async def execute(self, action: str, **kwargs):
+            assert action == "screenshot_tools"
+            assert kwargs.get("mode") == "window_active"
+            return '{"ok": true, "mode": "window_active", "path": "C:/tmp/window.png"}'
+
+    monkeypatch.setattr("Mudabbir.tools.builtin.desktop.DesktopTool", DummyDesktopTool)
+    loop = AgentLoop()
+    handled, reply = await loop._try_global_windows_fastpath(
+        text="أخذ لقطة لنافذة محددة", session_key="s39ss"
+    )
+    assert handled is True
+    assert "لقطة" in str(reply) or "captured" in str(reply).lower()
 
 
 @pytest.mark.asyncio

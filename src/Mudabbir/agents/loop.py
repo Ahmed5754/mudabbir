@@ -95,6 +95,7 @@ class AgentLoop:
 
         self._running = False
         self._pending_windows_dangerous: dict[str, dict[str, Any]] = {}
+        self._windows_session_state: dict[str, dict[str, Any]] = {}
         get_command_handler().set_on_settings_changed(self._on_settings_changed)
 
     async def _llm_one_shot_text(
@@ -376,6 +377,15 @@ class AgentLoop:
         params = resolution.get("params", {}) if isinstance(resolution.get("params"), dict) else {}
         if not action:
             return False, None
+        session_state = self._windows_session_state.setdefault(session_key, {})
+        mode = str(params.get("mode", "")).lower()
+        if (
+            action == "process_tools"
+            and mode.startswith("app_")
+            and not str(params.get("name", "")).strip()
+            and str(session_state.get("last_app", "")).strip()
+        ):
+            params["name"] = str(session_state.get("last_app", "")).strip()
 
         raw = await DesktopTool().execute(action=action, **params)
         raw_text = str(raw or "")
@@ -393,6 +403,13 @@ class AgentLoop:
             if arabic:
                 return True, (f"فشل التنفيذ: {err}" if err else "فشل التنفيذ.")
             return True, (f"Execution failed: {err}" if err else "Execution failed.")
+        if isinstance(parsed, dict):
+            remembered_app = str(parsed.get("query") or params.get("name") or "").strip()
+            if remembered_app:
+                session_state["last_app"] = remembered_app
+            top_app = str(parsed.get("top_app") or "").strip()
+            if top_app:
+                session_state["last_app"] = top_app
 
         if action == "volume" and str(params.get("mode", "")).lower() == "get" and isinstance(parsed, dict):
             level = parsed.get("level_percent")
@@ -451,6 +468,21 @@ class AgentLoop:
             return True, ("تم فتح صفحة الإعدادات." if arabic else "Opened Settings page.")
         if action == "network_tools":
             mode = str(params.get("mode", "")).lower()
+            if mode == "connect_wifi" and isinstance(parsed, dict):
+                requested = str(parsed.get("requested_ssid") or params.get("host") or "").strip()
+                connected = parsed.get("connected")
+                actual = str(parsed.get("connected_ssid") or "").strip()
+                if arabic:
+                    if connected is True:
+                        return True, f"📶 تم الاتصال بالشبكة: {actual or requested}."
+                    if connected is False:
+                        return True, f"⚠️ ما تم الاتصال بـ {requested}."
+                    return True, f"📶 تم إرسال طلب الاتصال بـ {requested}."
+                if connected is True:
+                    return True, f"📶 Connected to Wi-Fi: {actual or requested}."
+                if connected is False:
+                    return True, f"⚠️ Could not connect to Wi-Fi: {requested}."
+                return True, f"📶 Sent Wi-Fi connect request: {requested}."
             network_msgs_ar = {
                 "wifi_on": "تم تشغيل الواي فاي.",
                 "wifi_off": "تم إيقاف الواي فاي.",
@@ -521,21 +553,84 @@ class AgentLoop:
             if msg:
                 return True, msg
 
+        if action == "power_user_tools":
+            mode = str(params.get("mode", "")).lower()
+            power_msgs_ar = {
+                "airplane_on": "✈️ تم تفعيل وضع الطيران.",
+                "airplane_off": "✈️ تم تعطيل وضع الطيران.",
+                "airplane_toggle": "✈️ تم تبديل وضع الطيران.",
+                "god_mode": "🧩 تم إنشاء مجلد God Mode على سطح المكتب.",
+                "invert_colors": "🎨 تم تبديل عكس الألوان.",
+            }
+            power_msgs_en = {
+                "airplane_on": "✈️ Airplane mode enabled.",
+                "airplane_off": "✈️ Airplane mode disabled.",
+                "airplane_toggle": "✈️ Airplane mode toggled.",
+                "god_mode": "🧩 God Mode folder created on desktop.",
+                "invert_colors": "🎨 Color inversion toggled.",
+            }
+            msg = power_msgs_ar.get(mode) if arabic else power_msgs_en.get(mode)
+            if msg:
+                return True, msg
+
+        if action == "system_power":
+            mode = str(params.get("mode", "")).lower()
+            sys_msgs_ar = {
+                "hibernate_on": "🌙 تم تفعيل السبات.",
+                "hibernate_off": "🌙 تم تعطيل السبات.",
+            }
+            sys_msgs_en = {
+                "hibernate_on": "🌙 Hibernate enabled.",
+                "hibernate_off": "🌙 Hibernate disabled.",
+            }
+            msg = sys_msgs_ar.get(mode) if arabic else sys_msgs_en.get(mode)
+            if msg:
+                return True, msg
+
         if action == "media_control":
             mode = str(params.get("mode", "")).lower()
             media_msgs_ar = {
                 "play_pause": "تم تنفيذ تشغيل/إيقاف مؤقت.",
                 "next": "تم الانتقال للمقطع التالي.",
                 "previous": "تم الرجوع للمقطع السابق.",
+                "stop": "تم إيقاف الوسائط.",
             }
             media_msgs_en = {
                 "play_pause": "Play/Pause executed.",
                 "next": "Skipped to next track.",
                 "previous": "Went back to previous track.",
+                "stop": "Stopped media playback.",
             }
             msg = media_msgs_ar.get(mode) if arabic else media_msgs_en.get(mode)
             if msg:
                 return True, msg
+
+        if action == "microphone_control":
+            mode = str(params.get("mode", "")).lower()
+            muted = bool(parsed.get("muted")) if isinstance(parsed, dict) else None
+            if arabic:
+                if mode in {"get", "status"}:
+                    if muted is True:
+                        return True, "🎤 حالة الميكروفون: مكتوم."
+                    if muted is False:
+                        return True, "🎤 حالة الميكروفون: غير مكتوم."
+                    return True, "🎤 تم فحص حالة الميكروفون."
+                if muted is True:
+                    return True, "🎤 تم كتم الميكروفون."
+                if muted is False:
+                    return True, "🎤 تم إلغاء كتم الميكروفون."
+                return True, "🎤 تم تنفيذ أمر الميكروفون."
+            if mode in {"get", "status"}:
+                if muted is True:
+                    return True, "🎤 Microphone status: muted."
+                if muted is False:
+                    return True, "🎤 Microphone status: unmuted."
+                return True, "🎤 Checked microphone status."
+            if muted is True:
+                return True, "🎤 Microphone muted."
+            if muted is False:
+                return True, "🎤 Microphone unmuted."
+            return True, "🎤 Microphone command executed."
 
         if action == "process_tools":
             mode = str(params.get("mode", "")).lower()
@@ -865,6 +960,16 @@ class AgentLoop:
                     + (f" (max_kill={max_kill})" if max_kill is not None else "")
                     + "."
                 )
+            if mode == "app_reduce" and isinstance(parsed, dict):
+                stage = str(parsed.get("stage") or params.get("stage") or "").strip().lower()
+                resource = str(parsed.get("resource") or params.get("resource") or "resource").strip().lower()
+                if arabic:
+                    if stage == "plan":
+                        return True, f"🧠 خطة تخفيف {resource} جاهزة."
+                    return True, f"✅ تم تنفيذ تخفيف {resource}."
+                if stage == "plan":
+                    return True, f"🧠 {resource} reduction plan is ready."
+                return True, f"✅ {resource} reduction executed."
             process_msgs_ar = {
                 "restart_explorer": "تمت إعادة تشغيل واجهة ويندوز (Explorer).",
             }
@@ -1047,6 +1152,50 @@ class AgentLoop:
                 if preview:
                     return True, f"Screen analyzed. Preview: {preview[:180]}"
                 return True, "Screen analyzed."
+
+        if action == "screenshot_tools":
+            mode = str(params.get("mode", "")).lower()
+            out_path = str(parsed.get("path") or "").strip() if isinstance(parsed, dict) else ""
+            if arabic:
+                if mode == "window_active":
+                    return True, ("📸 تم أخذ لقطة للنافذة الحالية." + (f"\n{out_path}" if out_path else ""))
+                if mode == "full":
+                    return True, ("📸 تم أخذ لقطة للشاشة." + (f"\n{out_path}" if out_path else ""))
+                if mode == "region":
+                    return True, ("📸 تم أخذ لقطة للمنطقة المحددة." + (f"\n{out_path}" if out_path else ""))
+                if mode == "snipping_tool":
+                    return True, "✂️ تم فتح أداة القص."
+            else:
+                if mode == "window_active":
+                    return True, ("📸 Captured the active window." + (f"\n{out_path}" if out_path else ""))
+                if mode == "full":
+                    return True, ("📸 Captured the screen." + (f"\n{out_path}" if out_path else ""))
+                if mode == "region":
+                    return True, ("📸 Captured the selected region." + (f"\n{out_path}" if out_path else ""))
+                if mode == "snipping_tool":
+                    return True, "✂️ Opened Snipping Tool."
+
+        if action == "ui_tools":
+            mode = str(params.get("mode", "")).lower()
+            ui_msgs_ar = {
+                "night_light_on": "تم تفعيل الوضع الليلي.",
+                "night_light_off": "تم تعطيل الوضع الليلي.",
+                "desktop_icons_show": "تم إظهار أيقونات سطح المكتب.",
+                "desktop_icons_hide": "تم إخفاء أيقونات سطح المكتب.",
+                "open_display_resolution": "تم فتح إعدادات دقة الشاشة.",
+                "open_display_rotation": "تم فتح إعدادات تدوير الشاشة.",
+            }
+            ui_msgs_en = {
+                "night_light_on": "Night light enabled.",
+                "night_light_off": "Night light disabled.",
+                "desktop_icons_show": "Desktop icons shown.",
+                "desktop_icons_hide": "Desktop icons hidden.",
+                "open_display_resolution": "Opened display resolution settings.",
+                "open_display_rotation": "Opened display rotation settings.",
+            }
+            msg = ui_msgs_ar.get(mode) if arabic else ui_msgs_en.get(mode)
+            if msg:
+                return True, msg
 
         if action == "browser_control":
             mode = str(params.get("mode", "")).lower()
@@ -1366,6 +1515,9 @@ class AgentLoop:
                 "show_desktop": "تم تصغير كل النوافذ وإظهار سطح المكتب.",
                 "show_desktop_verified": "تم عرض سطح المكتب.",
                 "undo_show_desktop": "تمت إعادة إظهار النوافذ المصغرة.",
+                "desktop_icons_show": "🖼️ تم إظهار أيقونات سطح المكتب.",
+                "desktop_icons_hide": "🖼️ تم إخفاء أيقونات سطح المكتب.",
+                "desktop_icons_toggle": "🖼️ تم تبديل حالة أيقونات سطح المكتب.",
                 "split_left": "تم نقل النافذة لليسار.",
                 "split_right": "تم نقل النافذة لليمين.",
                 "task_view": "تم فتح عرض المهام.",
@@ -1379,6 +1531,9 @@ class AgentLoop:
                 "show_desktop": "Minimized all windows (Show Desktop).",
                 "show_desktop_verified": "Show Desktop executed.",
                 "undo_show_desktop": "Restored minimized windows.",
+                "desktop_icons_show": "Desktop icons shown.",
+                "desktop_icons_hide": "Desktop icons hidden.",
+                "desktop_icons_toggle": "Desktop icons visibility toggled.",
                 "split_left": "Moved window to the left side.",
                 "split_right": "Moved window to the right side.",
                 "task_view": "Opened Task View.",
@@ -1422,6 +1577,8 @@ class AgentLoop:
                 "open_mail": "تم فتح البريد.",
                 "open_volume_mixer": "تم فتح خالط الصوت.",
                 "open_mic_settings": "تم فتح إعدادات الميكروفون.",
+                "open_sound_output": "تم فتح إعدادات مخرج الصوت.",
+                "open_spatial_sound": "تم فتح إعدادات الصوت المكاني.",
                 "open_sound_cpl": "تم فتح إعدادات الصوت الكلاسيكية.",
                 "open_network_connections": "تم فتح اتصالات الشبكة.",
                 "open_netconnections_cpl": "تم فتح لوحة اتصالات الشبكة.",
@@ -1460,6 +1617,8 @@ class AgentLoop:
                 "open_mail": "Opened Mail.",
                 "open_volume_mixer": "Opened Volume Mixer.",
                 "open_mic_settings": "Opened Microphone settings.",
+                "open_sound_output": "Opened audio output settings.",
+                "open_spatial_sound": "Opened spatial sound settings.",
                 "open_sound_cpl": "Opened classic Sound settings.",
                 "open_network_connections": "Opened Network Connections.",
                 "open_netconnections_cpl": "Opened Network Connections control panel.",
@@ -1543,7 +1702,22 @@ class AgentLoop:
         if isinstance(parsed, dict) and "ok" in parsed and "message" in parsed:
             return True, str(parsed.get("message") or "")
 
-        return True, ("تم تنفيذ الأمر." if arabic else "Command executed successfully.")
+        ack_ar = (
+            "✅ تم.",
+            "✨ جاهز.",
+            "👍 تم التنفيذ.",
+            "🚀 خلصت.",
+        )
+        ack_en = (
+            "✅ Done.",
+            "✨ All set.",
+            "👍 Executed.",
+            "🚀 Finished.",
+        )
+        mode_for_ack = str(params.get("mode", "")).strip().lower()
+        basis = f"{session_key}|{action}|{mode_for_ack}"
+        idx = (sum(ord(ch) for ch in basis) % 4) if basis else 0
+        return True, (ack_ar[idx] if arabic else ack_en[idx])
 
     def _timeout_message(self, *, backend: str, provider: str) -> str:
         backend_n = str(backend or "").strip().lower()

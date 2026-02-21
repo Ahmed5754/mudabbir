@@ -600,7 +600,7 @@ class Settings(BaseSettings):
         description="Vision model used by describe_screen.",
     )
     vision_fallback_ocr_enabled: bool = Field(
-        default=True,
+        default=False,
         description="Fallback to OCR if cloud vision fails.",
     )
     windows_deterministic_hard_gate: bool = Field(

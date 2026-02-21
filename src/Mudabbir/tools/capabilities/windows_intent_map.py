@@ -213,10 +213,13 @@ RULES: tuple[IntentRule, ...] = (
     IntentRule("system.lock", "system_power", "lock", "safe", ("lock", "lock screen", "قفل الشاشه", "اقفل الشاشه")),
     IntentRule("system.sleep", "system_power", "sleep", "elevated", ("sleep", "sleep mode", "وضع السكون", "سكون")),
     IntentRule("system.hibernate", "system_power", "hibernate", "elevated", ("hibernate", "hibernation", "وضع السبات", "hibernate mode")),
+    IntentRule("system.hibernate_on", "system_power", "hibernate_on", "elevated", ("hibernate on", "enable hibernate", "تفعيل السبات", "تشغيل السبات")),
+    IntentRule("system.hibernate_off", "system_power", "hibernate_off", "elevated", ("hibernate off", "disable hibernate", "تعطيل السبات", "إيقاف السبات")),
     IntentRule("system.logoff", "system_power", "logoff", "elevated", ("logoff", "logout", "تسجيل الخروج")),
     IntentRule("system.screen_off", "system_power", "screen_off", "safe", ("screen off", "اغلاق الشاشه", "اطفاء الشاشه")),
     IntentRule("system.airplane_on", "power_user_tools", "airplane_on", "safe", ("airplane mode on", "turn on airplane", "تفعيل وضع الطيران")),
     IntentRule("system.airplane_off", "power_user_tools", "airplane_off", "safe", ("airplane mode off", "turn off airplane", "تعطيل وضع الطيران")),
+    IntentRule("system.airplane_toggle", "power_user_tools", "airplane_toggle", "safe", ("airplane mode", "toggle airplane mode", "وضع الطيران")),
     IntentRule("system.uptime", "system_info", "uptime", "safe", ("uptime", "وقت التشغيل", "مدة التشغيل")),
     IntentRule("system.windows_version", "system_info", "windows_version", "safe", ("windows version", "اصدار الويندوز", "إصدار الويندوز")),
     IntentRule("system.about", "system_info", "about", "safe", ("about device", "about page", "حول الجهاز")),
@@ -237,12 +240,15 @@ RULES: tuple[IntentRule, ...] = (
     IntentRule("audio.play_pause", "media_control", "play_pause", "safe", ("play pause", "pause media", "ايقاف مؤقت", "تشغيل او ايقاف مؤقت", "شغل وقف", "شغل/وقف")),
     IntentRule("audio.next", "media_control", "next", "safe", ("next song", "next track", "التالي", "الاغنيه التاليه", "المقطع التالي")),
     IntentRule("audio.previous", "media_control", "previous", "safe", ("previous song", "previous track", "السابق", "الاغنيه السابقه", "المقطع السابق")),
-    IntentRule("audio.stop", "media_tools", "stop_all_media", "safe", ("stop media", "ايقاف الوسائط", "stop playback", "ايقاف كل الوسائط", "إيقاف كل الوسائط")),
+    IntentRule("audio.stop", "media_control", "stop", "safe", ("stop media", "ايقاف الوسائط", "stop playback", "ايقاف كل الوسائط", "إيقاف كل الوسائط")),
+    IntentRule("audio.mic_unmute", "microphone_control", "unmute", "safe", ("unmute microphone", "mic unmute", "الغاء كتم الميكروفون", "إلغاء كتم الميكروفون", "فتح الميكروفون")),
+    IntentRule("audio.mic_mute", "microphone_control", "mute", "safe", ("mute microphone", "mic mute", "كتم الميكروفون", "سكر الميكروفون", "اسكت الميكروفون")),
+    IntentRule("audio.mic_status", "microphone_control", "get", "safe", ("microphone status", "mic status", "حالة الميكروفون", "هل الميكروفون مكتوم", "شو حالة الميكروفون")),
     IntentRule("audio.mixer", "app_tools", "open_volume_mixer", "safe", ("volume mixer", "sndvol", "خلط الصوت", "الميكسار")),
     IntentRule("audio.mic_settings", "app_tools", "open_mic_settings", "safe", ("microphone settings", "mic settings", "اعدادات الميكروفون", "إعدادات الميكروفون")),
     IntentRule("audio.voice_record", "microphone_record", "", "safe", ("start voice recorder", "تسجيل صوت سريع", "ابدأ تسجيل صوت"), params=("seconds",)),
-    IntentRule("audio.set_output", unsupported_reason="Changing audio output is not implemented in DesktopTool yet.", aliases=("audio output", "speaker headset", "تغيير مخرج الصوت")),
-    IntentRule("audio.spatial_sound", unsupported_reason="Spatial sound toggle is not implemented in DesktopTool yet.", aliases=("spatial sound", "الصوت المحيطي")),
+    IntentRule("audio.set_output", "app_tools", "open_sound_output", "safe", ("audio output", "speaker headset", "تغيير مخرج الصوت")),
+    IntentRule("audio.spatial_sound", "app_tools", "open_spatial_sound", "safe", ("spatial sound", "الصوت المحيطي")),
     IntentRule("display.brightness_up", "brightness", "up", "safe", ("brightness up", "raise brightness", "رفع الاضاءه", "رفع السطوع")),
     IntentRule("display.brightness_down", "brightness", "down", "safe", ("brightness down", "خفض الاضاءه", "خفض السطوع")),
     IntentRule("display.brightness_get", "brightness", "get", "safe", ("brightness level", "current brightness", "مستوى الاضاءه", "مستوى السطوع", "نسبة الاضاءة", "كم نسبة الاضاءة", "كم السطوع")),
@@ -251,8 +257,8 @@ RULES: tuple[IntentRule, ...] = (
     IntentRule("display.project_panel", "window_control", "project_panel", "safe", ("project", "العرض على شاشة أخرى", "العرض على شاشه اخرى")),
     IntentRule("display.extend", "window_control", "display_extend", "safe", ("extend", "وضع توسيع الشاشة", "وضع توسيع الشاشه")),
     IntentRule("display.duplicate", "window_control", "display_duplicate", "safe", ("duplicate", "وضع تكرار الشاشة", "وضع تكرار الشاشه")),
-    IntentRule("display.resolution", unsupported_reason="Changing display resolution from intent map is not implemented yet.", aliases=("change resolution", "تغيير دقة الشاشة", "تغيير دقه الشاشه")),
-    IntentRule("display.rotate", unsupported_reason="Display rotation from intent map is not implemented yet.", aliases=("rotate screen", "تدوير الشاشة", "تدوير الشاشه")),
+    IntentRule("display.resolution", "ui_tools", "open_display_resolution", "safe", ("change resolution", "تغيير دقة الشاشة", "تغيير دقه الشاشه")),
+    IntentRule("display.rotate", "ui_tools", "open_display_rotation", "safe", ("rotate screen", "تدوير الشاشة", "تدوير الشاشه")),
     IntentRule(
         "vision.screen_observe",
         "vision_tools",
@@ -270,7 +276,20 @@ RULES: tuple[IntentRule, ...] = (
             "استخدم مؤشر الماوس للانتقال",
         ),
     ),
-    IntentRule("display.screenshot_window", "screenshot_tools", "window_active", "safe", ("window screenshot", "لقطه نافذه")),
+    IntentRule(
+        "display.screenshot_window",
+        "screenshot_tools",
+        "window_active",
+        "safe",
+        (
+            "window screenshot",
+            "لقطه نافذه",
+            "لقطة نافذة",
+            "أخذ لقطة لنافذة محددة",
+            "اخذ لقطة لنافذة محددة",
+            "لقطة لنافذة محددة",
+        ),
+    ),
     IntentRule("display.screenshot_full", "screenshot_tools", "full", "safe", ("full screenshot", "screenshot", "لقطه شاشه", "سكرين شوت")),
     IntentRule("display.snipping_tool", "screenshot_tools", "snipping_tool", "safe", ("snipping tool", "اداه القص")),
     IntentRule("display.clipboard_history", "clipboard_tools", "history", "safe", ("clipboard history", "سجل الحافظة", "سجل الحافظه", "الحافظة السحابية", "افتح سجل الحافظه", "افتح سجل الحافظة")),
@@ -741,6 +760,9 @@ RULES: tuple[IntentRule, ...] = (
     IntentRule("window.close_current", "window_control", "close_current", "safe", ("close current window", "اغلاق النافذه الحاليه")),
     IntentRule("window.show_desktop", "window_control", "show_desktop_verified", "safe", ("show desktop", "تصغير كل النوافذ", "صغر كل النوافذ", "صغرلي كل النوافذ", "صغّر كل النوافذ")),
     IntentRule("window.undo_show_desktop", "window_control", "undo_show_desktop", "safe", ("undo show desktop", "اظهار النوافذ المصغره")),
+    IntentRule("window.desktop_icons_show", "window_control", "desktop_icons_show", "safe", ("show desktop icons", "اظهار ايقونات سطح المكتب", "إظهار أيقونات سطح المكتب")),
+    IntentRule("window.desktop_icons_hide", "window_control", "desktop_icons_hide", "safe", ("hide desktop icons", "اخفاء ايقونات سطح المكتب", "إخفاء أيقونات سطح المكتب")),
+    IntentRule("window.desktop_icons_toggle", "window_control", "desktop_icons_toggle", "safe", ("toggle desktop icons", "بدل ايقونات سطح المكتب", "تبديل ايقونات سطح المكتب")),
     IntentRule("window.always_on_top_on", "window_control", "always_on_top_on", "safe", ("always on top", "دائما في المقدمه")),
     IntentRule("window.always_on_top_off", "window_control", "always_on_top_off", "safe", ("remove always on top", "الغاء دائما في المقدمه")),
     IntentRule("window.split_right", "window_control", "split_right", "safe", ("split right", "يمين الشاشه")),
@@ -1699,21 +1721,5 @@ def resolve_windows_intent(message: str) -> IntentResolution:
             )
 
     # Unsupported but explicitly known asks from requested catalog.
-    if _contains_any(normalized, ("change audio output", "speaker headset", "تغيير مخرج الصوت", "spatial sound", "الصوت المحيطي")):
-        return IntentResolution(
-            matched=True,
-            capability_id="audio.unsupported.output_routing",
-            risk_level="safe",
-            unsupported=True,
-            unsupported_reason="Audio output routing/spatial sound automation is not implemented yet.",
-        )
-    if _contains_any(normalized, ("mute microphone", "unmute microphone", "كتم الميكروفون", "الغاء كتم الميكروفون")):
-        return IntentResolution(
-            matched=True,
-            capability_id="audio.unsupported.mic_toggle",
-            risk_level="safe",
-            unsupported=True,
-            unsupported_reason="Microphone mute/unmute direct toggle is not implemented yet.",
-        )
     return IntentResolution(matched=False)
 

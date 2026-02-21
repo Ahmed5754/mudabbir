@@ -22,6 +22,7 @@ from typing import Any
 
 from Mudabbir.config import Settings
 from Mudabbir.tools.capabilities.windows_intent_map import (
+    RULES as WINDOWS_INTENT_RULES,
     is_confirmation_message,
     resolve_windows_intent,
 )
@@ -1243,8 +1244,51 @@ class OpenInterpreterAgent:
             self._interpreter = None
 
     def _is_gui_request(self, message: str) -> bool:
-        """Heuristic detection for requests that involve GUI control."""
+        """Detect GUI/control intents with intent-map first, then broad fallback."""
+        try:
+            resolved = resolve_windows_intent(message or "")
+            if resolved.matched:
+                return True
+        except Exception:
+            pass
         return _contains_any(message, GUI_KEYWORDS)
+
+    def _wants_pointer_control(self, message: str) -> bool:
+        """Higher-level pointer intent check using intent-map aliases first."""
+        text = str(message or "")
+        try:
+            resolved = resolve_windows_intent(text)
+            cap = str(getattr(resolved, "capability_id", "") or "")
+            action = str(getattr(resolved, "action", "") or "")
+            if resolved.matched and (
+                cap.startswith("mouse.")
+                    or action in {"mouse_move", "click"}
+            ):
+                return True
+        except Exception:
+            pass
+        normalized = _normalize_text_for_match(text)
+        try:
+            pointer_aliases: set[str] = set()
+            for rule in WINDOWS_INTENT_RULES:
+                cap_id = str(getattr(rule, "capability_id", "") or "")
+                if not cap_id.startswith("mouse."):
+                    continue
+                for alias in tuple(getattr(rule, "aliases", ()) or ()):
+                    alias_norm = _normalize_text_for_match(str(alias or ""))
+                    if alias_norm:
+                        pointer_aliases.add(alias_norm)
+            if any(alias in normalized for alias in pointer_aliases):
+                return True
+        except Exception:
+            pass
+        return bool(
+            re.search(
+                r"\b(mouse|cursor|pointer|trackpad|touchpad)\b|(?:ال)?ماوس|(?:ال)?مؤشر|الماوس",
+                normalized,
+                re.IGNORECASE,
+            )
+        )
 
     def _is_task_manager_request(self, message: str) -> bool:
         """Detect requests that mention Task Manager."""
@@ -3667,9 +3711,9 @@ Required JSON schema:
                 }
 
         # Move mouse to a UI element by label/name (e.g. "move mouse to Save button").
-        if has_any(normalized, ("حرك", "move", "hover", "وجّه", "وجه")) and has_any(
-            normalized, ("ماوس", "mouse", "cursor", "المؤشر")
-        ) and has_any(normalized, ("button", "زر", "control", "element", "label", "icon", "ايقونه", "ايقونة")):
+        if has_any(normalized, ("حرك", "move", "hover", "وجّه", "وجه")) and self._wants_pointer_control(text) and has_any(
+            normalized, ("button", "زر", "control", "element", "label", "icon", "ايقونه", "ايقونة")
+        ):
             try:
                 from Mudabbir.tools.builtin.desktop import DesktopTool
 
@@ -3750,7 +3794,7 @@ Required JSON schema:
         if has_any(normalized, ("اضغط", "اكبس", "انقر", "click", "press")) and (
             has_any(normalized, ("button", "زر", "control", "element", "label", "icon", "ايقونه", "ايقونة"))
             or (
-                has_any(normalized, ("mouse", "ماوس", "cursor", "المؤشر"))
+                self._wants_pointer_control(text)
                 and extract_first_two_numbers() is None
                 and has_any(normalized, ("على", "on", "to", "towards", "لعند"))
             )
@@ -4181,7 +4225,7 @@ Required JSON schema:
         # Move mouse to a file icon on Desktop (e.g. "move mouse to game file on desktop").
         if (
             has_any(normalized, ("حرك", "move", "hover", "وجّه", "وجه"))
-            and has_any(normalized, ("ماوس", "mouse", "cursor", "المؤشر"))
+            and self._wants_pointer_control(text)
             and has_any(normalized, ("file", "files", "ملف", "ملفات"))
             and has_any(normalized, ("desktop", "سطح المكتب", "سطح", "المكتب"))
         ):
@@ -4302,7 +4346,7 @@ Required JSON schema:
                 }
 
         # Absolute mouse move by coordinates.
-        if has_any(normalized, ("حرك", "move")) and has_any(normalized, ("ماوس", "mouse", "cursor", "المؤشر")):
+        if has_any(normalized, ("حرك", "move")) and self._wants_pointer_control(text):
             coords = extract_first_two_numbers()
             if coords is not None:
                 try:

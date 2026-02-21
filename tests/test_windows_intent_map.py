@@ -22,11 +22,20 @@ def test_resolve_shutdown_is_destructive() -> None:
     assert result.risk_level == "destructive"
 
 
-def test_resolve_unsupported_audio_output() -> None:
+def test_resolve_audio_output_skill_maps_to_app_tools() -> None:
     result = resolve_windows_intent("change audio output to headset")
     assert result.matched is True
-    assert result.unsupported is True
-    assert "not implemented" in result.unsupported_reason.lower()
+    assert result.unsupported is False
+    assert result.action == "app_tools"
+    assert result.params.get("mode") == "open_sound_output"
+
+
+def test_resolve_spatial_sound_skill_maps_to_app_tools() -> None:
+    result = resolve_windows_intent("تفعيل الصوت المحيطي")
+    assert result.matched is True
+    assert result.unsupported is False
+    assert result.action == "app_tools"
+    assert result.params.get("mode") == "open_spatial_sound"
 
 
 def test_confirmation_message_detection() -> None:
@@ -40,6 +49,7 @@ def test_confirmation_message_detection() -> None:
     [
         ("تفعيل وضع الطيران", "power_user_tools", "airplane_on"),
         ("تعطيل وضع الطيران", "power_user_tools", "airplane_off"),
+        ("وضع الطيران", "power_user_tools", "airplane_toggle"),
         ("اعطني نسبة البطارية", "system_info", "battery"),
         ("خلي خطة الطاقة أداء عالي", "system_power", "power_plan_high"),
         ("افتح البيوس", "system_power", "reboot_bios"),
@@ -127,11 +137,27 @@ def test_resolve_type_current_date_and_time() -> None:
     assert len(time_result.params.get("text") or "") >= 5
 
 
-def test_resolve_unsupported_display_resolution() -> None:
+def test_resolve_display_resolution_opens_display_settings() -> None:
     result = resolve_windows_intent("تغيير دقة الشاشة 1920x1080")
     assert result.matched is True
-    assert result.unsupported is True
-    assert "not implemented" in result.unsupported_reason.lower()
+    assert result.unsupported is False
+    assert result.action == "ui_tools"
+    assert result.params.get("mode") == "open_display_resolution"
+
+
+def test_resolve_display_rotate_opens_display_settings() -> None:
+    result = resolve_windows_intent("تدوير الشاشة 90")
+    assert result.matched is True
+    assert result.unsupported is False
+    assert result.action == "ui_tools"
+    assert result.params.get("mode") == "open_display_rotation"
+
+
+def test_resolve_screenshot_window_arabic_phrase() -> None:
+    result = resolve_windows_intent("أخذ لقطة لنافذة محددة")
+    assert result.matched is True
+    assert result.action == "screenshot_tools"
+    assert result.params.get("mode") == "window_active"
 
 
 def test_resolve_arabic_brightness_and_battery_questions() -> None:
@@ -330,12 +356,57 @@ def test_resolve_colloquial_show_desktop_phrase() -> None:
     assert result.params.get("mode") == "show_desktop_verified"
 
 
+def test_resolve_desktop_icons_toggle_phrase() -> None:
+    result = resolve_windows_intent("إخفاء أيقونات سطح المكتب")
+    assert result.matched is True
+    assert result.action in {"window_control", "ui_tools"}
+    assert result.params.get("mode") == "desktop_icons_hide"
+
+
 def test_resolve_app_process_count_total_phrase() -> None:
     result = resolve_windows_intent("كم عملية لتطبيق Cursor شغالة وكلهم سوا كم يستهلك")
     assert result.matched is True
     assert result.action == "process_tools"
     assert result.params.get("mode") == "app_process_count_total"
     assert str(result.params.get("name") or "").lower() == "cursor"
+
+
+def test_resolve_mic_mute_and_unmute() -> None:
+    mute = resolve_windows_intent("كتم الميكروفون")
+    assert mute.matched is True
+    assert mute.action == "microphone_control"
+    assert mute.params.get("mode") == "mute"
+
+    unmute = resolve_windows_intent("إلغاء كتم الميكروفون")
+    assert unmute.matched is True
+    assert unmute.action == "microphone_control"
+    assert unmute.params.get("mode") == "unmute"
+
+
+def test_resolve_mic_status() -> None:
+    result = resolve_windows_intent("شو حالة الميكروفون")
+    assert result.matched is True
+    assert result.action == "microphone_control"
+    assert result.params.get("mode") == "get"
+
+
+def test_resolve_hibernate_on_off() -> None:
+    on = resolve_windows_intent("تفعيل السبات")
+    assert on.matched is True
+    assert on.action == "system_power"
+    assert on.params.get("mode") == "hibernate_on"
+
+    off = resolve_windows_intent("تعطيل السبات")
+    assert off.matched is True
+    assert off.action == "system_power"
+    assert off.params.get("mode") == "hibernate_off"
+
+
+def test_resolve_stop_all_media_maps_to_media_control_stop() -> None:
+    result = resolve_windows_intent("ايقاف كل الوسائط")
+    assert result.matched is True
+    assert result.action == "media_control"
+    assert result.params.get("mode") == "stop"
 
 
 def test_resolve_screen_observe_maps_to_vision_tools() -> None:

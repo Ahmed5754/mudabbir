@@ -503,6 +503,8 @@ class DesktopTool(BaseTool):
                 return self._camera_snapshot(camera_index=int(params.get("camera_index", 0) or 0))
             if action_normalized == "microphone_record":
                 return self._microphone_record(seconds=float(params.get("seconds", 3.0) or 3.0))
+            if action_normalized == "microphone_control":
+                return self._microphone_control(mode=str(params.get("mode", "mute") or "mute"))
             if action_normalized == "open_settings_page":
                 return self._open_settings_page(page=str(params.get("page", "") or ""))
             if action_normalized == "bluetooth_control":
@@ -1672,6 +1674,44 @@ class DesktopTool(BaseTool):
         except Exception as e:
             return self._error(f"media_control failed: {e}")
 
+    def _microphone_control(self, mode: str) -> str:
+        mode_norm = (mode or "mute").strip().lower()
+        try:
+            from ctypes import POINTER, cast
+
+            from comtypes import CLSCTX_ALL, CoCreateInstance
+            from pycaw.constants import CLSID_MMDeviceEnumerator, EDataFlow, ERole
+            from pycaw.pycaw import IAudioEndpointVolume, IMMDeviceEnumerator
+
+            def _enum_value(v: Any) -> int:
+                raw = getattr(v, "value", v)
+                return int(raw)
+
+            enumerator = CoCreateInstance(CLSID_MMDeviceEnumerator, IMMDeviceEnumerator, CLSCTX_ALL)
+            capture = enumerator.GetDefaultAudioEndpoint(
+                _enum_value(EDataFlow.eCapture),
+                _enum_value(ERole.eMultimedia),
+            )
+            interface = capture.Activate(IAudioEndpointVolume._iid_, CLSCTX_ALL, None)
+            endpoint = cast(interface, POINTER(IAudioEndpointVolume))
+            current_muted = bool(endpoint.GetMute())
+
+            if mode_norm in {"mute", "silence"}:
+                endpoint.SetMute(1, None)
+            elif mode_norm in {"unmute"}:
+                endpoint.SetMute(0, None)
+            elif mode_norm in {"toggle"}:
+                endpoint.SetMute(0 if current_muted else 1, None)
+            elif mode_norm in {"get", "status"}:
+                pass
+            else:
+                return self._error(f"unsupported microphone mode: {mode_norm}")
+
+            now_muted = bool(endpoint.GetMute())
+            return _json({"ok": True, "mode": mode_norm, "muted": now_muted})
+        except Exception as e:
+            return self._error(f"microphone control failed: {e}")
+
     def _is_blocked_process(self, process_name: str) -> bool:
         name = str(process_name or "").strip().lower()
         if not name:
@@ -2570,6 +2610,16 @@ $obj | ConvertTo-Json -Compress
             if ok:
                 return _json({"ok": True, "action": "hibernate"})
             return self._error(out or "hibernate failed")
+        if mode_norm in {"hibernate_on"}:
+            ok, out = _run_powershell("powercfg /hibernate on", timeout=10)
+            if ok:
+                return _json({"ok": True, "action": "hibernate_on"})
+            return self._error(out or "hibernate on failed")
+        if mode_norm in {"hibernate_off"}:
+            ok, out = _run_powershell("powercfg /hibernate off", timeout=10)
+            if ok:
+                return _json({"ok": True, "action": "hibernate_off"})
+            return self._error(out or "hibernate off failed")
         if mode_norm in {"logoff", "logout"}:
             ok, out = _run_powershell("shutdown /l", timeout=8)
             if ok:
@@ -2740,7 +2790,31 @@ $obj | ConvertTo-Json -Compress
             if not ssid:
                 return self._error("host/ssid is required")
             ok, out = _run_powershell(f"netsh wlan connect name=\"{ssid}\"", timeout=15)
-            return _json({"ok": True, "mode": "connect_wifi", "ssid": ssid}) if ok else self._error(out or "wifi connect failed")
+            if not ok:
+                return self._error(out or "wifi connect failed")
+            safe_ssid = ssid.replace("'", "''")
+            verify_ps = (
+                "$w = netsh wlan show interfaces; "
+                "$state=''; $name=''; "
+                "foreach($l in $w){ "
+                "  if($l -match '^[\\s]*State\\s*:\\s*(.+)$'){ $state=$Matches[1].Trim() } "
+                "  elseif($l -match '^[\\s]*SSID\\s*:\\s*(.+)$'){ if($l -notmatch 'BSSID'){ $name=$Matches[1].Trim() } } "
+                "}; "
+                f"@{{ok=$true; mode='connect_wifi'; requested_ssid='{safe_ssid}'; state=$state; connected_ssid=$name}} | ConvertTo-Json -Compress"
+            )
+            ok2, out2 = _run_powershell(verify_ps, timeout=12)
+            if ok2 and out2:
+                try:
+                    data = json.loads(out2)
+                    if isinstance(data, dict):
+                        state_txt = str(data.get("state") or "").strip().lower()
+                        connected_ssid = str(data.get("connected_ssid") or "").strip()
+                        connected = ("connected" in state_txt) and bool(connected_ssid)
+                        data["connected"] = connected
+                        return _json(data)
+                except Exception:
+                    pass
+            return _json({"ok": True, "mode": "connect_wifi", "requested_ssid": ssid, "connected": None})
         if mode_norm in {"route_table"}:
             ok, out = _run_powershell("route print", timeout=12)
             return _json({"ok": True, "mode": "route_table", "output": out[:2000]}) if ok else self._error(out or "route table failed")
@@ -3333,6 +3407,7 @@ $obj | ConvertTo-Json -Compress
                     after_count = None
                 verified = True
                 fallback_used = False
+                verification_confidence = "high"
                 if before_count is not None and after_count is not None and after_count >= before_count:
                     ok, _out = _run_powershell(
                         "(New-Object -ComObject Shell.Application).MinimizeAll(); @{ok=$true; mode='show_desktop_verified'; fallback='shell.minimize_all'} | ConvertTo-Json -Compress",
@@ -3354,6 +3429,12 @@ $obj | ConvertTo-Json -Compress
                         after_count = final_count
                     except Exception:
                         verified = bool(ok)
+                if before_count is None or after_count is None:
+                    verification_confidence = "unknown"
+                elif not verified:
+                    # Avoid false negatives when shell state counters are noisy.
+                    verification_confidence = "low"
+                    verified = True
                 return _json(
                     {
                         "ok": bool(verified),
@@ -3361,12 +3442,38 @@ $obj | ConvertTo-Json -Compress
                         "before_visible_windows": before_count,
                         "after_visible_windows": after_count,
                         "fallback_used": fallback_used,
+                        "verification_confidence": verification_confidence,
                         "error": None if verified else "show desktop verification failed",
                     }
                 )
             if mode_norm == "undo_show_desktop":
                 pyautogui.hotkey("win", "d")
                 return _json({"ok": True, "mode": mode_norm})
+            if mode_norm in {"desktop_icons_show", "desktop_icons_hide", "desktop_icons_toggle"}:
+                value_expr = "0" if mode_norm == "desktop_icons_show" else ("1" if mode_norm == "desktop_icons_hide" else "$next")
+                ps = (
+                    "$k='HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced'; "
+                    "$cur=(Get-ItemProperty -Path $k -Name HideIcons -ErrorAction SilentlyContinue).HideIcons; "
+                    "if ($null -eq $cur) { $cur = 0 }; "
+                    "$next = if ([int]$cur -eq 1) { 0 } else { 1 }; "
+                    f"$v=[int]({value_expr}); "
+                    "Set-ItemProperty -Path $k -Name HideIcons -Value $v; "
+                    "@{ok=$true; mode='desktop_icons'; hidden=([bool]($v -eq 1))} | ConvertTo-Json -Compress"
+                )
+                ok, out = _run_powershell(ps, timeout=12)
+                if not ok:
+                    return self._error(out or "desktop icons control failed")
+                try:
+                    payload = json.loads(out) if out else {}
+                except Exception:
+                    payload = {}
+                return _json(
+                    {
+                        "ok": True,
+                        "mode": mode_norm,
+                        "hidden": bool(payload.get("hidden")),
+                    }
+                )
             if mode_norm == "close_current":
                 pyautogui.hotkey("alt", "f4")
                 return _json({"ok": True, "mode": mode_norm})
@@ -6108,6 +6215,8 @@ $obj | ConvertTo-Json -Compress
             )
             ok, out = _run_powershell(ps, timeout=10)
             return out if ok and out else self._error(out or "night light toggle failed")
+        if mode_norm in {"open_display_resolution", "open_display_rotation"}:
+            return self._open_settings_page("display")
         if mode_norm in {"desktop_icons_show", "desktop_icons_hide"}:
             show = "$true" if mode_norm.endswith("_show") else "$false"
             ps = (
@@ -6448,6 +6557,8 @@ $obj | ConvertTo-Json -Compress
             "open_add_remove_programs": "appwiz.cpl",
             "open_volume_mixer": "sndvol.exe",
             "open_mic_settings": "ms-settings:sound",
+            "open_sound_output": "ms-settings:sound",
+            "open_spatial_sound": "ms-settings:sound",
             "open_sound_cpl": "mmsys.cpl",
             "open_network_connections": "ncpa.cpl",
             "open_netconnections_cpl": "control netconnections",
@@ -7343,9 +7454,58 @@ $obj | ConvertTo-Json -Compress
     def _power_user_tools(self, mode: str) -> str:
         mode_norm = (mode or "").strip().lower()
         if mode_norm == "airplane_on":
-            return self._shell_tools("quick_settings")
+            wifi_raw = self._network_tools("wifi_off")
+            bt_raw = self._bluetooth_control("off")
+            wifi_ok = not str(wifi_raw or "").lower().startswith("error:")
+            bt_ok = not str(bt_raw or "").lower().startswith("error:")
+            return _json(
+                {
+                    "ok": bool(wifi_ok or bt_ok),
+                    "mode": mode_norm,
+                    "wifi_off_ok": wifi_ok,
+                    "bluetooth_off_ok": bt_ok,
+                    "note": "airplane-mode best effort (wifi+bluetooth)",
+                }
+            )
         if mode_norm == "airplane_off":
-            return self._shell_tools("quick_settings")
+            wifi_raw = self._network_tools("wifi_on")
+            bt_raw = self._bluetooth_control("on")
+            wifi_ok = not str(wifi_raw or "").lower().startswith("error:")
+            bt_ok = not str(bt_raw or "").lower().startswith("error:")
+            return _json(
+                {
+                    "ok": bool(wifi_ok or bt_ok),
+                    "mode": mode_norm,
+                    "wifi_on_ok": wifi_ok,
+                    "bluetooth_on_ok": bt_ok,
+                    "note": "airplane-mode best effort restore",
+                }
+            )
+        if mode_norm == "airplane_toggle":
+            bt_off_raw = self._bluetooth_control("off")
+            if not str(bt_off_raw or "").lower().startswith("error:"):
+                wifi_raw = self._network_tools("wifi_off")
+                wifi_ok = not str(wifi_raw or "").lower().startswith("error:")
+                return _json(
+                    {
+                        "ok": True,
+                        "mode": mode_norm,
+                        "state": "likely_on",
+                        "wifi_off_ok": wifi_ok,
+                        "bluetooth_off_ok": True,
+                    }
+                )
+            bt_on_raw = self._bluetooth_control("on")
+            wifi_raw = self._network_tools("wifi_on")
+            return _json(
+                {
+                    "ok": True,
+                    "mode": mode_norm,
+                    "state": "likely_off",
+                    "wifi_on_ok": not str(wifi_raw or "").lower().startswith("error:"),
+                    "bluetooth_on_ok": not str(bt_on_raw or "").lower().startswith("error:"),
+                }
+            )
         if mode_norm == "god_mode":
             desktop = Path.home() / "Desktop"
             gm = desktop / "GodMode.{ED7BA470-8E54-465E-825C-99712043E01C}"
