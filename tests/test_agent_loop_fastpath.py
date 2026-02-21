@@ -1672,6 +1672,29 @@ async def test_global_fastpath_mute_app_volume_human_reply(
 
 
 @pytest.mark.asyncio
+async def test_global_fastpath_now_playing_info_human_reply(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class DummyDesktopTool:
+        async def execute(self, action: str, **kwargs):
+            assert action == "media_tools"
+            assert kwargs.get("mode") == "now_playing_info"
+            return (
+                '{"ok": true, "mode": "now_playing_info", "title": "Numb", '
+                '"artist": "Linkin Park", "playback_status": "Playing", "app": "Spotify.exe"}'
+            )
+
+    monkeypatch.setattr("Mudabbir.tools.builtin.desktop.DesktopTool", DummyDesktopTool)
+    loop = AgentLoop()
+    handled, reply = await loop._try_global_windows_fastpath(
+        text="شو الأغنية المشغلة", session_key="s39nowplay"
+    )
+    assert handled is True
+    assert "numb" in str(reply).lower()
+    assert "spotify" in str(reply).lower()
+
+
+@pytest.mark.asyncio
 async def test_global_fastpath_vision_click_target_human_reply(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

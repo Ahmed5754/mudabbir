@@ -221,6 +221,13 @@ def test_resolve_mute_app_volume_phrase() -> None:
     assert str(result.params.get("name") or "").lower() == "chrome"
 
 
+def test_resolve_now_playing_info_phrase() -> None:
+    result = resolve_windows_intent("شو الأغنية المشغلة")
+    assert result.matched is True
+    assert result.action == "media_tools"
+    assert result.params.get("mode") == "now_playing_info"
+
+
 def test_resolve_vision_click_target_phrase() -> None:
     result = resolve_windows_intent("انقر على زر التالي")
     assert result.matched is True

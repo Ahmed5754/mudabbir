@@ -7520,6 +7520,48 @@ $obj | ConvertTo-Json -Compress
             return self._media_control("previous")
         if mode_norm == "play_pause":
             return self._media_control("play_pause")
+        if mode_norm == "now_playing_info":
+            ps = (
+                "try { "
+                "  Add-Type -AssemblyName System.Runtime.WindowsRuntime -ErrorAction Stop; "
+                "  $null = [Windows.Media.Control.GlobalSystemMediaTransportControlsSessionManager, Windows.Media.Control, ContentType=WindowsRuntime]; "
+                "  $asTask = ([System.WindowsRuntimeSystemExtensions].GetMethods() | "
+                "    Where-Object { $_.Name -eq 'AsTask' -and $_.GetParameters().Count -eq 1 -and $_.GetParameters()[0].ParameterType.Name -like 'IAsyncOperation*' } | "
+                "    Select-Object -First 1); "
+                "  if(-not $asTask){ throw 'AsTask bridge unavailable'; }; "
+                "  function Await($op, $resultType) { "
+                "    $task = $asTask.MakeGenericMethod($resultType).Invoke($null, @($op)); "
+                "    $task.Wait(-1) | Out-Null; "
+                "    return $task.Result; "
+                "  }; "
+                "  $mgrType=[Windows.Media.Control.GlobalSystemMediaTransportControlsSessionManager]; "
+                "  $mgr = Await ($mgrType::RequestAsync()) ([Windows.Media.Control.GlobalSystemMediaTransportControlsSessionManager]); "
+                "  $session = $mgr.GetCurrentSession(); "
+                "  if(-not $session){ @{ok=$false; mode='now_playing_info'; error='no active media session'} | ConvertTo-Json -Compress; exit }; "
+                "  $props = Await ($session.TryGetMediaPropertiesAsync()) ([Windows.Media.Control.GlobalSystemMediaTransportControlsSessionMediaProperties]); "
+                "  $play = $session.GetPlaybackInfo(); "
+                "  @{ "
+                "    ok=$true; mode='now_playing_info'; "
+                "    title=[string]$props.Title; "
+                "    artist=[string]$props.Artist; "
+                "    album=[string]$props.AlbumTitle; "
+                "    playback_status=[string]$play.PlaybackStatus; "
+                "    app=[string]$session.SourceAppUserModelId "
+                "  } | ConvertTo-Json -Compress "
+                "} catch { "
+                "  @{ok=$false; mode='now_playing_info'; error=($_.Exception.Message)} | ConvertTo-Json -Compress "
+                "}"
+            )
+            ok, out = _run_powershell(ps, timeout=15)
+            if not ok or not out:
+                return self._error(out or "now playing query failed")
+            try:
+                parsed = json.loads(out)
+            except Exception:
+                return self._error(out or "now playing parse failed")
+            if isinstance(parsed, dict) and parsed.get("ok"):
+                return _json(parsed)
+            return self._error(str(parsed.get("error") or "no active media session") if isinstance(parsed, dict) else "no active media session")
         if mode_norm in {"mute_browser_only", "unmute_browser_only"}:
             try:
                 from pycaw.pycaw import AudioUtilities

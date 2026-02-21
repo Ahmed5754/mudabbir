@@ -1768,6 +1768,28 @@ class AgentLoop:
                 if mode == "app_volume_mute":
                     return True, f"🔇 Muted {app_name or 'app'} ({count})."
                 return True, f"🔊 Unmuted {app_name or 'app'} ({count})."
+            if mode == "now_playing_info" and isinstance(parsed, dict):
+                title = str(parsed.get("title") or "").strip()
+                artist = str(parsed.get("artist") or "").strip()
+                playback_status = str(parsed.get("playback_status") or "").strip()
+                app = str(parsed.get("app") or "").strip()
+                if arabic:
+                    base = f"🎵 الآن: {title or 'غير معروف'}"
+                    if artist:
+                        base += f" - {artist}"
+                    if playback_status:
+                        base += f" ({playback_status})"
+                    if app:
+                        base += f"\nمن: {app}"
+                    return True, base
+                base = f"🎵 Now playing: {title or 'Unknown title'}"
+                if artist:
+                    base += f" - {artist}"
+                if playback_status:
+                    base += f" ({playback_status})"
+                if app:
+                    base += f"\nSource: {app}"
+                return True, base
             media_msgs_ar = {
                 "stop_all_media": "⏸️ تم إيقاف الوسائط.",
                 "youtube_open": "▶️ تم فتح الفيديو.",
