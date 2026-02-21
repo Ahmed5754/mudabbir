@@ -1632,6 +1632,7 @@ class AgentLoop:
                 "disk_usage": "تم جلب استهلاك ومساحة الأقراص.",
                 "defrag": f"تم بدء إلغاء التجزئة للقرص: {drv or 'C:'}.",
                 "chkdsk_scan": f"تم بدء فحص القرص: {drv or 'C:'}.",
+                "safe_eject": "تم إخراج وسيط التخزين بأمان.",
             }
             disk_msgs_en = {
                 "smart_status": "Fetched disk SMART/health status.",
@@ -1641,6 +1642,7 @@ class AgentLoop:
                 "disk_usage": "Fetched disk usage and free space.",
                 "defrag": f"Started defrag on drive: {drv or 'C:'}.",
                 "chkdsk_scan": f"Started disk check on drive: {drv or 'C:'}.",
+                "safe_eject": "Safely ejected storage device.",
             }
             msg = disk_msgs_ar.get(mode) if arabic else disk_msgs_en.get(mode)
             if msg:

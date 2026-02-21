@@ -5871,6 +5871,40 @@ $obj | ConvertTo-Json -Compress
             drv = (drive or "C:").strip()
             ok, out = _run_powershell(f"defrag {drv} /O", timeout=180)
             return _json({"ok": True, "mode": mode_norm, "drive": drv, "output": out[:1800]}) if ok else self._error(out or "defrag failed")
+        if mode_norm == "safe_eject":
+            drv_raw = (drive or "").strip().upper()
+            if drv_raw and len(drv_raw) == 1 and drv_raw.isalpha():
+                drv_raw = f"{drv_raw}:"
+            if drv_raw and not re.match(r"^[A-Z]:$", drv_raw):
+                return self._error("drive must look like E:")
+            ps = (
+                "$shell=New-Object -ComObject Shell.Application; "
+                "$ejected=@(); "
+                "$targets=@(); "
+                + (
+                    f"$targets=@('{drv_raw}'); "
+                    if drv_raw
+                    else "$targets=(Get-CimInstance Win32_LogicalDisk | Where-Object {$_.DriveType -eq 2 -and $_.DeviceID} | Select-Object -ExpandProperty DeviceID); "
+                )
+                + "foreach($d in $targets){ "
+                "  try { "
+                "    $item=$shell.Namespace(17).ParseName($d); "
+                "    if($item){ $item.InvokeVerb('Eject'); Start-Sleep -Milliseconds 300; $ejected += $d } "
+                "  } catch { } "
+                "}; "
+                "if($ejected.Count -eq 0){ @{ok=$false; error='no removable drive ejected'} | ConvertTo-Json -Compress } "
+                "else { @{ok=$true; mode='safe_eject'; drives=$ejected; count=$ejected.Count} | ConvertTo-Json -Compress }"
+            )
+            ok, out = _run_powershell(ps, timeout=20)
+            if not ok or not out:
+                return self._error(out or "safe eject failed")
+            try:
+                parsed = json.loads(out)
+            except Exception:
+                return self._error(out or "safe eject parse failed")
+            if isinstance(parsed, dict) and parsed.get("ok"):
+                return _json(parsed)
+            return self._error(str(parsed.get("error") or "safe eject failed") if isinstance(parsed, dict) else "safe eject failed")
         return self._error(f"unsupported disk_tools mode: {mode_norm}")
 
     def _security_tools(self, mode: str, target: str = "", port: Any = None, rule_name: str = "") -> str:

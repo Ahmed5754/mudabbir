@@ -82,34 +82,6 @@ ERROR_PATTERNS = (
     "at line:",
 )
 
-GUI_KEYWORDS = (
-    "mouse",
-    "click",
-    "cursor",
-    "desktop",
-    "window",
-    "volume",
-    "brightness",
-    "media",
-    "app",
-    "application",
-    "task manager",
-    "gui",
-    "ماوس",
-    "الماوس",
-    "كليك",
-    "نقرة",
-    "صوت",
-    "الصوت",
-    "سطوع",
-    "ميديا",
-    "تطبيق",
-    "برنامج",
-    "مدير المهام",
-    "نافذة",
-    "واجهة",
-)
-
 TASK_MANAGER_KEYWORDS = ("task manager", "taskmgr", "مدير المهام")
 TOP_PROCESS_KEYWORDS = (
     "top 5",
@@ -362,6 +334,24 @@ def _looks_like_process_snapshot(output: str) -> bool:
 def _contains_any(text: str, keywords: tuple[str, ...]) -> bool:
     lowered = text.lower()
     return any(k in lowered for k in keywords)
+
+
+def _build_windows_alias_fallback() -> tuple[str, ...]:
+    """Build fallback phrases from intent-map aliases instead of rigid hand-picked keywords."""
+    phrases: set[str] = set()
+    for rule in WINDOWS_INTENT_RULES:
+        for alias in tuple(getattr(rule, "aliases", ()) or ()):
+            norm = _normalize_text_for_match(str(alias or ""))
+            if not norm:
+                continue
+            # Skip tiny fragments to reduce false positives in normal chat.
+            if len(norm) < 4:
+                continue
+            phrases.add(norm)
+    return tuple(sorted(phrases, key=len, reverse=True))
+
+
+WINDOWS_ALIAS_FALLBACK = _build_windows_alias_fallback()
 
 
 def _looks_like_raw_command_leak(text: str) -> bool:
@@ -1244,14 +1234,17 @@ class OpenInterpreterAgent:
             self._interpreter = None
 
     def _is_gui_request(self, message: str) -> bool:
-        """Detect GUI/control intents with intent-map first, then broad fallback."""
+        """Detect GUI/control intents with intent-map first, then alias-derived fallback."""
         try:
             resolved = resolve_windows_intent(message or "")
             if resolved.matched:
                 return True
         except Exception:
             pass
-        return _contains_any(message, GUI_KEYWORDS)
+        normalized = _normalize_text_for_match(str(message or ""))
+        if not normalized:
+            return False
+        return any(alias in normalized for alias in WINDOWS_ALIAS_FALLBACK)
 
     def _wants_pointer_control(self, message: str) -> bool:
         """Pointer-intent check using intent-map/context, not rigid keyword lists."""

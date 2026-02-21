@@ -743,6 +743,7 @@ def test_resolve_user_set_type_extracts_username_and_group() -> None:
         ("تنظيف الملفات المؤقتة", "disk_tools", "temp_files_clean"),
         ("مسح prefetch", "disk_tools", "prefetch_clean"),
         ("استخدام القرص", "disk_tools", "disk_usage"),
+        ("إخراج آمن E:", "disk_tools", "safe_eject"),
         ("registry backup HKCU\\Software", "registry_tools", "backup"),
     ],
 )
@@ -753,6 +754,14 @@ def test_resolve_update_remote_disk_registry_aliases(
     assert result.matched is True
     assert result.action == action
     assert result.params.get("mode") == mode
+
+
+def test_resolve_safe_eject_extracts_drive() -> None:
+    result = resolve_windows_intent("safe eject usb E:")
+    assert result.matched is True
+    assert result.action == "disk_tools"
+    assert result.params.get("mode") == "safe_eject"
+    assert result.params.get("drive") == "E:"
 
 
 def test_resolve_install_kb_extracts_target() -> None:

@@ -921,6 +921,26 @@ RULES: tuple[IntentRule, ...] = (
     IntentRule("disk.usage", "disk_tools", "disk_usage", "safe", ("disk usage", "مساحة الاقراص", "استخدام القرص")),
     IntentRule("disk.defrag", "disk_tools", "defrag", "elevated", ("defrag", "الغاء تجزئة", "إلغاء تجزئة"), params=("drive",)),
     IntentRule("disk.chkdsk_scan", "disk_tools", "chkdsk_scan", "elevated", ("chkdsk scan", "فحص الباد سيكتور", "فحص القرص"), params=("drive",)),
+    IntentRule(
+        "disk.safe_eject",
+        "disk_tools",
+        "safe_eject",
+        "safe",
+        (
+            "safe eject",
+            "safe remove",
+            "safe eject usb",
+            "eject usb",
+            "safe eject drive",
+            "اخراج امن",
+            "إخراج آمن",
+            "اخراج usb",
+            "إخراج usb",
+            "ايقاف تشغيل الاقراص الصلبة الخارجية",
+            "إيقاف تشغيل الأقراص الصلبة الخارجية",
+        ),
+        params=("drive",),
+    ),
     IntentRule("registry.query", "registry_tools", "query", "safe", ("registry query", "استعلام السجل"), params=("key",)),
     IntentRule("registry.add_key", "registry_tools", "add_key", "destructive", ("registry add key", "اضافة مفتاح للسجل", "إضافة مفتاح للسجل"), params=("key",)),
     IntentRule("registry.delete_key", "registry_tools", "delete_key", "destructive", ("registry delete key", "حذف مفتاح من السجل"), params=("key",)),
@@ -1318,7 +1338,7 @@ def _build_params(rule: IntentRule, raw_text: str, normalized: str) -> dict[str,
             else:
                 params["value_type"] = "REG_SZ"
     if "drive" in rule.params and not params.get("drive"):
-        m = re.search(r"\b([A-Za-z]:)\b", raw_text or "")
+        m = re.search(r"(?<![A-Za-z0-9])([A-Za-z]:)(?![A-Za-z0-9])", raw_text or "")
         if m:
             params["drive"] = m.group(1).upper()
     if "rule_name" in rule.params and not params.get("rule_name"):

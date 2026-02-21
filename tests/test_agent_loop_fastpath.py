@@ -1073,6 +1073,27 @@ async def test_global_fastpath_update_remote_disk_registry_replies(
 
 
 @pytest.mark.asyncio
+async def test_global_fastpath_safe_eject_reply(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class DummyDesktopTool:
+        async def execute(self, action: str, **kwargs):
+            assert action == "disk_tools"
+            assert kwargs.get("mode") == "safe_eject"
+            assert kwargs.get("drive") == "E:"
+            return '{"ok": true, "mode": "safe_eject", "drives": ["E:"], "count": 1}'
+
+    monkeypatch.setattr("Mudabbir.tools.builtin.desktop.DesktopTool", DummyDesktopTool)
+    loop = AgentLoop()
+
+    handled, reply = await loop._try_global_windows_fastpath(
+        text="إخراج آمن E:", session_key="s22eject"
+    )
+    assert handled is True
+    assert ("أمان" in str(reply)) or ("آمن" in str(reply)) or ("eject" in str(reply).lower())
+
+
+@pytest.mark.asyncio
 async def test_global_fastpath_network_security_search_web_api_replies(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
