@@ -229,6 +229,13 @@ def test_resolve_now_playing_info_phrase() -> None:
     assert result.params.get("mode") == "now_playing_info"
 
 
+def test_resolve_camera_snapshot_phrase() -> None:
+    result = resolve_windows_intent("التقاط صورة من الكاميرا")
+    assert result.matched is True
+    assert result.action == "media_tools"
+    assert result.params.get("mode") == "camera_snapshot"
+
+
 def test_resolve_vision_click_target_phrase() -> None:
     result = resolve_windows_intent("انقر على زر التالي")
     assert result.matched is True

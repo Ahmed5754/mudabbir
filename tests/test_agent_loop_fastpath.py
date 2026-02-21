@@ -1701,6 +1701,25 @@ async def test_global_fastpath_now_playing_info_human_reply(
 
 
 @pytest.mark.asyncio
+async def test_global_fastpath_camera_snapshot_human_reply(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class DummyDesktopTool:
+        async def execute(self, action: str, **kwargs):
+            assert action == "media_tools"
+            assert kwargs.get("mode") == "camera_snapshot"
+            return '{"ok": true, "mode": "camera_snapshot", "path": "C:/Users/Admin/Pictures/camera_test.jpg"}'
+
+    monkeypatch.setattr("Mudabbir.tools.builtin.desktop.DesktopTool", DummyDesktopTool)
+    loop = AgentLoop()
+    handled, reply = await loop._try_global_windows_fastpath(
+        text="التقاط صورة من الكاميرا", session_key="s39cam"
+    )
+    assert handled is True
+    assert ("كاميرا" in str(reply)) or ("camera" in str(reply).lower())
+
+
+@pytest.mark.asyncio
 async def test_global_fastpath_vision_click_target_human_reply(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

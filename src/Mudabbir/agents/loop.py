@@ -1730,6 +1730,11 @@ class AgentLoop:
                 if arabic:
                     return True, ("🎥 تم تسجيل الشاشة." + (f"\n{path}" if path else ""))
                 return True, ("🎥 Screen recording completed." + (f"\n{path}" if path else ""))
+            if mode == "camera_snapshot" and isinstance(parsed, dict):
+                path = str(parsed.get("path") or "").strip()
+                if arabic:
+                    return True, ("📸 تم التقاط صورة بالكاميرا." + (f"\n{path}" if path else ""))
+                return True, ("📸 Camera photo captured." + (f"\n{path}" if path else ""))
             if mode in {"mute_browser_only", "unmute_browser_only"} and isinstance(parsed, dict):
                 count = int(parsed.get("changed_sessions") or 0)
                 if arabic:

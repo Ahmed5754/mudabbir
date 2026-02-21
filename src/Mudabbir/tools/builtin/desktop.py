@@ -7563,6 +7563,26 @@ $obj | ConvertTo-Json -Compress
             if isinstance(parsed, dict) and parsed.get("ok"):
                 return _json(parsed)
             return self._error(str(parsed.get("error") or "no active media session") if isinstance(parsed, dict) else "no active media session")
+        if mode_norm == "camera_snapshot":
+            out_dir = Path.home() / "Pictures"
+            out_dir.mkdir(parents=True, exist_ok=True)
+            out_path = out_dir / f"camera_{_timestamp_id()}.jpg"
+            try:
+                import cv2
+
+                cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
+                if not cap.isOpened():
+                    cap = cv2.VideoCapture(0)
+                if not cap.isOpened():
+                    return self._error("camera is unavailable")
+                ok, frame = cap.read()
+                cap.release()
+                if not ok or frame is None:
+                    return self._error("failed to capture camera frame")
+                cv2.imwrite(str(out_path), frame)
+                return _json({"ok": True, "mode": mode_norm, "path": str(out_path)})
+            except Exception as exc:
+                return self._error(f"camera snapshot failed: {exc}")
         if mode_norm in {"mute_browser_only", "unmute_browser_only"}:
             try:
                 from pycaw.pycaw import AudioUtilities
