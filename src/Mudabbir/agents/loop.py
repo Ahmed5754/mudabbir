@@ -814,9 +814,9 @@ class AgentLoop:
                         return True, "🎤 حالة الميكروفون: غير مكتوم."
                     return True, "🎤 تم فحص حالة الميكروفون."
                 if muted is True:
-                    return True, "🎤 تم كتم الميكروفون."
+                    return True, "🎤 تم كتم الميكروفون. إذا بدك بفك الكتم فورًا."
                 if muted is False:
-                    return True, "🎤 تم إلغاء كتم الميكروفون."
+                    return True, "🎤 تم إلغاء كتم الميكروفون. تريد أتأكد من الحالة؟"
                 return True, "🎤 تم تنفيذ أمر الميكروفون."
             if mode in {"get", "status"}:
                 if muted is True:
@@ -825,9 +825,9 @@ class AgentLoop:
                     return True, "🎤 Microphone status: unmuted."
                 return True, "🎤 Checked microphone status."
             if muted is True:
-                return True, "🎤 Microphone muted."
+                return True, "🎤 Microphone muted. I can unmute it right away."
             if muted is False:
-                return True, "🎤 Microphone unmuted."
+                return True, "🎤 Microphone unmuted. Want me to verify status?"
             return True, "🎤 Microphone command executed."
 
         if action == "process_tools":
@@ -1749,8 +1749,12 @@ class AgentLoop:
             if msg:
                 if arabic and mode == "show_desktop_verified":
                     return True, f"{msg} إذا بدك برجعلك النوافذ."
+                if arabic and mode == "minimize":
+                    return True, f"{msg} إذا بدك بكبّرها مباشرة."
                 if (not arabic) and mode == "show_desktop_verified":
                     return True, f"{msg} I can restore all windows if you want."
+                if (not arabic) and mode == "minimize":
+                    return True, f"{msg} I can maximize it back now."
                 return True, msg
 
         if action == "app_tools":
