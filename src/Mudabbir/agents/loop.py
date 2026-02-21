@@ -703,6 +703,20 @@ class AgentLoop:
             if msg:
                 return True, msg
 
+        if action == "vision_tools":
+            mode = str(params.get("mode", "")).lower()
+            if mode == "describe_screen":
+                preview = ""
+                if isinstance(parsed, dict):
+                    preview = str(parsed.get("ocr_text_preview") or "").strip()
+                if arabic:
+                    if preview:
+                        return True, f"تم تحليل الشاشة. مقتطف مقروء: {preview[:220]}"
+                    return True, "تم تحليل الشاشة (لقطة + OCR)."
+                if preview:
+                    return True, f"Screen analyzed. OCR preview: {preview[:220]}"
+                return True, "Screen analyzed (snapshot + OCR)."
+
         if action == "browser_control":
             mode = str(params.get("mode", "")).lower()
             browser_msgs_ar = {

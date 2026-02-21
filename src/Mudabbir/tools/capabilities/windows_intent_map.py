@@ -255,14 +255,19 @@ RULES: tuple[IntentRule, ...] = (
     IntentRule("display.rotate", unsupported_reason="Display rotation from intent map is not implemented yet.", aliases=("rotate screen", "تدوير الشاشة", "تدوير الشاشه")),
     IntentRule(
         "vision.screen_observe",
-        unsupported_reason="Live screen observation/control by visual understanding is not implemented yet in DesktopTool fastpath.",
-        aliases=(
+        "vision_tools",
+        "describe_screen",
+        "safe",
+        (
             "look at the screen",
             "look at my screen",
+            "analyze my screen",
             "انظر الى الشاشة",
             "انظر إلى الشاشة",
             "راقب الشاشة",
+            "حلل الشاشة",
             "ماذا يوجد على شاشتي",
+            "استخدم مؤشر الماوس للانتقال",
         ),
     ),
     IntentRule("display.screenshot_window", "screenshot_tools", "window_active", "safe", ("window screenshot", "لقطه نافذه")),

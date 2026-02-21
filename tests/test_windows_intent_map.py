@@ -159,11 +159,11 @@ def test_resolve_colloquial_show_desktop_phrase() -> None:
     assert result.params.get("mode") == "show_desktop"
 
 
-def test_resolve_screen_observe_is_unsupported() -> None:
+def test_resolve_screen_observe_maps_to_vision_tools() -> None:
     result = resolve_windows_intent("مدير المهام مفتوح انظر إلى الشاشة واستخدم مؤشر الماوس")
     assert result.matched is True
-    assert result.unsupported is True
-    assert "not implemented" in result.unsupported_reason.lower()
+    assert result.action == "vision_tools"
+    assert result.params.get("mode") == "describe_screen"
 
 
 @pytest.mark.parametrize(

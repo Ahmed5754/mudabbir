@@ -896,3 +896,22 @@ async def test_global_fastpath_open_settings_page_update_reply(
     )
     assert handled is True
     assert "تحديثات" in str(reply) or "update" in str(reply).lower()
+
+
+@pytest.mark.asyncio
+async def test_global_fastpath_vision_describe_screen_reply(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class DummyDesktopTool:
+        async def execute(self, action: str, **kwargs):
+            assert action == "vision_tools"
+            assert kwargs.get("mode") == "describe_screen"
+            return '{"ok": true, "ocr_text_preview": "Task Manager - Processes"}'
+
+    monkeypatch.setattr("Mudabbir.tools.builtin.desktop.DesktopTool", DummyDesktopTool)
+    loop = AgentLoop()
+    handled, reply = await loop._try_global_windows_fastpath(
+        text="انظر إلى الشاشة", session_key="s39"
+    )
+    assert handled is True
+    assert "الشاشة" in str(reply) or "screen" in str(reply).lower()
