@@ -386,6 +386,13 @@ class AgentLoop:
             and str(session_state.get("last_app", "")).strip()
         ):
             params["name"] = str(session_state.get("last_app", "")).strip()
+        if (
+            action == "service_tools"
+            and mode in {"start", "stop", "restart", "describe", "dependencies", "startup"}
+            and not str(params.get("name", "")).strip()
+            and str(session_state.get("last_service", "")).strip()
+        ):
+            params["name"] = str(session_state.get("last_service", "")).strip()
 
         raw = await DesktopTool().execute(action=action, **params)
         raw_text = str(raw or "")
@@ -407,6 +414,10 @@ class AgentLoop:
             remembered_app = str(parsed.get("query") or params.get("name") or "").strip()
             if remembered_app:
                 session_state["last_app"] = remembered_app
+            if action == "service_tools":
+                remembered_service = str(parsed.get("name") or params.get("name") or "").strip()
+                if remembered_service:
+                    session_state["last_service"] = remembered_service
             top_app = str(parsed.get("top_app") or "").strip()
             if top_app:
                 session_state["last_app"] = top_app

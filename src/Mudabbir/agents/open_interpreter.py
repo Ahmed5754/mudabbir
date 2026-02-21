@@ -2392,6 +2392,29 @@ Required JSON schema:
                 return True
             return False
 
+        def infer_recent_ui_target() -> tuple[str, str]:
+            """Try to recover last UI target/window from recent conversation context."""
+            for item in reversed(history_items):
+                if not isinstance(item, dict):
+                    continue
+                content = str(item.get("content", "") or "").strip()
+                if not content:
+                    continue
+                # assistant messages that include resolved targets
+                m_btn = re.search(r"(?i)(?:clicked button|moved mouse to ui element)\s*:\s*(.+)$", content)
+                if m_btn:
+                    return clean_query(m_btn.group(1) or ""), ""
+                m_ar = re.search(r"(?:تم الضغط على الزر|تم تحريك الماوس إلى العنصر)\s*:\s*(.+)$", content)
+                if m_ar:
+                    return clean_query(m_ar.group(1) or ""), ""
+                m_win = re.search(r"(?i)window\s*:\s*(.+)$", content)
+                if m_win:
+                    return "", clean_query(m_win.group(1) or "")
+                m_ar_win = re.search(r"(?:ضمن النافذة)\s*:\s*(.+)$", content)
+                if m_ar_win:
+                    return "", clean_query(m_ar_win.group(1) or "")
+            return "", ""
+
         def parse_tool_json(raw: str) -> tuple[dict | list | None, str | None]:
             if not isinstance(raw, str):
                 return None, "Unexpected tool response type."
@@ -3734,9 +3757,13 @@ Required JSON schema:
 
                 control_name, window_name = extract_ui_target(text)
                 if not control_name:
+                    prev_target, prev_window = infer_recent_ui_target()
+                    control_name = prev_target or control_name
+                    window_name = window_name or prev_window
+                if not control_name:
                     return {
                         "type": "message",
-                        "content": "حدد اسم الزر/العنصر الذي تريد تحريك الماوس إليه."
+                        "content": "حدد العنصر المطلوب، أو قل: حرك عليه."
                         if arabic
                         else "Please specify the button/element name to move to.",
                     }
@@ -3833,9 +3860,13 @@ Required JSON schema:
 
                 control_name, window_name = extract_ui_target(text)
                 if not control_name:
+                    prev_target, prev_window = infer_recent_ui_target()
+                    control_name = prev_target or control_name
+                    window_name = window_name or prev_window
+                if not control_name:
                     return {
                         "type": "message",
-                        "content": "حدد اسم الزر/العنصر الذي تريد الضغط عليه."
+                        "content": "حدد العنصر المطلوب، أو قل: اضغط عليه."
                         if arabic
                         else "Please specify which button/element to click.",
                     }
