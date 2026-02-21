@@ -145,6 +145,27 @@ def test_resolve_arabic_brightness_and_battery_questions() -> None:
     assert battery.params.get("mode") == "battery"
 
 
+def test_resolve_colloquial_top_ram_phrase() -> None:
+    result = resolve_windows_intent("شو اكتر مهمة تستهلك رامات شغالة و كم تستهلك")
+    assert result.matched is True
+    assert result.action == "process_tools"
+    assert result.params.get("mode") == "top_ram"
+
+
+def test_resolve_colloquial_show_desktop_phrase() -> None:
+    result = resolve_windows_intent("صغر كل النوافذ")
+    assert result.matched is True
+    assert result.action == "window_control"
+    assert result.params.get("mode") == "show_desktop"
+
+
+def test_resolve_screen_observe_is_unsupported() -> None:
+    result = resolve_windows_intent("مدير المهام مفتوح انظر إلى الشاشة واستخدم مؤشر الماوس")
+    assert result.matched is True
+    assert result.unsupported is True
+    assert "not implemented" in result.unsupported_reason.lower()
+
+
 @pytest.mark.parametrize(
     ("message", "action", "mode"),
     [

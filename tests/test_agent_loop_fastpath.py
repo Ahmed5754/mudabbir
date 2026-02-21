@@ -250,7 +250,7 @@ async def test_global_fastpath_media_and_window_replies(monkeypatch: pytest.Monk
             if action == "media_control":
                 assert kwargs.get("mode") == "next"
             if action == "window_control":
-                assert kwargs.get("mode") == "minimize"
+                assert kwargs.get("mode") in {"minimize", "show_desktop"}
             return '{"ok": true}'
 
     monkeypatch.setattr("Mudabbir.tools.builtin.desktop.DesktopTool", DummyDesktopTool)
@@ -267,6 +267,12 @@ async def test_global_fastpath_media_and_window_replies(monkeypatch: pytest.Monk
     )
     assert handled_window is True
     assert "تصغير" in str(reply_window)
+
+    handled_show_desktop, reply_show_desktop = await loop._try_global_windows_fastpath(
+        text="صغر كل النوافذ", session_key="s9d"
+    )
+    assert handled_show_desktop is True
+    assert "سطح المكتب" in str(reply_show_desktop) or "show desktop" in str(reply_show_desktop).lower()
 
 
 @pytest.mark.asyncio
