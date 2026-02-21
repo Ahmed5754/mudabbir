@@ -2415,6 +2415,28 @@ Required JSON schema:
                     return "", clean_query(m_ar_win.group(1) or "")
             return "", ""
 
+        def is_pronoun_target(value: str) -> bool:
+            v = _normalize_text_for_match(str(value or "")).strip()
+            if not v:
+                return True
+            pronouns = {
+                "عليه",
+                "عليها",
+                "عليهم",
+                "عليه؟",
+                "عليها؟",
+                "it",
+                "this",
+                "that",
+                "there",
+                "here",
+                "same",
+                "نفسه",
+                "نفسها",
+                "نفس",
+            }
+            return v in pronouns
+
         def parse_tool_json(raw: str) -> tuple[dict | list | None, str | None]:
             if not isinstance(raw, str):
                 return None, "Unexpected tool response type."
@@ -3756,7 +3778,7 @@ Required JSON schema:
                 from Mudabbir.tools.builtin.desktop import DesktopTool
 
                 control_name, window_name = extract_ui_target(text)
-                if not control_name:
+                if is_pronoun_target(control_name):
                     prev_target, prev_window = infer_recent_ui_target()
                     control_name = prev_target or control_name
                     window_name = window_name or prev_window
@@ -3859,7 +3881,7 @@ Required JSON schema:
                 from Mudabbir.tools.builtin.desktop import DesktopTool
 
                 control_name, window_name = extract_ui_target(text)
-                if not control_name:
+                if is_pronoun_target(control_name):
                     prev_target, prev_window = infer_recent_ui_target()
                     control_name = prev_target or control_name
                     window_name = window_name or prev_window
