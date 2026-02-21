@@ -393,6 +393,26 @@ class AgentLoop:
             and str(session_state.get("last_service", "")).strip()
         ):
             params["name"] = str(session_state.get("last_service", "")).strip()
+        if action == "app_tools":
+            # Follow-up phrasing like "سكره/افتحه" should reuse last app when name/query is omitted.
+            if not str(params.get("process_name", "")).strip() and str(session_state.get("last_app", "")).strip():
+                params["process_name"] = str(session_state.get("last_app", "")).strip()
+            if not str(params.get("query", "")).strip() and str(session_state.get("last_app", "")).strip():
+                params["query"] = str(session_state.get("last_app", "")).strip()
+        if (
+            action == "window_control"
+            and mode in {"bring_to_front", "hide", "show"}
+            and not str(params.get("query", "")).strip()
+            and str(session_state.get("last_window", "")).strip()
+        ):
+            params["query"] = str(session_state.get("last_window", "")).strip()
+        if (
+            action == "window_control"
+            and mode in {"rename_title"}
+            and not str(params.get("text", "")).strip()
+            and str(session_state.get("last_window", "")).strip()
+        ):
+            params["text"] = str(session_state.get("last_window", "")).strip()
 
         raw = await DesktopTool().execute(action=action, **params)
         raw_text = str(raw or "")
@@ -418,6 +438,9 @@ class AgentLoop:
                 remembered_service = str(parsed.get("name") or params.get("name") or "").strip()
                 if remembered_service:
                     session_state["last_service"] = remembered_service
+            remembered_window = str(parsed.get("window_title") or parsed.get("title") or params.get("query") or "").strip()
+            if remembered_window:
+                session_state["last_window"] = remembered_window
             top_app = str(parsed.get("top_app") or "").strip()
             if top_app:
                 session_state["last_app"] = top_app
