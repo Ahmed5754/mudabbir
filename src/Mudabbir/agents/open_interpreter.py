@@ -4697,6 +4697,28 @@ Required JSON schema:
             if intent_map_result is not None:
                 yield intent_map_result
                 return
+            if bool(getattr(self.settings, "windows_deterministic_hard_gate", True)) and self._is_gui_request(user_request):
+                unresolved = resolve_windows_intent(user_request)
+                if not unresolved.matched:
+                    if is_arabic_request:
+                        yield {
+                            "type": "result",
+                            "content": (
+                                "لم أفهم أمر ويندوز بشكل كافٍ. جرّب صياغة مباشرة مثل: "
+                                "'افتح مدير المهام'، 'اعرض سطح المكتب'، "
+                                "'كم عملية Cursor وكلها سوا كم تستهلك'."
+                            ),
+                        }
+                    else:
+                        yield {
+                            "type": "result",
+                            "content": (
+                                "I couldn't deterministically map that Windows command. "
+                                "Try a direct form like: 'open task manager', 'show desktop', "
+                                "or 'how many Cursor processes and total memory'."
+                            ),
+                        }
+                    return
 
             ai_desktop_result = await self._try_ai_desktop_response(
                 user_request, history=history

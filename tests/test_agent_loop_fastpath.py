@@ -250,7 +250,7 @@ async def test_global_fastpath_media_and_window_replies(monkeypatch: pytest.Monk
             if action == "media_control":
                 assert kwargs.get("mode") == "next"
             if action == "window_control":
-                assert kwargs.get("mode") in {"minimize", "show_desktop"}
+                assert kwargs.get("mode") in {"minimize", "show_desktop_verified"}
             return '{"ok": true}'
 
     monkeypatch.setattr("Mudabbir.tools.builtin.desktop.DesktopTool", DummyDesktopTool)
@@ -314,6 +314,28 @@ async def test_global_fastpath_process_app_memory_total_human_reply(
     assert handled is True
     assert "Cursor" in str(reply)
     assert "4058.4" in str(reply)
+    assert "24" in str(reply)
+
+
+@pytest.mark.asyncio
+async def test_global_fastpath_process_app_process_count_total_human_reply(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class DummyDesktopTool:
+        async def execute(self, action: str, **kwargs):
+            assert action == "process_tools"
+            assert kwargs.get("mode") == "app_process_count_total"
+            assert kwargs.get("name") == "Cursor"
+            return '{"ok": true, "mode": "app_process_count_total", "query": "Cursor", "process_count": 24, "total_ram_mb": 4062.0}'
+
+    monkeypatch.setattr("Mudabbir.tools.builtin.desktop.DesktopTool", DummyDesktopTool)
+    loop = AgentLoop()
+    handled, reply = await loop._try_global_windows_fastpath(
+        text="كم عملية لتطبيق Cursor شغالة وكلهم سوا كم يستهلك", session_key="s10aa"
+    )
+    assert handled is True
+    assert "Cursor" in str(reply)
+    assert "4062.0" in str(reply)
     assert "24" in str(reply)
 
 
@@ -1334,3 +1356,21 @@ async def test_global_fastpath_vision_describe_screen_reply(
     )
     assert handled is True
     assert "الشاشة" in str(reply) or "screen" in str(reply).lower()
+
+
+@pytest.mark.asyncio
+async def test_global_fastpath_returns_failure_when_tool_ok_false(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class DummyDesktopTool:
+        async def execute(self, action: str, **kwargs):
+            assert action == "window_control"
+            return '{"ok": false, "error": "verification failed"}'
+
+    monkeypatch.setattr("Mudabbir.tools.builtin.desktop.DesktopTool", DummyDesktopTool)
+    loop = AgentLoop()
+    handled, reply = await loop._try_global_windows_fastpath(
+        text="صغر كل النوافذ", session_key="s39f"
+    )
+    assert handled is True
+    assert "فشل التنفيذ" in str(reply) or "failed" in str(reply).lower()

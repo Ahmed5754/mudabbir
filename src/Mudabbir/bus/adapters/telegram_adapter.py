@@ -31,6 +31,7 @@ from Mudabbir.bus import (
     OutboundMessage,
 )
 from Mudabbir.bus.format import convert_markdown
+from Mudabbir.config import get_settings
 
 logger = logging.getLogger(__name__)
 
@@ -438,8 +439,10 @@ class TelegramAdapter(BaseChannelAdapter):
             await update.message.reply_text("⛔ Unauthorized.")
             return
 
+        settings = get_settings()
+        display_ar = str(getattr(settings, "assistant_display_name_ar", "مُدَبِّر") or "مُدَبِّر")
         await update.message.reply_text(
-            "🧠 **Mudabbir**\n\nI am listening. Just type to chat!",
+            f"🧠 **{display_ar}**\n\nجاهز. اكتب طلبك مباشرة أو /help.",
             parse_mode="Markdown",
         )
 

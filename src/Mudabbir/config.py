@@ -336,6 +336,10 @@ class Settings(BaseSettings):
         default=320,
         description="Max tokens for AI response composer output.",
     )
+    assistant_display_name_ar: str = Field(
+        default="مُدَبِّر",
+        description="Arabic display name for user-facing assistant messages.",
+    )
 
     # LLM Configuration
     llm_provider: str = Field(
@@ -587,6 +591,22 @@ class Settings(BaseSettings):
     ocr_provider: str = Field(
         default="openai", description="OCR provider: 'openai', 'sarvam', or 'tesseract'"
     )
+    vision_provider: str = Field(
+        default="auto",
+        description="Vision provider for screen analysis: 'openai', 'gemini', or 'auto'",
+    )
+    vision_model: str = Field(
+        default="gpt-4o",
+        description="Vision model used by describe_screen.",
+    )
+    vision_fallback_ocr_enabled: bool = Field(
+        default=True,
+        description="Fallback to OCR if cloud vision fails.",
+    )
+    windows_deterministic_hard_gate: bool = Field(
+        default=True,
+        description="Force deterministic routing for Windows/GUI-like requests before general AI planning.",
+    )
 
     # Sarvam AI
     sarvam_api_key: str | None = Field(default=None, description="Sarvam AI API subscription key")
@@ -822,6 +842,7 @@ class Settings(BaseSettings):
             # Plan mode
             "plan_mode": self.plan_mode,
             "plan_mode_tools": self.plan_mode_tools,
+            "assistant_display_name_ar": self.assistant_display_name_ar,
             # Self-audit
             "self_audit_enabled": self.self_audit_enabled,
             "self_audit_schedule": self.self_audit_schedule,
@@ -842,6 +863,10 @@ class Settings(BaseSettings):
             "stt_model": self.stt_model,
             # OCR
             "ocr_provider": self.ocr_provider,
+            "vision_provider": self.vision_provider,
+            "vision_model": self.vision_model,
+            "vision_fallback_ocr_enabled": self.vision_fallback_ocr_enabled,
+            "windows_deterministic_hard_gate": self.windows_deterministic_hard_gate,
             # Sarvam AI
             "sarvam_api_key": self.sarvam_api_key or existing.get("sarvam_api_key"),
             "sarvam_tts_model": self.sarvam_tts_model,

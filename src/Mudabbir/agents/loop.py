@@ -388,6 +388,11 @@ class AgentLoop:
                 parsed = json.loads(raw)
             except Exception:
                 parsed = raw
+        if isinstance(parsed, dict) and parsed.get("ok") is False:
+            err = str(parsed.get("error") or parsed.get("message") or "").strip()
+            if arabic:
+                return True, (f"فشل التنفيذ: {err}" if err else "فشل التنفيذ.")
+            return True, (f"Execution failed: {err}" if err else "Execution failed.")
 
         if action == "volume" and str(params.get("mode", "")).lower() == "get" and isinstance(parsed, dict):
             level = parsed.get("level_percent")
@@ -554,8 +559,16 @@ class AgentLoop:
                 total_ram_mb = parsed.get("total_ram_mb")
                 if query and total_ram_mb is not None:
                     if arabic:
-                        return True, f"إجمالي استهلاك تطبيق {query}: {total_ram_mb} MB عبر {process_count} عملية."
-                    return True, f"Total memory for app {query}: {total_ram_mb} MB across {process_count} processes."
+                        return True, f"{query}: {process_count} عملية، الإجمالي {total_ram_mb} MB."
+                    return True, f"{query}: {process_count} processes, total {total_ram_mb} MB."
+            if mode == "app_process_count_total" and isinstance(parsed, dict):
+                query = str(parsed.get("query") or params.get("name") or "").strip()
+                process_count = int(parsed.get("process_count") or 0)
+                total_ram_mb = parsed.get("total_ram_mb")
+                if query and total_ram_mb is not None:
+                    if arabic:
+                        return True, f"{query}: عدد العمليات {process_count}، والمجموع {total_ram_mb} MB."
+                    return True, f"{query}: {process_count} processes, combined memory {total_ram_mb} MB."
             if mode == "app_cpu_total" and isinstance(parsed, dict):
                 query = str(parsed.get("query") or params.get("name") or "").strip()
                 process_count = int(parsed.get("process_count") or 0)
@@ -1011,15 +1024,29 @@ class AgentLoop:
             mode = str(params.get("mode", "")).lower()
             if mode == "describe_screen":
                 preview = ""
+                summary = ""
+                top_app = ""
                 if isinstance(parsed, dict):
                     preview = str(parsed.get("ocr_text_preview") or "").strip()
+                    summary = str(parsed.get("ui_summary") or "").strip()
+                    top_app = str(parsed.get("top_app") or "").strip()
                 if arabic:
+                    if summary or top_app:
+                        msg = f"تحليل الشاشة جاهز{f'، الأعلى: {top_app}' if top_app else ''}."
+                        if summary:
+                            msg += f" {summary[:180]}"
+                        return True, msg
                     if preview:
-                        return True, f"تم تحليل الشاشة. مقتطف مقروء: {preview[:220]}"
-                    return True, "تم تحليل الشاشة (لقطة + OCR)."
+                        return True, f"تحليل الشاشة جاهز. مقتطف: {preview[:180]}"
+                    return True, "تحليل الشاشة جاهز."
+                if summary or top_app:
+                    msg = f"Screen analyzed{f', top app: {top_app}' if top_app else ''}."
+                    if summary:
+                        msg += f" {summary[:180]}"
+                    return True, msg
                 if preview:
-                    return True, f"Screen analyzed. OCR preview: {preview[:220]}"
-                return True, "Screen analyzed (snapshot + OCR)."
+                    return True, f"Screen analyzed. Preview: {preview[:180]}"
+                return True, "Screen analyzed."
 
         if action == "browser_control":
             mode = str(params.get("mode", "")).lower()
@@ -1337,6 +1364,7 @@ class AgentLoop:
                 "restore": "تمت استعادة حجم النافذة.",
                 "close_current": "تم إغلاق النافذة الحالية.",
                 "show_desktop": "تم تصغير كل النوافذ وإظهار سطح المكتب.",
+                "show_desktop_verified": "تم عرض سطح المكتب.",
                 "undo_show_desktop": "تمت إعادة إظهار النوافذ المصغرة.",
                 "split_left": "تم نقل النافذة لليسار.",
                 "split_right": "تم نقل النافذة لليمين.",
@@ -1349,6 +1377,7 @@ class AgentLoop:
                 "restore": "Window restored.",
                 "close_current": "Current window closed.",
                 "show_desktop": "Minimized all windows (Show Desktop).",
+                "show_desktop_verified": "Show Desktop executed.",
                 "undo_show_desktop": "Restored minimized windows.",
                 "split_left": "Moved window to the left side.",
                 "split_right": "Moved window to the right side.",
@@ -1587,7 +1616,7 @@ class AgentLoop:
             if task is not None and self._session_tasks.get(resolved_key) is task:
                 self._session_tasks.pop(resolved_key, None)
 
-    _WELCOME_EXCLUDED = frozenset({Channel.WEBSOCKET, Channel.CLI, Channel.SYSTEM})
+    _WELCOME_EXCLUDED = frozenset({Channel.WEBSOCKET, Channel.CLI, Channel.SYSTEM, Channel.TELEGRAM})
 
     async def _process_message_inner(self, message: InboundMessage, session_key: str) -> None:
         """Inner message processing (called under concurrency guards)."""
@@ -1621,7 +1650,7 @@ class AgentLoop:
                         channel=message.channel,
                         chat_id=message.chat_id,
                         content=(
-                            "Welcome to Mudabbir! Type /help (or !help) to see available commands."
+                            f"مرحباً بك في {self.settings.assistant_display_name_ar}! اكتب /help لعرض الأوامر."
                         ),
                     )
                 )

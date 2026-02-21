@@ -455,6 +455,20 @@ RULES: tuple[IntentRule, ...] = (
         params=("name",),
     ),
     IntentRule(
+        "process.app_process_count_total",
+        "process_tools",
+        "app_process_count_total",
+        "safe",
+        (
+            "كم عملية لتطبيق",
+            "كلهم سوا كم يستهلك",
+            "كتلة عمليات",
+            "app process count total",
+            "how many processes for app",
+        ),
+        params=("name",),
+    ),
+    IntentRule(
         "process.app_cpu_total",
         "process_tools",
         "app_cpu_total",
@@ -725,7 +739,7 @@ RULES: tuple[IntentRule, ...] = (
     IntentRule("window.maximize", "window_control", "maximize", "safe", ("maximize window", "تكبير النافذه", "تكبير النافذة")),
     IntentRule("window.restore", "window_control", "restore", "safe", ("restore window", "استعاده النافذه", "استعادة النافذة")),
     IntentRule("window.close_current", "window_control", "close_current", "safe", ("close current window", "اغلاق النافذه الحاليه")),
-    IntentRule("window.show_desktop", "window_control", "show_desktop", "safe", ("show desktop", "تصغير كل النوافذ", "صغر كل النوافذ", "صغرلي كل النوافذ", "صغّر كل النوافذ")),
+    IntentRule("window.show_desktop", "window_control", "show_desktop_verified", "safe", ("show desktop", "تصغير كل النوافذ", "صغر كل النوافذ", "صغرلي كل النوافذ", "صغّر كل النوافذ")),
     IntentRule("window.undo_show_desktop", "window_control", "undo_show_desktop", "safe", ("undo show desktop", "اظهار النوافذ المصغره")),
     IntentRule("window.always_on_top_on", "window_control", "always_on_top_on", "safe", ("always on top", "دائما في المقدمه")),
     IntentRule("window.always_on_top_off", "window_control", "always_on_top_off", "safe", ("remove always on top", "الغاء دائما في المقدمه")),
@@ -1258,6 +1272,17 @@ def _build_params(rule: IntentRule, raw_text: str, normalized: str) -> dict[str,
             (
                 r"(?:كل عمليات تطبيق|اجمالي استهلاك تطبيق|مجموع استهلاك تطبيق|كل عمليات برنامج)\s+([A-Za-z0-9._-]+)",
                 r"(?:total memory for app|sum memory for app|app total ram|total app memory)\s+([A-Za-z0-9._-]+)",
+                r"(?:تطبيق|برنامج|app)\s+([A-Za-z0-9._-]+)",
+            ),
+        )
+        if q:
+            params["name"] = q
+    if rule.capability_id == "process.app_process_count_total":
+        q = _extract_named_value(
+            raw_text,
+            (
+                r"(?:كم عملية لتطبيق|كم عمليه لتطبيق|كتلة عمليات|كتله عمليات)\s+([A-Za-z0-9._-]+)",
+                r"(?:how many processes for app|app process count total)\s+([A-Za-z0-9._-]+)",
                 r"(?:تطبيق|برنامج|app)\s+([A-Za-z0-9._-]+)",
             ),
         )

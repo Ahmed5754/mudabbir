@@ -8,6 +8,7 @@ import ipaddress
 import json
 import logging
 import os
+import base64
 import re
 import subprocess
 import time
@@ -17,6 +18,7 @@ from pathlib import Path
 from typing import Any
 
 from Mudabbir.bus.media import get_media_dir
+from Mudabbir.config import get_settings
 from Mudabbir.tools.builtin.desktop_audio import AUDIO_ACTIONS
 from Mudabbir.tools.builtin.desktop_display import DISPLAY_ACTIONS
 from Mudabbir.tools.builtin.desktop_files import FILE_ACTIONS
@@ -3300,9 +3302,68 @@ $obj | ConvertTo-Json -Compress
             return self._error(f"pyautogui unavailable: {exc}")
         pyautogui.FAILSAFE = False
         try:
-            if mode_norm == "show_desktop":
+            if mode_norm in {"show_desktop", "show_desktop_verified"}:
+                before_count = None
+                try:
+                    import pygetwindow as gw
+
+                    before_count = len(
+                        [
+                            w
+                            for w in gw.getAllWindows()
+                            if str(getattr(w, "title", "") or "").strip() and bool(getattr(w, "isVisible", True))
+                        ]
+                    )
+                except Exception:
+                    before_count = None
                 pyautogui.hotkey("win", "d")
-                return _json({"ok": True, "mode": mode_norm})
+                time.sleep(0.22)
+                after_count = None
+                try:
+                    import pygetwindow as gw
+
+                    after_count = len(
+                        [
+                            w
+                            for w in gw.getAllWindows()
+                            if str(getattr(w, "title", "") or "").strip() and bool(getattr(w, "isVisible", True))
+                        ]
+                    )
+                except Exception:
+                    after_count = None
+                verified = True
+                fallback_used = False
+                if before_count is not None and after_count is not None and after_count >= before_count:
+                    ok, _out = _run_powershell(
+                        "(New-Object -ComObject Shell.Application).MinimizeAll(); @{ok=$true; mode='show_desktop_verified'; fallback='shell.minimize_all'} | ConvertTo-Json -Compress",
+                        timeout=10,
+                    )
+                    fallback_used = bool(ok)
+                    time.sleep(0.18)
+                    try:
+                        import pygetwindow as gw
+
+                        final_count = len(
+                            [
+                                w
+                                for w in gw.getAllWindows()
+                                if str(getattr(w, "title", "") or "").strip() and bool(getattr(w, "isVisible", True))
+                            ]
+                        )
+                        verified = final_count < before_count if before_count is not None else bool(ok)
+                        after_count = final_count
+                    except Exception:
+                        verified = bool(ok)
+                return _json(
+                    {
+                        "ok": bool(verified),
+                        "mode": "show_desktop_verified",
+                        "before_visible_windows": before_count,
+                        "after_visible_windows": after_count,
+                        "fallback_used": fallback_used,
+                        "error": None if verified else "show desktop verification failed",
+                    }
+                )
             if mode_norm == "undo_show_desktop":
                 pyautogui.hotkey("win", "d")
                 return _json({"ok": True, "mode": mode_norm})
@@ -3700,6 +3761,41 @@ $obj | ConvertTo-Json -Compress
                     "process_count": len(items),
                     "total_ram_mb": round(total_ram_mb, 2),
                     "items": items[:30],
+                }
+            )
+        if mode_norm == "app_process_count_total":
+            query_raw = (name or "").strip()
+            if not query_raw:
+                return self._error("name is required")
+            query_norm = query_raw.casefold()
+            if query_norm.endswith(".exe"):
+                query_norm = query_norm[:-4]
+            items: list[dict[str, Any]] = []
+            total_ram_mb = 0.0
+            for p in psutil.process_iter(["pid", "name", "memory_info"]):
+                try:
+                    info = p.info
+                    pname = str(info.get("name") or "").strip()
+                    if not pname:
+                        continue
+                    pname_norm = pname.casefold()
+                    pname_no_ext = pname_norm[:-4] if pname_norm.endswith(".exe") else pname_norm
+                    if query_norm not in pname_norm and query_norm not in pname_no_ext:
+                        continue
+                    ram_mb = round((info.get("memory_info").rss or 0) / (1024 * 1024), 2) if info.get("memory_info") else 0.0
+                    total_ram_mb += ram_mb
+                    items.append({"pid": int(info.get("pid") or 0), "name": pname, "ram_mb": ram_mb})
+                except Exception:
+                    continue
+            items.sort(key=lambda x: float(x.get("ram_mb", 0.0) or 0.0), reverse=True)
+            return _json(
+                {
+                    "ok": True,
+                    "mode": mode_norm,
+                    "query": query_raw,
+                    "process_count": len(items),
+                    "total_ram_mb": round(total_ram_mb, 2),
+                    "top_processes": items[:3],
                 }
             )
         if mode_norm == "app_cpu_total":
@@ -7486,10 +7582,143 @@ $obj | ConvertTo-Json -Compress
             except Exception as exc:
                 return None, str(exc)
 
+        def _describe_with_cloud_vision(img_path: Path) -> tuple[bool, dict[str, Any], str | None]:
+            settings = get_settings()
+            provider = str(getattr(settings, "vision_provider", "auto") or "auto").strip().lower()
+            prompt = (
+                "Analyze this Windows desktop screenshot and return STRICT JSON with keys: "
+                "ui_summary (short string), top_app (string), detected_elements (array of short strings), confidence (0..1). "
+                "No markdown."
+            )
+            image_bytes = img_path.read_bytes()
+            b64 = base64.b64encode(image_bytes).decode("ascii")
+
+            def _parse_json_text(raw_text: str) -> dict[str, Any]:
+                text = str(raw_text or "").strip()
+                if text.startswith("```"):
+                    text = re.sub(r"^```(?:json)?", "", text, flags=re.IGNORECASE).strip()
+                    text = re.sub(r"```$", "", text).strip()
+                parsed = json.loads(text)
+                if not isinstance(parsed, dict):
+                    return {}
+                return parsed
+
+            if provider in {"openai", "auto"}:
+                api_key = str(getattr(settings, "openai_api_key", "") or "").strip()
+                if api_key:
+                    try:
+                        import httpx
+
+                        model = str(getattr(settings, "vision_model", "gpt-4o") or "gpt-4o")
+                        payload = {
+                            "model": model,
+                            "messages": [
+                                {
+                                    "role": "user",
+                                    "content": [
+                                        {"type": "text", "text": prompt},
+                                        {
+                                            "type": "image_url",
+                                            "image_url": {"url": f"data:image/png;base64,{b64}"},
+                                        },
+                                    ],
+                                }
+                            ],
+                            "temperature": 0.1,
+                            "max_tokens": 500,
+                        }
+                        with httpx.Client(timeout=45.0) as client:
+                            resp = client.post(
+                                "https://api.openai.com/v1/chat/completions",
+                                headers={
+                                    "Authorization": f"Bearer {api_key}",
+                                    "Content-Type": "application/json",
+                                },
+                                json=payload,
+                            )
+                            resp.raise_for_status()
+                        data = resp.json()
+                        text_out = (
+                            (((data or {}).get("choices") or [{}])[0].get("message") or {}).get("content", "")
+                        )
+                        parsed = _parse_json_text(str(text_out))
+                        if parsed:
+                            return True, parsed, "openai"
+                    except Exception:
+                        pass
+
+            if provider in {"gemini", "auto"}:
+                api_key = str(getattr(settings, "google_api_key", "") or "").strip()
+                if api_key:
+                    try:
+                        import httpx
+
+                        model = str(getattr(settings, "vision_model", "gemini-2.5-flash") or "gemini-2.5-flash")
+                        endpoint = (
+                            "https://generativelanguage.googleapis.com/v1beta/models/"
+                            f"{model}:generateContent?key={api_key}"
+                        )
+                        payload = {
+                            "contents": [
+                                {
+                                    "parts": [
+                                        {"text": prompt},
+                                        {
+                                            "inline_data": {
+                                                "mime_type": "image/png",
+                                                "data": b64,
+                                            }
+                                        },
+                                    ]
+                                }
+                            ],
+                            "generationConfig": {"temperature": 0.1, "maxOutputTokens": 500},
+                        }
+                        with httpx.Client(timeout=45.0) as client:
+                            resp = client.post(endpoint, json=payload)
+                            resp.raise_for_status()
+                        data = resp.json()
+                        candidates = (data or {}).get("candidates") or []
+                        parts = (((candidates[0] if candidates else {}).get("content") or {}).get("parts") or [])
+                        text_out = ""
+                        for p in parts:
+                            if isinstance(p, dict) and p.get("text"):
+                                text_out += str(p.get("text"))
+                        parsed = _parse_json_text(text_out)
+                        if parsed:
+                            return True, parsed, "gemini"
+                    except Exception:
+                        pass
+
+            return False, {}, None
+
         if mode_norm in {"describe_screen"}:
             image_path, err = _capture("ocr_screen")
             if image_path is None:
                 return self._error(err or "screen capture failed")
+            ok_vision, vision_data, vision_engine = _describe_with_cloud_vision(image_path)
+            if ok_vision:
+                ui_summary = str(vision_data.get("ui_summary") or "").strip()
+                top_app = str(vision_data.get("top_app") or "").strip()
+                detected = vision_data.get("detected_elements")
+                if not isinstance(detected, list):
+                    detected = []
+                confidence = vision_data.get("confidence")
+                return _json(
+                    {
+                        "ok": True,
+                        "mode": mode_norm,
+                        "screenshot": str(image_path),
+                        "source": "vision",
+                        "vision_engine": vision_engine,
+                        "ui_summary": ui_summary,
+                        "top_app": top_app,
+                        "detected_elements": [str(x) for x in detected[:20]],
+                        "confidence": confidence,
+                    }
+                )
+            if not bool(getattr(get_settings(), "vision_fallback_ocr_enabled", True)):
+                return self._error("vision analysis failed and OCR fallback is disabled")
             ok_ocr, text_out, engine = _ocr_image(image_path)
             windows = _serialize_windows(include_untitled=False, limit=25)
             return _json(
@@ -7497,6 +7726,7 @@ $obj | ConvertTo-Json -Compress
                     "ok": True,
                     "mode": mode_norm,
                     "screenshot": str(image_path),
+                    "source": "ocr_fallback",
                     "window_count": len(windows),
                     "top_windows": [str(w.get("title", "") or "") for w in windows[:8]],
                     "ocr_engine": engine if ok_ocr else None,

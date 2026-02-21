@@ -327,7 +327,15 @@ def test_resolve_colloquial_show_desktop_phrase() -> None:
     result = resolve_windows_intent("صغر كل النوافذ")
     assert result.matched is True
     assert result.action == "window_control"
-    assert result.params.get("mode") == "show_desktop"
+    assert result.params.get("mode") == "show_desktop_verified"
+
+
+def test_resolve_app_process_count_total_phrase() -> None:
+    result = resolve_windows_intent("كم عملية لتطبيق Cursor شغالة وكلهم سوا كم يستهلك")
+    assert result.matched is True
+    assert result.action == "process_tools"
+    assert result.params.get("mode") == "app_process_count_total"
+    assert str(result.params.get("name") or "").lower() == "cursor"
 
 
 def test_resolve_screen_observe_maps_to_vision_tools() -> None:
