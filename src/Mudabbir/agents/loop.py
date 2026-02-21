@@ -351,6 +351,7 @@ class AgentLoop:
                 session_state = self._windows_session_state.setdefault(session_key, {})
                 last_app = str(session_state.get("last_app", "")).strip()
                 last_window = str(session_state.get("last_window", "")).strip()
+                last_service = str(session_state.get("last_service", "")).strip()
                 # Handle short pronoun follow-ups when intent map has no explicit match.
                 if last_app and normalized in {"سكره", "اغلقه", "اقفله", "close it", "close app"}:
                     resolution = {
@@ -384,6 +385,51 @@ class AgentLoop:
                         "capability_id": "window.maximize",
                         "action": "window_control",
                         "params": {"mode": "maximize", "query": last_window},
+                        "risk_level": "safe",
+                        "unsupported": False,
+                        "unsupported_reason": "",
+                    }
+                elif last_service and normalized in {"وقفها", "وقفه", "stop it", "stop service"}:
+                    resolution = {
+                        "capability_id": "services.stop",
+                        "action": "service_tools",
+                        "params": {"mode": "stop", "name": last_service},
+                        "risk_level": "destructive",
+                        "unsupported": False,
+                        "unsupported_reason": "",
+                    }
+                elif last_service and normalized in {"شغلها", "شغله", "start it", "start service"}:
+                    resolution = {
+                        "capability_id": "services.start",
+                        "action": "service_tools",
+                        "params": {"mode": "start", "name": last_service},
+                        "risk_level": "elevated",
+                        "unsupported": False,
+                        "unsupported_reason": "",
+                    }
+                elif last_service and normalized in {"اعد تشغيلها", "اعادة تشغيلها", "restart it", "restart service"}:
+                    resolution = {
+                        "capability_id": "services.restart",
+                        "action": "service_tools",
+                        "params": {"mode": "restart", "name": last_service},
+                        "risk_level": "elevated",
+                        "unsupported": False,
+                        "unsupported_reason": "",
+                    }
+                elif normalized in {"شغل النت", "شغل الواي فاي", "enable wifi", "turn on wifi"}:
+                    resolution = {
+                        "capability_id": "network.wifi_on",
+                        "action": "network_tools",
+                        "params": {"mode": "wifi_on"},
+                        "risk_level": "safe",
+                        "unsupported": False,
+                        "unsupported_reason": "",
+                    }
+                elif normalized in {"طفي النت", "سكر النت", "طفي الواي فاي", "disable wifi", "turn off wifi"}:
+                    resolution = {
+                        "capability_id": "network.wifi_off",
+                        "action": "network_tools",
+                        "params": {"mode": "wifi_off"},
                         "risk_level": "safe",
                         "unsupported": False,
                         "unsupported_reason": "",
