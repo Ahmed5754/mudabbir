@@ -1744,6 +1744,28 @@ class AgentLoop:
                 if arabic:
                     return True, f"🔉 تم ضبط صوت {app_name or 'التطبيق'} على {level_value}% ({count})."
                 return True, f"🔉 Set {app_name or 'app'} volume to {level_value}% ({count})."
+            if mode in {"app_volume_up", "app_volume_down"} and isinstance(parsed, dict):
+                app_name = str(parsed.get("name") or params.get("name") or "").strip()
+                delta_value = int(parsed.get("delta") or params.get("level") or 10)
+                level_value = parsed.get("level")
+                count = int(parsed.get("changed_sessions") or 0)
+                if arabic:
+                    direction = "رفع" if mode == "app_volume_up" else "خفض"
+                    suffix = f" (صار {level_value}%)." if level_value is not None else "."
+                    return True, f"🔉 تم {direction} صوت {app_name or 'التطبيق'} بمقدار {delta_value}% ({count}){suffix}"
+                direction = "Raised" if mode == "app_volume_up" else "Lowered"
+                suffix = f" (now {level_value}%)." if level_value is not None else "."
+                return True, f"🔉 {direction} {app_name or 'app'} by {delta_value}% ({count}){suffix}"
+            if mode in {"app_volume_mute", "app_volume_unmute"} and isinstance(parsed, dict):
+                app_name = str(parsed.get("name") or params.get("name") or "").strip()
+                count = int(parsed.get("changed_sessions") or 0)
+                if arabic:
+                    if mode == "app_volume_mute":
+                        return True, f"🔇 تم كتم {app_name or 'التطبيق'} ({count})."
+                    return True, f"🔊 تم إلغاء كتم {app_name or 'التطبيق'} ({count})."
+                if mode == "app_volume_mute":
+                    return True, f"🔇 Muted {app_name or 'app'} ({count})."
+                return True, f"🔊 Unmuted {app_name or 'app'} ({count})."
             media_msgs_ar = {
                 "stop_all_media": "⏸️ تم إيقاف الوسائط.",
                 "youtube_open": "▶️ تم فتح الفيديو.",

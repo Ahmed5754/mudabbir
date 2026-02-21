@@ -7463,6 +7463,7 @@ $obj | ConvertTo-Json -Compress
         seconds: Any = None,
         name: str = "",
         level: Any = None,
+        delta: Any = None,
     ) -> str:
         mode_norm = (mode or "").strip().lower()
         if mode_norm == "stop_all_media":
@@ -7520,7 +7521,7 @@ $obj | ConvertTo-Json -Compress
                 )
             except Exception as exc:
                 return self._error(f"browser audio control failed: {exc}")
-        if mode_norm in {"app_volume_set"}:
+        if mode_norm in {"app_volume_set", "app_volume_up", "app_volume_down", "app_volume_mute", "app_volume_unmute"}:
             app_name = str(name or "").strip().lower()
             if not app_name:
                 return self._error("name is required")
@@ -7529,6 +7530,11 @@ $obj | ConvertTo-Json -Compress
             except Exception:
                 level_value = 50
             level_value = max(0, min(100, level_value))
+            try:
+                delta_value = int(delta if delta is not None else level if level is not None else 10)
+            except Exception:
+                delta_value = 10
+            delta_value = max(1, min(100, delta_value))
             target_name = app_name if app_name.endswith(".exe") else f"{app_name}.exe"
             try:
                 from pycaw.pycaw import AudioUtilities
@@ -7536,6 +7542,8 @@ $obj | ConvertTo-Json -Compress
                 changed = 0
                 touched: list[str] = []
                 scalar = float(level_value) / 100.0
+                updated_levels: list[int] = []
+                muted_state: bool | None = None
                 for session in AudioUtilities.GetAllSessions():
                     try:
                         proc = getattr(session, "Process", None)
@@ -7545,7 +7553,25 @@ $obj | ConvertTo-Json -Compress
                         volume = getattr(session, "SimpleAudioVolume", None)
                         if volume is None:
                             continue
-                        volume.SetMasterVolume(float(scalar), None)
+                        if mode_norm == "app_volume_set":
+                            volume.SetMasterVolume(float(scalar), None)
+                            updated_levels.append(int(round(float(scalar) * 100.0)))
+                        elif mode_norm == "app_volume_up":
+                            current = float(volume.GetMasterVolume())
+                            new_scalar = max(0.0, min(1.0, current + (float(delta_value) / 100.0)))
+                            volume.SetMasterVolume(float(new_scalar), None)
+                            updated_levels.append(int(round(new_scalar * 100.0)))
+                        elif mode_norm == "app_volume_down":
+                            current = float(volume.GetMasterVolume())
+                            new_scalar = max(0.0, min(1.0, current - (float(delta_value) / 100.0)))
+                            volume.SetMasterVolume(float(new_scalar), None)
+                            updated_levels.append(int(round(new_scalar * 100.0)))
+                        elif mode_norm == "app_volume_mute":
+                            volume.SetMute(1, None)
+                            muted_state = True
+                        elif mode_norm == "app_volume_unmute":
+                            volume.SetMute(0, None)
+                            muted_state = False
                         changed += 1
                         if pname not in touched:
                             touched.append(pname)
@@ -7553,16 +7579,22 @@ $obj | ConvertTo-Json -Compress
                         continue
                 if changed == 0:
                     return self._error(f"no active audio sessions found for {target_name}")
-                return _json(
-                    {
-                        "ok": True,
-                        "mode": mode_norm,
-                        "name": target_name,
-                        "level": level_value,
-                        "changed_sessions": changed,
-                        "apps": touched,
-                    }
-                )
+                payload: dict[str, Any] = {
+                    "ok": True,
+                    "mode": mode_norm,
+                    "name": target_name,
+                    "changed_sessions": changed,
+                    "apps": touched,
+                }
+                if mode_norm == "app_volume_set":
+                    payload["level"] = level_value
+                elif mode_norm in {"app_volume_up", "app_volume_down"}:
+                    payload["delta"] = delta_value
+                    if updated_levels:
+                        payload["level"] = updated_levels[-1]
+                elif muted_state is not None:
+                    payload["muted"] = muted_state
+                return _json(payload)
             except Exception as exc:
                 return self._error(f"app volume control failed: {exc}")
         if mode_norm in {"screen_record", "screen_record_short"}:

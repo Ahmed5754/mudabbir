@@ -204,6 +204,23 @@ def test_resolve_set_app_volume_phrase() -> None:
     assert result.params.get("level") == 30
 
 
+def test_resolve_raise_app_volume_phrase() -> None:
+    result = resolve_windows_intent("رفع صوت تطبيق Chrome 15")
+    assert result.matched is True
+    assert result.action == "media_tools"
+    assert result.params.get("mode") == "app_volume_up"
+    assert str(result.params.get("name") or "").lower() == "chrome"
+    assert result.params.get("level") == 15
+
+
+def test_resolve_mute_app_volume_phrase() -> None:
+    result = resolve_windows_intent("كتم صوت تطبيق Chrome")
+    assert result.matched is True
+    assert result.action == "media_tools"
+    assert result.params.get("mode") == "app_volume_mute"
+    assert str(result.params.get("name") or "").lower() == "chrome"
+
+
 def test_resolve_vision_click_target_phrase() -> None:
     result = resolve_windows_intent("انقر على زر التالي")
     assert result.matched is True

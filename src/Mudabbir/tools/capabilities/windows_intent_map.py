@@ -886,6 +886,10 @@ RULES: tuple[IntentRule, ...] = (
     IntentRule("media.browser_mute_only", "media_tools", "mute_browser_only", "safe", ("mute browser only", "كتم صوت المتصفح فقط", "كتم المتصفح")),
     IntentRule("media.browser_unmute_only", "media_tools", "unmute_browser_only", "safe", ("unmute browser only", "الغاء كتم صوت المتصفح", "إلغاء كتم صوت المتصفح", "رجع صوت المتصفح", "افتح صوت المتصفح")),
     IntentRule("media.app_volume_set", "media_tools", "app_volume_set", "safe", ("set app volume", "app volume", "غير صوت تطبيق", "عدل صوت تطبيق", "خلي صوت تطبيق"), params=("name", "level")),
+    IntentRule("media.app_volume_up", "media_tools", "app_volume_up", "safe", ("increase app volume", "raise app volume", "رفع صوت تطبيق", "علي صوت تطبيق", "زو د صوت تطبيق", "زود صوت تطبيق"), params=("name", "level")),
+    IntentRule("media.app_volume_down", "media_tools", "app_volume_down", "safe", ("decrease app volume", "lower app volume", "خفض صوت تطبيق", "وطي صوت تطبيق", "نزل صوت تطبيق"), params=("name", "level")),
+    IntentRule("media.app_volume_mute", "media_tools", "app_volume_mute", "safe", ("mute app volume", "كتم صوت تطبيق", "اكتم صوت تطبيق"), params=("name",)),
+    IntentRule("media.app_volume_unmute", "media_tools", "app_volume_unmute", "safe", ("unmute app volume", "الغاء كتم صوت تطبيق", "إلغاء كتم صوت تطبيق", "رجع صوت تطبيق"), params=("name",)),
     IntentRule("media.screen_record", "media_tools", "screen_record", "safe", ("screen record", "record screen", "screen recording", "تسجيل فيديو للشاشة", "سجل الشاشة", "تسجيل الشاشة"), params=("seconds",)),
     IntentRule("tasks.list", "task_tools", "list", "safe", ("task scheduler list", "قائمة المهام المجدولة")),
     IntentRule("tasks.running", "task_tools", "running", "safe", ("running scheduled tasks", "المهام المجدولة الجارية", "المهام الجارية")),
@@ -1010,7 +1014,7 @@ def _build_params(rule: IntentRule, raw_text: str, normalized: str) -> dict[str,
         q = _extract_named_value(
             raw_text,
             (
-                r"(?:set app volume|app volume|غير صوت تطبيق|عدل صوت تطبيق|خلي صوت تطبيق)\s+([A-Za-z0-9._-]+)",
+                r"(?:set app volume|app volume|غير صوت تطبيق|عدل صوت تطبيق|خلي صوت تطبيق|increase app volume|raise app volume|decrease app volume|lower app volume|رفع صوت تطبيق|علي صوت تطبيق|زود صوت تطبيق|زو د صوت تطبيق|خفض صوت تطبيق|وطي صوت تطبيق|نزل صوت تطبيق|mute app volume|unmute app volume|كتم صوت تطبيق|اكتم صوت تطبيق|الغاء كتم صوت تطبيق|إلغاء كتم صوت تطبيق|رجع صوت تطبيق)\s+([A-Za-z0-9._-]+)",
                 r"(?:service startup type|startup type service)\s+([A-Za-z0-9._-]+)",
                 r"(?:وصف الخدمة|وصف الخدمه|تبعيات الخدمة|تبعيات الخدمه|تشغيل خدمة|تشغيل خدمه|شغل خدمة|شغل خدمه|ايقاف خدمة|ايقاف خدمه|اعادة تشغيل خدمة|اعاده تشغيل خدمة|إعادة تشغيل خدمة)\s+([A-Za-z0-9._-]+)",
                 r"(?:start service|stop service|restart service|service description|service dependencies)\s+([A-Za-z0-9._-]+)",
@@ -1022,17 +1026,23 @@ def _build_params(rule: IntentRule, raw_text: str, normalized: str) -> dict[str,
             q = _extract_app_query(raw_text)
         if q:
             params["name"] = q
-    if rule.capability_id == "media.app_volume_set":
+    if rule.capability_id in {
+        "media.app_volume_set",
+        "media.app_volume_up",
+        "media.app_volume_down",
+        "media.app_volume_mute",
+        "media.app_volume_unmute",
+    }:
         app_for_volume = _extract_named_value(
             raw_text,
             (
-                r"(?:غير صوت تطبيق|عدل صوت تطبيق|خلي صوت تطبيق|set app volume|app volume)\s+([A-Za-z0-9._-]+)",
+                r"(?:غير صوت تطبيق|عدل صوت تطبيق|خلي صوت تطبيق|set app volume|app volume|increase app volume|raise app volume|decrease app volume|lower app volume|رفع صوت تطبيق|علي صوت تطبيق|زود صوت تطبيق|زو د صوت تطبيق|خفض صوت تطبيق|وطي صوت تطبيق|نزل صوت تطبيق|mute app volume|unmute app volume|كتم صوت تطبيق|اكتم صوت تطبيق|الغاء كتم صوت تطبيق|إلغاء كتم صوت تطبيق|رجع صوت تطبيق)\s+([A-Za-z0-9._-]+)",
                 r"(?:صوت)\s+([A-Za-z0-9._-]+)",
             ),
         )
         if app_for_volume:
             params["name"] = str(app_for_volume).strip()
-        if value is not None:
+        if value is not None and rule.capability_id in {"media.app_volume_set", "media.app_volume_up", "media.app_volume_down"}:
             params["level"] = max(0, min(100, value))
     if "username" in rule.params:
         q = _extract_named_value(

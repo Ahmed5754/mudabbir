@@ -1608,6 +1608,49 @@ async def test_global_fastpath_set_app_volume_human_reply(
 
 
 @pytest.mark.asyncio
+async def test_global_fastpath_raise_app_volume_human_reply(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class DummyDesktopTool:
+        async def execute(self, action: str, **kwargs):
+            assert action == "media_tools"
+            assert kwargs.get("mode") == "app_volume_up"
+            assert str(kwargs.get("name", "")).lower() == "chrome"
+            assert int(kwargs.get("level")) == 15
+            return '{"ok": true, "mode": "app_volume_up", "name": "chrome.exe", "delta": 15, "level": 52, "changed_sessions": 2}'
+
+    monkeypatch.setattr("Mudabbir.tools.builtin.desktop.DesktopTool", DummyDesktopTool)
+    loop = AgentLoop()
+    handled, reply = await loop._try_global_windows_fastpath(
+        text="رفع صوت تطبيق Chrome 15", session_key="s39appvup"
+    )
+    assert handled is True
+    assert "15" in str(reply)
+    assert "chrome" in str(reply).lower()
+
+
+@pytest.mark.asyncio
+async def test_global_fastpath_mute_app_volume_human_reply(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class DummyDesktopTool:
+        async def execute(self, action: str, **kwargs):
+            assert action == "media_tools"
+            assert kwargs.get("mode") == "app_volume_mute"
+            assert str(kwargs.get("name", "")).lower() == "chrome"
+            return '{"ok": true, "mode": "app_volume_mute", "name": "chrome.exe", "muted": true, "changed_sessions": 1}'
+
+    monkeypatch.setattr("Mudabbir.tools.builtin.desktop.DesktopTool", DummyDesktopTool)
+    loop = AgentLoop()
+    handled, reply = await loop._try_global_windows_fastpath(
+        text="كتم صوت تطبيق Chrome", session_key="s39appvmute"
+    )
+    assert handled is True
+    assert "chrome" in str(reply).lower()
+    assert ("كتم" in str(reply)) or ("muted" in str(reply).lower())
+
+
+@pytest.mark.asyncio
 async def test_global_fastpath_vision_click_target_human_reply(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
