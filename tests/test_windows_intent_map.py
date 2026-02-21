@@ -204,6 +204,24 @@ def test_resolve_set_app_volume_phrase() -> None:
     assert result.params.get("level") == 30
 
 
+def test_resolve_vision_click_target_phrase() -> None:
+    result = resolve_windows_intent("انقر على زر التالي")
+    assert result.matched is True
+    assert result.action == "vision_tools"
+    assert result.params.get("mode") == "locate_ui_target"
+    assert result.params.get("interaction") == "click"
+    assert "زر التالي" in str(result.params.get("target") or "")
+
+
+def test_resolve_vision_move_target_phrase() -> None:
+    result = resolve_windows_intent("حرك الماوس إلى شريط البحث")
+    assert result.matched is True
+    assert result.action == "vision_tools"
+    assert result.params.get("mode") == "locate_ui_target"
+    assert result.params.get("interaction") == "move"
+    assert "شريط البحث" in str(result.params.get("target") or "")
+
+
 def test_resolve_popup_message_phrase() -> None:
     result = resolve_windows_intent('اظهر رسالة "تم النسخ بنجاح"')
     assert result.matched is True

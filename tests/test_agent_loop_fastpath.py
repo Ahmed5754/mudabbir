@@ -1608,6 +1608,26 @@ async def test_global_fastpath_set_app_volume_human_reply(
 
 
 @pytest.mark.asyncio
+async def test_global_fastpath_vision_click_target_human_reply(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class DummyDesktopTool:
+        async def execute(self, action: str, **kwargs):
+            assert action == "vision_tools"
+            assert kwargs.get("mode") == "locate_ui_target"
+            assert kwargs.get("interaction") == "click"
+            return '{"ok": true, "mode": "locate_ui_target", "matched_label": "زر التالي", "action_done": "click"}'
+
+    monkeypatch.setattr("Mudabbir.tools.builtin.desktop.DesktopTool", DummyDesktopTool)
+    loop = AgentLoop()
+    handled, reply = await loop._try_global_windows_fastpath(
+        text="انقر على زر التالي", session_key="s39visionc"
+    )
+    assert handled is True
+    assert "النقر" in str(reply) or "clicked" in str(reply).lower()
+
+
+@pytest.mark.asyncio
 async def test_global_fastpath_repeat_last_interval_replays_multiple_times(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

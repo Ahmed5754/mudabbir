@@ -277,6 +277,36 @@ RULES: tuple[IntentRule, ...] = (
         ),
     ),
     IntentRule(
+        "vision.click_target",
+        "vision_tools",
+        "locate_ui_target",
+        "safe",
+        (
+            "click on",
+            "click the",
+            "انقر على",
+            "اضغط على",
+            "اكبس على",
+            "اضغط زر",
+        ),
+        params=("target", "interaction"),
+    ),
+    IntentRule(
+        "vision.move_to_target",
+        "vision_tools",
+        "locate_ui_target",
+        "safe",
+        (
+            "move to",
+            "move mouse to",
+            "حرك الماوس الى",
+            "حرك الماوس إلى",
+            "روح على",
+            "وجهني على",
+        ),
+        params=("target", "interaction"),
+    ),
+    IntentRule(
         "display.screenshot_window",
         "screenshot_tools",
         "window_active",
@@ -1073,6 +1103,19 @@ def _build_params(rule: IntentRule, raw_text: str, normalized: str) -> dict[str,
             q = _extract_named_value(raw_text, (r"(?:target|kb)\s*[:=]?\s*([^\s]+)",))
             if q:
                 params["target"] = q
+    if rule.capability_id in {"vision.click_target", "vision.move_to_target"}:
+        target_hint = _extract_named_value(
+            raw_text,
+            (
+                r"(?:click on|click the)\s+(.+)$",
+                r"(?:انقر على|اضغط على|اكبس على|اضغط زر)\s+(.+)$",
+                r"(?:move to|move mouse to)\s+(.+)$",
+                r"(?:حرك الماوس الى|حرك الماوس إلى|روح على|وجهني على)\s+(.+)$",
+            ),
+        )
+        if target_hint:
+            params["target"] = target_hint.strip(" .")
+        params["interaction"] = "click" if rule.capability_id == "vision.click_target" else "move"
     if "ext" in rule.params:
         ext = _extract_extension(raw_text)
         if ext:
@@ -1588,6 +1631,42 @@ def resolve_windows_intent(message: str) -> IntentResolution:
             matched=True,
             capability_id="network.pathping",
             action="network_tools",
+            params=params,
+            risk_level="safe",
+        )
+    if _contains_any(normalized, ("انقر على", "انقر علي", "اضغط على", "اضغط علي", "اكبس على", "اكبس علي", "click on", "click the")):
+        target_hint = _extract_named_value(
+            raw,
+            (
+                r"(?:انقر على|اضغط على|اكبس على)\s+(.+)$",
+                r"(?:click on|click the)\s+(.+)$",
+            ),
+        )
+        params = {"mode": "locate_ui_target", "interaction": "click"}
+        if target_hint:
+            params["target"] = target_hint.strip(" .")
+        return IntentResolution(
+            matched=True,
+            capability_id="vision.click_target",
+            action="vision_tools",
+            params=params,
+            risk_level="safe",
+        )
+    if _contains_any(normalized, ("حرك الماوس الى", "حرك الماوس إلى", "حرك الماوس الي", "move mouse to", "move to")):
+        target_hint = _extract_named_value(
+            raw,
+            (
+                r"(?:حرك الماوس الى|حرك الماوس إلى)\s+(.+)$",
+                r"(?:move mouse to|move to)\s+(.+)$",
+            ),
+        )
+        params = {"mode": "locate_ui_target", "interaction": "move"}
+        if target_hint:
+            params["target"] = target_hint.strip(" .")
+        return IntentResolution(
+            matched=True,
+            capability_id="vision.move_to_target",
+            action="vision_tools",
             params=params,
             risk_level="safe",
         )

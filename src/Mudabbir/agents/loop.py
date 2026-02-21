@@ -1423,6 +1423,21 @@ class AgentLoop:
                 if preview:
                     return True, f"Screen analyzed. Preview: {preview[:180]}"
                 return True, "Screen analyzed."
+            if mode in {"locate_ui_target", "locate_element"} and isinstance(parsed, dict):
+                ok_locate = bool(parsed.get("ok", False))
+                target = str(parsed.get("matched_label") or params.get("target") or "").strip()
+                action_done = str(parsed.get("action_done") or params.get("interaction") or "").strip().lower()
+                if arabic:
+                    if ok_locate:
+                        if action_done == "click":
+                            return True, f"🖱️ تم العثور على {target or 'العنصر'} والنقر عليه."
+                        return True, f"🖱️ تم العثور على {target or 'العنصر'} وتحريك الماوس إليه."
+                    return True, f"ما لقيت {target or 'العنصر'} على الشاشة حالياً."
+                if ok_locate:
+                    if action_done == "click":
+                        return True, f"🖱️ Found {target or 'target'} and clicked it."
+                    return True, f"🖱️ Found {target or 'target'} and moved the mouse to it."
+                return True, f"Couldn't find {target or 'the target'} on screen right now."
 
         if action == "screenshot_tools":
             mode = str(params.get("mode", "")).lower()
