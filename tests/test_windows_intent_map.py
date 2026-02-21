@@ -372,6 +372,15 @@ def test_resolve_ram_by_pid_phrase() -> None:
     assert result.params.get("pid") == 4321
 
 
+def test_resolve_set_priority_by_pid_phrase() -> None:
+    result = resolve_windows_intent("set priority pid 1234 high")
+    assert result.matched is True
+    assert result.action == "process_tools"
+    assert result.params.get("mode") == "set_priority"
+    assert result.params.get("pid") == 1234
+    assert result.params.get("priority") == "high"
+
+
 def test_resolve_app_cpu_total_phrase() -> None:
     result = resolve_windows_intent("اجمالي cpu تطبيق Cursor")
     assert result.matched is True

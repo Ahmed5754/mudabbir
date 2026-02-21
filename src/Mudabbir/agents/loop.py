@@ -1243,6 +1243,7 @@ class AgentLoop:
                 "start_time_by_pid": "تم جلب وقت بدء العملية.",
                 "suspend_pid": "تم تعليق العملية.",
                 "resume_pid": "تم استئناف العملية.",
+                "set_priority": "تم تغيير أولوية العملية.",
             }
             process_msgs_en = {
                 "restart_explorer": "Windows Explorer has been restarted.",
@@ -1254,6 +1255,7 @@ class AgentLoop:
                 "start_time_by_pid": "Fetched process start time.",
                 "suspend_pid": "Process suspended.",
                 "resume_pid": "Process resumed.",
+                "set_priority": "Process priority updated.",
             }
             msg = process_msgs_ar.get(mode) if arabic else process_msgs_en.get(mode)
             if msg:

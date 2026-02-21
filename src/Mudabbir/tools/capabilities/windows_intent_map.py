@@ -488,6 +488,23 @@ RULES: tuple[IntentRule, ...] = (
     IntentRule("process.suspend_by_pid", "process_tools", "suspend_pid", "elevated", ("suspend pid", "تعليق عملية pid"), params=("pid",)),
     IntentRule("process.resume_by_pid", "process_tools", "resume_pid", "elevated", ("resume pid", "استئناف عملية pid"), params=("pid",)),
     IntentRule(
+        "process.set_priority_by_pid",
+        "process_tools",
+        "set_priority",
+        "elevated",
+        (
+            "set priority pid",
+            "set process priority",
+            "change process priority",
+            "change priority pid",
+            "تغيير اولوية عملية",
+            "تغيير أولوية عملية",
+            "اضبط اولوية pid",
+            "اضبط أولوية pid",
+        ),
+        params=("pid", "priority"),
+    ),
+    IntentRule(
         "process.kill_high_cpu",
         "process_tools",
         "kill_high_cpu",
@@ -1405,6 +1422,13 @@ def _build_params(rule: IntentRule, raw_text: str, normalized: str) -> dict[str,
         params["port"] = max(1, min(65535, abs(value)))
     if "pid" in rule.params and "pid" not in params and value is not None:
         params["pid"] = max(1, min(2_147_483_647, abs(value)))
+    if "priority" in rule.params and "priority" not in params:
+        if _contains_any(normalized, ("high", "عالي", "مرتفعة", "مرتفع")):
+            params["priority"] = "high"
+        elif _contains_any(normalized, ("normal", "عادي", "متوسط", "متوسطة")):
+            params["priority"] = "normal"
+        elif _contains_any(normalized, ("low", "منخفض", "منخفضة")):
+            params["priority"] = "low"
     if rule.capability_id == "services.stop" and not params.get("name"):
         q = _extract_named_value(raw_text, (r"(?:stop service|ايقاف خدمه|إيقاف خدمة)\s+(.+)$",))
         if q:
