@@ -368,6 +368,66 @@ RULES: tuple[IntentRule, ...] = (
     IntentRule("network.connect_named", "network_tools", "connect_wifi", "safe", ("connect wifi", "الاتصال بشبكه"), params=("host",)),
     IntentRule("network.open_ports", "network_tools", "open_ports", "safe", ("open ports", "المنافذ المفتوحة", "اظهار المنافذ المفتوحة")),
     IntentRule("network.port_owner", "network_tools", "port_owner", "safe", ("port owner", "من يستخدم المنفذ", "البرنامج الذي يستخدم منفذ"), params=("port",)),
+    IntentRule(
+        "network.block_app_network",
+        "network_tools",
+        "block_app_network",
+        "elevated",
+        (
+            "block app network",
+            "block internet for app",
+            "قطع الانترنت عن برنامج",
+            "قطع النت عن برنامج",
+            "قطع الاتصال عن برنامج",
+        ),
+        params=("name",),
+    ),
+    IntentRule(
+        "network.unblock_app_network",
+        "network_tools",
+        "unblock_app_network",
+        "elevated",
+        (
+            "unblock app network",
+            "allow app network",
+            "restore app internet",
+            "ارجاع الانترنت لبرنامج",
+            "ارجاع النت لبرنامج",
+            "السماح لبرنامج بالانترنت",
+        ),
+        params=("name",),
+    ),
+    IntentRule(
+        "network.limit_app_bandwidth",
+        "network_tools",
+        "limit_app_bandwidth",
+        "elevated",
+        (
+            "limit app bandwidth",
+            "set app bandwidth limit",
+            "bandwidth limit app",
+            "حدد سرعة برنامج",
+            "حدد سرعة النت لبرنامج",
+            "تحديد سرعة التحميل لبرنامج",
+            "قيد سرعة برنامج",
+        ),
+        params=("name", "limit_kbps"),
+    ),
+    IntentRule(
+        "network.unlimit_app_bandwidth",
+        "network_tools",
+        "unlimit_app_bandwidth",
+        "elevated",
+        (
+            "unlimit app bandwidth",
+            "remove app bandwidth limit",
+            "الغاء تحديد سرعة برنامج",
+            "إلغاء تحديد سرعة برنامج",
+            "فك تحديد سرعة برنامج",
+            "رجع سرعة النت لبرنامج",
+        ),
+        params=("name",),
+    ),
     IntentRule("network.route_table", "network_tools", "route_table", "safe", ("route table", "جدول التوجيه")),
     IntentRule("network.tracert", "network_tools", "tracert", "safe", ("tracert", "trace route", "تتبع المسار", "تتبع الطريق"), params=("host",)),
     IntentRule("network.pathping", "network_tools", "pathping", "safe", ("pathping", "اختبار فقدان الشبكة", "اختبار فقدان الشبكه"), params=("host",)),
@@ -480,7 +540,51 @@ RULES: tuple[IntentRule, ...] = (
         ),
     ),
     IntentRule("process.kill_by_pid", "process_tools", "kill_pid", "destructive", ("kill by pid", "kill pid", "انهاء عملية pid", "قتل عملية pid"), params=("pid",)),
+    IntentRule(
+        "process.kill_by_name",
+        "process_tools",
+        "kill_name",
+        "destructive",
+        (
+            "kill process",
+            "kill by name",
+            "end process by name",
+            "انهاء عملية باسم",
+            "قتل عملية باسم",
+            "اغلاق عملية باسم",
+        ),
+        params=("name",),
+    ),
+    IntentRule(
+        "process.kill_unresponsive",
+        "process_tools",
+        "kill_unresponsive",
+        "destructive",
+        (
+            "kill unresponsive",
+            "kill unresponsive process",
+            "end unresponsive process",
+            "انهاء عملية لا تستجيب",
+            "اقتل عملية لا تستجيب",
+            "اغلاق برنامج لا يستجيب",
+        ),
+    ),
     IntentRule("process.path_by_pid", "process_tools", "path_by_pid", "safe", ("process path by pid", "مسار عملية pid"), params=("pid",)),
+    IntentRule(
+        "process.path_by_name",
+        "process_tools",
+        "path_by_name",
+        "safe",
+        (
+            "process path",
+            "path by name",
+            "executable path",
+            "مسار العملية",
+            "مسار تشغيل العملية",
+            "مسار ملف تشغيل العملية",
+        ),
+        params=("name",),
+    ),
     IntentRule("process.cpu_by_pid", "process_tools", "cpu_by_pid", "safe", ("cpu by pid", "استهلاك cpu لعملية pid"), params=("pid",)),
     IntentRule("process.ram_by_pid", "process_tools", "ram_by_pid", "safe", ("ram by pid", "استهلاك ram لعملية pid"), params=("pid",)),
     IntentRule("process.threads_by_pid", "process_tools", "threads_by_pid", "safe", ("threads by pid", "عدد الخيوط لعملية pid"), params=("pid",)),
@@ -503,6 +607,65 @@ RULES: tuple[IntentRule, ...] = (
             "اضبط أولوية pid",
         ),
         params=("pid", "priority"),
+    ),
+    IntentRule(
+        "process.blacklist_app",
+        "process_tools",
+        "blacklist_app",
+        "elevated",
+        (
+            "blacklist app",
+            "block app launch",
+            "prevent app launch",
+            "منع تشغيل برنامج",
+            "حظر تشغيل برنامج",
+            "blacklist program",
+        ),
+        params=("name",),
+    ),
+    IntentRule(
+        "process.whitelist_app",
+        "process_tools",
+        "whitelist_app",
+        "elevated",
+        (
+            "whitelist app",
+            "allow app launch",
+            "remove app from blacklist",
+            "السماح بتشغيل برنامج",
+            "فك حظر برنامج",
+            "الغاء حظر برنامج",
+        ),
+        params=("name",),
+    ),
+    IntentRule(
+        "process.list_blacklist_apps",
+        "process_tools",
+        "list_blacklist_apps",
+        "safe",
+        (
+            "list blacklisted apps",
+            "blacklist apps list",
+            "قائمة البرامج المحظورة",
+            "البرامج المحظورة",
+        ),
+    ),
+    IntentRule(
+        "process.monitor_until_exit",
+        "process_tools",
+        "monitor_until_exit",
+        "safe",
+        (
+            "monitor process",
+            "watch process",
+            "alert when process closes",
+            "monitor app close",
+            "راقب عملية",
+            "راقب برنامج",
+            "نبهني عند اغلاق البرنامج",
+            "نبهني عند اغلاق العملية",
+        ),
+        params=("name", "seconds"),
     ),
     IntentRule(
         "process.kill_high_cpu",
@@ -1488,6 +1651,73 @@ def _build_params(rule: IntentRule, raw_text: str, normalized: str) -> dict[str,
         )
         if q:
             params["name"] = q
+    if rule.capability_id in {"process.blacklist_app", "process.whitelist_app"}:
+        q = _extract_named_value(
+            raw_text,
+            (
+                r"(?:blacklist app|blacklist program|block app launch|prevent app launch)\s+([A-Za-z0-9._-]+)",
+                r"(?:whitelist app|allow app launch|remove app from blacklist)\s+([A-Za-z0-9._-]+)",
+                r"(?:منع تشغيل برنامج|حظر تشغيل برنامج|السماح بتشغيل برنامج|فك حظر برنامج|الغاء حظر برنامج)\s+([A-Za-z0-9._-]+)",
+            ),
+        )
+        if q:
+            params["name"] = q
+    if rule.capability_id == "process.kill_by_name":
+        q = _extract_named_value(
+            raw_text,
+            (
+                r"(?:kill process|kill by name|end process by name)\s+([A-Za-z0-9._-]+)",
+                r"(?:انهاء عملية باسم|قتل عملية باسم|اغلاق عملية باسم)\s+([A-Za-z0-9._-]+)",
+            ),
+        )
+        if q:
+            params["name"] = q
+    if rule.capability_id in {
+        "network.block_app_network",
+        "network.unblock_app_network",
+        "network.limit_app_bandwidth",
+        "network.unlimit_app_bandwidth",
+    }:
+        q = _extract_named_value(
+            raw_text,
+            (
+                r"(?:block app network|block internet for app)\s+([A-Za-z0-9._-]+)",
+                r"(?:unblock app network|allow app network|restore app internet)\s+([A-Za-z0-9._-]+)",
+                r"(?:limit app bandwidth|set app bandwidth limit|bandwidth limit app)\s+([A-Za-z0-9._-]+)",
+                r"(?:unlimit app bandwidth|remove app bandwidth limit)\s+([A-Za-z0-9._-]+)",
+                r"(?:قطع الانترنت عن برنامج|قطع النت عن برنامج|قطع الاتصال عن برنامج|ارجاع الانترنت لبرنامج|ارجاع النت لبرنامج|السماح لبرنامج بالانترنت)\s+([A-Za-z0-9._-]+)",
+                r"(?:حدد سرعة برنامج|حدد سرعة النت لبرنامج|تحديد سرعة التحميل لبرنامج|قيد سرعة برنامج|الغاء تحديد سرعة برنامج|إلغاء تحديد سرعة برنامج|فك تحديد سرعة برنامج|رجع سرعة النت لبرنامج)\s+([A-Za-z0-9._-]+)",
+            ),
+        )
+        if q:
+            params["name"] = q
+        if rule.capability_id == "network.limit_app_bandwidth":
+            vals = _extract_ints(raw_text, limit=4)
+            if vals:
+                params["limit_kbps"] = max(1, min(10_000_000, abs(int(vals[0]))))
+    if rule.capability_id == "process.path_by_name":
+        q = _extract_named_value(
+            raw_text,
+            (
+                r"(?:process path|path by name|executable path)\s+([A-Za-z0-9._-]+)",
+                r"(?:مسار العملية|مسار تشغيل العملية|مسار ملف تشغيل العملية)\s+([A-Za-z0-9._-]+)",
+            ),
+        )
+        if q:
+            params["name"] = q
+    if rule.capability_id == "process.monitor_until_exit":
+        q = _extract_named_value(
+            raw_text,
+            (
+                r"(?:monitor process|watch process|monitor app close)\s+([A-Za-z0-9._-]+)",
+                r"(?:راقب عملية|راقب برنامج)\s+([A-Za-z0-9._-]+)",
+                r"(?:نبهني عند اغلاق البرنامج|نبهني عند اغلاق العملية)\s+([A-Za-z0-9._-]+)",
+            ),
+        )
+        if q:
+            params["name"] = q
+        if _contains_any(normalized, ("notify", "alert", "نبهني", "تنبيه", "نبّهني")):
+            params["notify"] = True
     if rule.capability_id == "process.app_process_count_total":
         q = _extract_named_value(
             raw_text,

@@ -364,6 +364,22 @@ def test_resolve_kill_by_pid_phrase() -> None:
     assert result.params.get("pid") == 1234
 
 
+def test_resolve_kill_by_name_phrase() -> None:
+    result = resolve_windows_intent("kill process chrome")
+    assert result.matched is True
+    assert result.action == "process_tools"
+    assert result.params.get("mode") == "kill_name"
+    assert str(result.params.get("name") or "").lower() == "chrome"
+
+
+def test_resolve_kill_unresponsive_phrase() -> None:
+    result = resolve_windows_intent("kill unresponsive process")
+    assert result.matched is True
+    assert result.action == "process_tools"
+    assert result.params.get("mode") == "kill_unresponsive"
+    assert result.risk_level == "destructive"
+
+
 def test_resolve_ram_by_pid_phrase() -> None:
     result = resolve_windows_intent("ram by pid 4321")
     assert result.matched is True
@@ -379,6 +395,89 @@ def test_resolve_set_priority_by_pid_phrase() -> None:
     assert result.params.get("mode") == "set_priority"
     assert result.params.get("pid") == 1234
     assert result.params.get("priority") == "high"
+
+
+def test_resolve_blacklist_app_phrase() -> None:
+    result = resolve_windows_intent("blacklist app chrome")
+    assert result.matched is True
+    assert result.action == "process_tools"
+    assert result.params.get("mode") == "blacklist_app"
+    assert str(result.params.get("name") or "").lower() == "chrome"
+
+
+def test_resolve_whitelist_app_phrase() -> None:
+    result = resolve_windows_intent("السماح بتشغيل برنامج chrome")
+    assert result.matched is True
+    assert result.action == "process_tools"
+    assert result.params.get("mode") == "whitelist_app"
+    assert str(result.params.get("name") or "").lower() == "chrome"
+
+
+def test_resolve_list_blacklist_apps_phrase() -> None:
+    result = resolve_windows_intent("قائمة البرامج المحظورة")
+    assert result.matched is True
+    assert result.action == "process_tools"
+    assert result.params.get("mode") == "list_blacklist_apps"
+
+
+def test_resolve_monitor_until_exit_phrase() -> None:
+    result = resolve_windows_intent("راقب برنامج chrome 15")
+    assert result.matched is True
+    assert result.action == "process_tools"
+    assert result.params.get("mode") == "monitor_until_exit"
+    assert str(result.params.get("name") or "").lower() == "chrome"
+    assert result.params.get("seconds") == 15
+
+
+def test_resolve_monitor_until_exit_with_notify_phrase() -> None:
+    result = resolve_windows_intent("راقب برنامج chrome 10 ونبهني")
+    assert result.matched is True
+    assert result.action == "process_tools"
+    assert result.params.get("mode") == "monitor_until_exit"
+    assert str(result.params.get("name") or "").lower() == "chrome"
+    assert result.params.get("seconds") == 10
+    assert result.params.get("notify") is True
+
+
+def test_resolve_path_by_name_phrase() -> None:
+    result = resolve_windows_intent("process path chrome")
+    assert result.matched is True
+    assert result.action == "process_tools"
+    assert result.params.get("mode") == "path_by_name"
+    assert str(result.params.get("name") or "").lower() == "chrome"
+
+
+def test_resolve_block_app_network_phrase() -> None:
+    result = resolve_windows_intent("قطع الانترنت عن برنامج chrome")
+    assert result.matched is True
+    assert result.action == "network_tools"
+    assert result.params.get("mode") == "block_app_network"
+    assert str(result.params.get("name") or "").lower() == "chrome"
+
+
+def test_resolve_unblock_app_network_phrase() -> None:
+    result = resolve_windows_intent("allow app network chrome")
+    assert result.matched is True
+    assert result.action == "network_tools"
+    assert result.params.get("mode") == "unblock_app_network"
+    assert str(result.params.get("name") or "").lower() == "chrome"
+
+
+def test_resolve_limit_app_bandwidth_phrase() -> None:
+    result = resolve_windows_intent("حدد سرعة النت لبرنامج chrome 2048")
+    assert result.matched is True
+    assert result.action == "network_tools"
+    assert result.params.get("mode") == "limit_app_bandwidth"
+    assert str(result.params.get("name") or "").lower() == "chrome"
+    assert result.params.get("limit_kbps") == 2048
+
+
+def test_resolve_unlimit_app_bandwidth_phrase() -> None:
+    result = resolve_windows_intent("remove app bandwidth limit chrome")
+    assert result.matched is True
+    assert result.action == "network_tools"
+    assert result.params.get("mode") == "unlimit_app_bandwidth"
+    assert str(result.params.get("name") or "").lower() == "chrome"
 
 
 def test_resolve_app_cpu_total_phrase() -> None:

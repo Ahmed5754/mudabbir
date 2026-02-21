@@ -756,6 +756,10 @@ class AgentLoop:
                 "ping": "تم تنفيذ اختبار الاتصال (Ping).",
                 "open_ports": "تم جلب المنافذ المفتوحة.",
                 "port_owner": "تم جلب البرنامج الذي يستخدم المنفذ.",
+                "block_app_network": "تم حظر الإنترنت عن البرنامج.",
+                "unblock_app_network": "تمت إعادة الإنترنت للبرنامج.",
+                "limit_app_bandwidth": "تم تطبيق تحديد سرعة النت للبرنامج.",
+                "unlimit_app_bandwidth": "تم إلغاء تحديد سرعة النت للبرنامج.",
                 "route_table": "تم جلب جدول التوجيه.",
                 "tracert": "تم تنفيذ تتبع المسار.",
                 "pathping": "تم تنفيذ فحص المسار وفقدان الحزم.",
@@ -789,6 +793,10 @@ class AgentLoop:
                 "ping": "Ping test executed.",
                 "open_ports": "Fetched open ports.",
                 "port_owner": "Fetched process using the selected port.",
+                "block_app_network": "Blocked internet access for the app.",
+                "unblock_app_network": "Restored internet access for the app.",
+                "limit_app_bandwidth": "Applied bandwidth limit for the app.",
+                "unlimit_app_bandwidth": "Removed app bandwidth limit.",
                 "route_table": "Fetched route table.",
                 "tracert": "Ran trace route.",
                 "pathping": "Ran path ping/packet-loss diagnostics.",
@@ -1223,6 +1231,32 @@ class AgentLoop:
                     + (f" (max_kill={max_kill})" if max_kill is not None else "")
                     + "."
                 )
+            if mode == "monitor_until_exit" and isinstance(parsed, dict):
+                app_name = str(parsed.get("name") or params.get("name") or "").strip()
+                exited = bool(parsed.get("exited"))
+                elapsed = parsed.get("elapsed_seconds")
+                timeout = parsed.get("timeout_seconds")
+                notified = bool(parsed.get("notified"))
+                if arabic:
+                    if exited:
+                        if notified:
+                            return True, f"تمت مراقبة {app_name or 'العملية'} وانغلقت بعد {elapsed} ثانية. أرسلت تنبيه."
+                        return True, f"تمت مراقبة {app_name or 'العملية'} وانغلقت بعد {elapsed} ثانية."
+                    return True, f"راقبت {app_name or 'العملية'} لمدة {timeout} ثانية ولسا شغالة."
+                if exited:
+                    if notified:
+                        return True, f"Monitored {app_name or 'process'} and it exited after {elapsed}s. Alert sent."
+                    return True, f"Monitored {app_name or 'process'} and it exited after {elapsed}s."
+                return True, f"Monitored {app_name or 'process'} for {timeout}s and it is still running."
+            if mode == "path_by_name" and isinstance(parsed, dict):
+                query = str(parsed.get("query") or params.get("name") or "").strip()
+                items = parsed.get("items") if isinstance(parsed.get("items"), list) else []
+                first = items[0] if items else {}
+                ppath = str(first.get("path") or "").strip()
+                if ppath:
+                    if arabic:
+                        return True, f"مسار تشغيل {query or 'العملية'}: {ppath}"
+                    return True, f"Executable path for {query or 'process'}: {ppath}"
             if mode == "app_reduce" and isinstance(parsed, dict):
                 stage = str(parsed.get("stage") or params.get("stage") or "").strip().lower()
                 resource = str(parsed.get("resource") or params.get("resource") or "resource").strip().lower()
@@ -1236,6 +1270,13 @@ class AgentLoop:
             process_msgs_ar = {
                 "restart_explorer": "تمت إعادة تشغيل واجهة ويندوز (Explorer).",
                 "kill_pid": "تم إنهاء العملية عبر PID.",
+                "kill_name": "تم إنهاء العملية بالاسم.",
+                "kill_unresponsive": "تم إنهاء العمليات غير المستجيبة.",
+                "blacklist_app": "تمت إضافة البرنامج لقائمة الحظر.",
+                "whitelist_app": "تمت إزالة البرنامج من قائمة الحظر.",
+                "list_blacklist_apps": "هذه قائمة البرامج المحظورة حالياً.",
+                "monitor_until_exit": "تمت مراقبة العملية المطلوبة.",
+                "path_by_name": "تم جلب مسار تشغيل العملية.",
                 "path_by_pid": "تم جلب مسار العملية.",
                 "cpu_by_pid": "تم جلب استهلاك CPU للعملية.",
                 "ram_by_pid": "تم جلب استهلاك RAM للعملية.",
@@ -1248,6 +1289,13 @@ class AgentLoop:
             process_msgs_en = {
                 "restart_explorer": "Windows Explorer has been restarted.",
                 "kill_pid": "Process terminated by PID.",
+                "kill_name": "Process terminated by name.",
+                "kill_unresponsive": "Unresponsive processes were terminated.",
+                "blacklist_app": "App added to launch blacklist.",
+                "whitelist_app": "App removed from launch blacklist.",
+                "list_blacklist_apps": "Here is the current launch blacklist.",
+                "monitor_until_exit": "Process monitoring completed.",
+                "path_by_name": "Fetched process executable path.",
                 "path_by_pid": "Fetched process path.",
                 "cpu_by_pid": "Fetched process CPU usage.",
                 "ram_by_pid": "Fetched process RAM usage.",

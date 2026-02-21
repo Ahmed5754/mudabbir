@@ -148,6 +148,57 @@ async def test_global_fastpath_network_tools_human_reply(monkeypatch: pytest.Mon
 
 
 @pytest.mark.asyncio
+async def test_global_fastpath_network_block_unblock_app_replies(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class DummyDesktopTool:
+        async def execute(self, action: str, **kwargs):
+            assert action == "network_tools"
+            mode = kwargs.get("mode")
+            if mode == "block_app_network":
+                assert str(kwargs.get("name") or "").lower() == "chrome"
+                return '{"ok": true, "mode": "block_app_network", "app": "chrome", "rule_name": "Mudabbir_App_Net_chrome"}'
+            if mode == "unblock_app_network":
+                assert str(kwargs.get("name") or "").lower() == "chrome"
+                return '{"ok": true, "mode": "unblock_app_network", "app": "chrome", "rule_name": "Mudabbir_App_Net_chrome"}'
+            if mode == "limit_app_bandwidth":
+                assert str(kwargs.get("name") or "").lower() == "chrome"
+                assert int(kwargs.get("limit_kbps") or 0) == 2048
+                return '{"ok": true, "mode": "limit_app_bandwidth", "app": "chrome", "policy_name": "Mudabbir_App_QoS_chrome", "limit_kbps": 2048}'
+            if mode == "unlimit_app_bandwidth":
+                assert str(kwargs.get("name") or "").lower() == "chrome"
+                return '{"ok": true, "mode": "unlimit_app_bandwidth", "app": "chrome", "policy_name": "Mudabbir_App_QoS_chrome"}'
+            return '{"ok": true}'
+
+    monkeypatch.setattr("Mudabbir.tools.builtin.desktop.DesktopTool", DummyDesktopTool)
+    loop = AgentLoop()
+
+    handled_block, reply_block = await loop._try_global_windows_fastpath(
+        text="قطع الانترنت عن برنامج chrome", session_key="s7block1"
+    )
+    assert handled_block is True
+    assert ("حظر" in str(reply_block)) or ("blocked" in str(reply_block).lower())
+
+    handled_unblock, reply_unblock = await loop._try_global_windows_fastpath(
+        text="allow app network chrome", session_key="s7block2"
+    )
+    assert handled_unblock is True
+    assert ("إعادة" in str(reply_unblock)) or ("restored" in str(reply_unblock).lower())
+
+    handled_limit, reply_limit = await loop._try_global_windows_fastpath(
+        text="حدد سرعة النت لبرنامج chrome 2048", session_key="s7block3"
+    )
+    assert handled_limit is True
+    assert ("تحديد سرعة" in str(reply_limit)) or ("bandwidth" in str(reply_limit).lower())
+
+    handled_unlimit, reply_unlimit = await loop._try_global_windows_fastpath(
+        text="remove app bandwidth limit chrome", session_key="s7block4"
+    )
+    assert handled_unlimit is True
+    assert ("إلغاء" in str(reply_unlimit)) or ("removed" in str(reply_unlimit).lower())
+
+
+@pytest.mark.asyncio
 async def test_global_fastpath_network_diagnostics_replies(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -322,6 +373,32 @@ async def test_global_fastpath_process_kill_by_pid_human_reply(
 
 
 @pytest.mark.asyncio
+async def test_global_fastpath_process_kill_by_name_confirmation_flow(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class DummyDesktopTool:
+        async def execute(self, action: str, **kwargs):
+            assert action == "process_tools"
+            assert kwargs.get("mode") == "kill_name"
+            assert str(kwargs.get("name") or "").lower() == "chrome"
+            return '{"ok": true, "mode": "kill_name", "name": "chrome", "killed": 2}'
+
+    monkeypatch.setattr("Mudabbir.tools.builtin.desktop.DesktopTool", DummyDesktopTool)
+    loop = AgentLoop()
+    handled_wait, reply_wait = await loop._try_global_windows_fastpath(
+        text="kill process chrome", session_key="s10name1"
+    )
+    assert handled_wait is True
+    assert ("yes" in str(reply_wait).lower()) or ("تأكيد" in str(reply_wait))
+
+    handled_exec, reply_exec = await loop._try_global_windows_fastpath(
+        text="yes", session_key="s10name1"
+    )
+    assert handled_exec is True
+    assert ("name" in str(reply_exec).lower()) or ("الاسم" in str(reply_exec)) or ("عملية" in str(reply_exec))
+
+
+@pytest.mark.asyncio
 async def test_global_fastpath_process_set_priority_by_pid_human_reply(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -340,6 +417,139 @@ async def test_global_fastpath_process_set_priority_by_pid_human_reply(
     )
     assert handled is True
     assert ("priority" in str(reply).lower()) or ("أولوية" in str(reply))
+
+
+@pytest.mark.asyncio
+async def test_global_fastpath_process_kill_unresponsive_confirmation_flow(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class DummyDesktopTool:
+        async def execute(self, action: str, **kwargs):
+            assert action == "process_tools"
+            assert kwargs.get("mode") == "kill_unresponsive"
+            return '{"ok": true, "mode": "kill_unresponsive", "killed": 2}'
+
+    monkeypatch.setattr("Mudabbir.tools.builtin.desktop.DesktopTool", DummyDesktopTool)
+    loop = AgentLoop()
+
+    handled_wait, reply_wait = await loop._try_global_windows_fastpath(
+        text="kill unresponsive process", session_key="s10unresp"
+    )
+    assert handled_wait is True
+    assert "yes" in str(reply_wait).lower() or "تأكيد" in str(reply_wait)
+
+    handled_exec, reply_exec = await loop._try_global_windows_fastpath(
+        text="yes", session_key="s10unresp"
+    )
+    assert handled_exec is True
+    assert ("unresponsive" in str(reply_exec).lower()) or ("غير المستجيبة" in str(reply_exec))
+
+
+@pytest.mark.asyncio
+async def test_global_fastpath_process_blacklist_and_whitelist_app_replies(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class DummyDesktopTool:
+        async def execute(self, action: str, **kwargs):
+            assert action == "process_tools"
+            mode = kwargs.get("mode")
+            if mode == "blacklist_app":
+                assert str(kwargs.get("name") or "").lower() == "chrome"
+                return '{"ok": true, "mode": "blacklist_app", "name": "chrome"}'
+            if mode == "whitelist_app":
+                assert str(kwargs.get("name") or "").lower() == "chrome"
+                return '{"ok": true, "mode": "whitelist_app", "name": "chrome"}'
+            if mode == "list_blacklist_apps":
+                return '{"ok": true, "mode": "list_blacklist_apps", "items": ["chrome"], "count": 1}'
+            return '{"ok": true}'
+
+    monkeypatch.setattr("Mudabbir.tools.builtin.desktop.DesktopTool", DummyDesktopTool)
+    loop = AgentLoop()
+
+    handled_blacklist, reply_blacklist = await loop._try_global_windows_fastpath(
+        text="blacklist app chrome", session_key="s10blk1"
+    )
+    assert handled_blacklist is True
+    assert ("blacklist" in str(reply_blacklist).lower()) or ("الحظر" in str(reply_blacklist))
+
+    handled_whitelist, reply_whitelist = await loop._try_global_windows_fastpath(
+        text="whitelist app chrome", session_key="s10blk2"
+    )
+    assert handled_whitelist is True
+    assert ("removed" in str(reply_whitelist).lower()) or ("إزالة" in str(reply_whitelist)) or ("ازالة" in str(reply_whitelist))
+
+    handled_list, reply_list = await loop._try_global_windows_fastpath(
+        text="list blacklisted apps", session_key="s10blk3"
+    )
+    assert handled_list is True
+    assert ("blacklist" in str(reply_list).lower()) or ("المحظور" in str(reply_list))
+
+
+@pytest.mark.asyncio
+async def test_global_fastpath_process_monitor_until_exit_reply(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class DummyDesktopTool:
+        async def execute(self, action: str, **kwargs):
+            assert action == "process_tools"
+            assert kwargs.get("mode") == "monitor_until_exit"
+            assert str(kwargs.get("name") or "").lower() == "chrome"
+            assert kwargs.get("seconds") == 5
+            return '{"ok": true, "mode": "monitor_until_exit", "name": "chrome", "exited": false, "elapsed_seconds": 5, "timeout_seconds": 5}'
+
+    monkeypatch.setattr("Mudabbir.tools.builtin.desktop.DesktopTool", DummyDesktopTool)
+    loop = AgentLoop()
+    handled, reply = await loop._try_global_windows_fastpath(
+        text="monitor process chrome 5", session_key="s10mon1"
+    )
+    assert handled is True
+    assert ("running" in str(reply).lower()) or ("شغالة" in str(reply))
+
+
+@pytest.mark.asyncio
+async def test_global_fastpath_process_monitor_until_exit_with_notify_reply(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class DummyDesktopTool:
+        async def execute(self, action: str, **kwargs):
+            assert action == "process_tools"
+            assert kwargs.get("mode") == "monitor_until_exit"
+            assert str(kwargs.get("name") or "").lower() == "chrome"
+            assert kwargs.get("seconds") == 3
+            assert kwargs.get("notify") is True
+            return '{"ok": true, "mode": "monitor_until_exit", "name": "chrome", "exited": true, "elapsed_seconds": 2.1, "timeout_seconds": 3, "notified": true}'
+
+    monkeypatch.setattr("Mudabbir.tools.builtin.desktop.DesktopTool", DummyDesktopTool)
+    loop = AgentLoop()
+    handled, reply = await loop._try_global_windows_fastpath(
+        text="monitor process chrome 3 notify", session_key="s10mon2"
+    )
+    assert handled is True
+    assert ("alert sent" in str(reply).lower()) or ("تنبيه" in str(reply))
+
+
+@pytest.mark.asyncio
+async def test_global_fastpath_process_path_by_name_reply(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class DummyDesktopTool:
+        async def execute(self, action: str, **kwargs):
+            assert action == "process_tools"
+            assert kwargs.get("mode") == "path_by_name"
+            assert str(kwargs.get("name") or "").lower() == "chrome"
+            return (
+                '{"ok": true, "mode": "path_by_name", "query": "chrome", "count": 1, '
+                '"items": [{"pid": 1234, "name": "chrome.exe", "path": "C:\\\\Program Files\\\\Google\\\\Chrome\\\\Application\\\\chrome.exe"}]}'
+            )
+
+    monkeypatch.setattr("Mudabbir.tools.builtin.desktop.DesktopTool", DummyDesktopTool)
+    loop = AgentLoop()
+    handled, reply = await loop._try_global_windows_fastpath(
+        text="process path chrome", session_key="s10path1"
+    )
+    assert handled is True
+    assert "chrome.exe" in str(reply).lower() or "chrome" in str(reply).lower()
+    assert "program files" in str(reply).lower()
 
 
 @pytest.mark.asyncio

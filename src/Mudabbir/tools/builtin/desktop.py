@@ -247,6 +247,7 @@ class DesktopTool(BaseTool):
         "credential dialog xaml host",
         "windows security",
     }
+    APP_LAUNCH_BLACKLIST: set[str] = set()
     ACTION_GROUPS = {
         "system": SYSTEM_ACTIONS,
         "audio": AUDIO_ACTIONS,
@@ -526,6 +527,8 @@ class DesktopTool(BaseTool):
                     mode=str(params.get("mode", "ip_internal") or "ip_internal"),
                     host=str(params.get("host", "") or ""),
                     port=params.get("port"),
+                    name=str(params.get("name", "") or ""),
+                    limit_kbps=params.get("limit_kbps", params.get("limit", params.get("kbps"))),
                 )
             if action_normalized == "file_tools":
                 return self._file_tools(
@@ -561,6 +564,8 @@ class DesktopTool(BaseTool):
                     stage=str(params.get("stage", "") or ""),
                     priority=str(params.get("priority", "") or ""),
                     threshold=params.get("threshold"),
+                    monitor_seconds=params.get("monitor_seconds", params.get("seconds")),
+                    notify=bool(params.get("notify", False)),
                 )
             if action_normalized == "service_tools":
                 return self._service_tools(
@@ -1073,6 +1078,9 @@ class DesktopTool(BaseTool):
         query_norm = _normalize_query(query)
         if not query_norm:
             return self._error("query is required")
+        blacklisted, blocked_item = self._is_launch_blacklisted(query_norm)
+        if blacklisted:
+            return self._error(f"launch blocked by blacklist: {blocked_item}")
 
         query_cf = query_norm.casefold()
 
@@ -1730,6 +1738,23 @@ class DesktopTool(BaseTool):
         if not normalized:
             return False
         return normalized in self.BLOCKED_WINDOW_CLASSES
+
+    @staticmethod
+    def _normalize_app_token(value: str) -> str:
+        token = str(value or "").strip().lower()
+        token = token.replace('"', "").replace("'", "")
+        token = token.replace(".exe", "")
+        token = re.sub(r"\s+", " ", token).strip()
+        return token
+
+    def _is_launch_blacklisted(self, query: str) -> tuple[bool, str]:
+        token = self._normalize_app_token(query)
+        if not token:
+            return False, ""
+        for item in sorted(self.APP_LAUNCH_BLACKLIST):
+            if item and (item == token or item in token or token in item):
+                return True, item
+        return False, ""
 
     def _get_wrapper_class_name(self, wrapper: Any) -> str:
         try:
@@ -2724,7 +2749,14 @@ $obj | ConvertTo-Json -Compress
             return self._hardware_tools("battery_minutes")
         return self._error(f"unsupported system_info mode: {mode_norm}")
 
-    def _network_tools(self, mode: str, host: str = "", port: Any = None) -> str:
+    def _network_tools(
+        self,
+        mode: str,
+        host: str = "",
+        port: Any = None,
+        name: str = "",
+        limit_kbps: Any = None,
+    ) -> str:
         mode_norm = (mode or "ip_internal").strip().lower()
         if mode_norm in {"ip_internal", "local_ip"}:
             ps = (
@@ -2944,6 +2976,88 @@ $obj | ConvertTo-Json -Compress
             if ok and out:
                 return _json({"ok": True, "mode": mode_norm, "port": p, "data": json.loads(out)})
             return self._error(out or f"port owner lookup failed for port {p}")
+        if mode_norm in {"block_app_network", "unblock_app_network"}:
+            app_query = (name or host or "").strip()
+            if not app_query:
+                return self._error("app name is required")
+            app_query_safe = app_query.replace("'", "''")
+            block = mode_norm == "block_app_network"
+            rule_name = f"Mudabbir_App_Net_{app_query}"
+            rule_safe = rule_name.replace("'", "''")
+            if block:
+                ps = (
+                    f"$q='{app_query_safe}'; "
+                    "$procs=Get-Process -ErrorAction SilentlyContinue | "
+                    "Where-Object { $_.Name -like ('*' + $q + '*') -or ($_.Name + '.exe') -like ('*' + $q + '*') }; "
+                    "$paths=@($procs | ForEach-Object { try { $_.Path } catch { $null } } | Where-Object { $_ } | Select-Object -Unique); "
+                    f"$rule='{rule_safe}'; "
+                    "if(-not $paths -or $paths.Count -eq 0){ "
+                    "  @{ok=$false; mode='block_app_network'; app=$q; error='No running process path found'} | ConvertTo-Json -Compress; exit 0 "
+                    "}; "
+                    "Get-NetFirewallRule -DisplayName $rule -ErrorAction SilentlyContinue | Remove-NetFirewallRule -ErrorAction SilentlyContinue; "
+                    "$created=@(); "
+                    "foreach($p in $paths){ "
+                    "  try { "
+                    "    New-NetFirewallRule -DisplayName $rule -Direction Outbound -Action Block -Program $p -Profile Any -ErrorAction Stop | Out-Null; "
+                    "    $created += $p "
+                    "  } catch {} "
+                    "}; "
+                    "@{ok=$true; mode='block_app_network'; app=$q; rule_name=$rule; paths=$created; count=$created.Count} | ConvertTo-Json -Compress"
+                )
+            else:
+                ps = (
+                    f"$rule='{rule_safe}'; "
+                    "Get-NetFirewallRule -DisplayName $rule -ErrorAction SilentlyContinue | Remove-NetFirewallRule -ErrorAction SilentlyContinue; "
+                    f"@{{ok=$true; mode='unblock_app_network'; app='{app_query_safe}'; rule_name=$rule}} | ConvertTo-Json -Compress"
+                )
+            ok, out = _run_powershell(ps, timeout=25)
+            if ok and out:
+                return out
+            return self._error(out or f"{mode_norm} failed")
+        if mode_norm in {"limit_app_bandwidth", "unlimit_app_bandwidth"}:
+            app_query = (name or host or "").strip()
+            if not app_query:
+                return self._error("app name is required")
+            policy_name = f"Mudabbir_App_QoS_{app_query}"
+            policy_name_safe = policy_name.replace("'", "''")
+            app_query_safe = app_query.replace("'", "''")
+            if mode_norm == "limit_app_bandwidth":
+                try:
+                    kbps = int(limit_kbps if limit_kbps is not None else 0)
+                except Exception:
+                    kbps = 0
+                if kbps <= 0:
+                    return self._error("limit_kbps must be a positive integer")
+                bps = kbps * 1000
+                ps = (
+                    f"$q='{app_query_safe}'; "
+                    "$procs=Get-Process -ErrorAction SilentlyContinue | "
+                    "Where-Object { $_.Name -like ('*' + $q + '*') -or ($_.Name + '.exe') -like ('*' + $q + '*') }; "
+                    "$paths=@($procs | ForEach-Object { try { $_.Path } catch { $null } } | Where-Object { $_ } | Select-Object -Unique); "
+                    f"$policy='{policy_name_safe}'; "
+                    "if(-not $paths -or $paths.Count -eq 0){ "
+                    "  @{ok=$false; mode='limit_app_bandwidth'; app=$q; error='No running process path found'} | ConvertTo-Json -Compress; exit 0 "
+                    "}; "
+                    "Get-NetQosPolicy -Name $policy -ErrorAction SilentlyContinue | Remove-NetQosPolicy -Confirm:$false -ErrorAction SilentlyContinue; "
+                    "$created=@(); "
+                    "foreach($p in $paths){ "
+                    "  try { "
+                    f"    New-NetQosPolicy -Name $policy -AppPathNameMatchCondition $p -ThrottleRateActionBitsPerSecond {bps} -PolicyStore ActiveStore -ErrorAction Stop | Out-Null; "
+                    "    $created += $p "
+                    "  } catch {} "
+                    "}; "
+                    f"@{{ok=$true; mode='limit_app_bandwidth'; app=$q; policy_name=$policy; paths=$created; count=$created.Count; limit_kbps={kbps}; limit_bps={bps}}} | ConvertTo-Json -Compress"
+                )
+            else:
+                ps = (
+                    f"$policy='{policy_name_safe}'; "
+                    "Get-NetQosPolicy -Name $policy -ErrorAction SilentlyContinue | Remove-NetQosPolicy -Confirm:$false -ErrorAction SilentlyContinue; "
+                    f"@{{ok=$true; mode='unlimit_app_bandwidth'; app='{app_query_safe}'; policy_name=$policy}} | ConvertTo-Json -Compress"
+                )
+            ok, out = _run_powershell(ps, timeout=30)
+            if ok and out:
+                return out
+            return self._error(out or f"{mode_norm} failed")
         return self._error(f"unsupported network_tools mode: {mode_norm}")
 
     def _file_tools(
@@ -3832,6 +3946,8 @@ $obj | ConvertTo-Json -Compress
         stage: str = "",
         priority: str = "",
         threshold: Any = None,
+        monitor_seconds: Any = None,
+        notify: bool = False,
     ) -> str:
         mode_norm = (mode or "").strip().lower()
         resource_norm = (resource or "").strip().lower()
@@ -3899,6 +4015,87 @@ $obj | ConvertTo-Json -Compress
             key = "cpu" if mode_norm == "top_cpu" else "ram_mb"
             items.sort(key=lambda x: float(x.get(key, 0.0) or 0.0), reverse=True)
             return _json({"ok": True, "mode": mode_norm, "items": items[:10]})
+        if mode_norm == "monitor_until_exit":
+            query_raw = (name or "").strip()
+            if not query_raw:
+                return self._error("name is required")
+            query_norm = query_raw.casefold()
+            if query_norm.endswith(".exe"):
+                query_norm = query_norm[:-4]
+
+            try:
+                timeout_sec = float(monitor_seconds if monitor_seconds is not None else 60.0)
+            except Exception:
+                timeout_sec = 60.0
+            timeout_sec = max(3.0, min(3600.0, timeout_sec))
+            start_ts = time.time()
+
+            def _is_target_running() -> bool:
+                for proc in psutil.process_iter(["name"]):
+                    try:
+                        pname = str(proc.info.get("name") or "").strip()
+                        if not pname:
+                            continue
+                        pname_norm = pname.casefold()
+                        pname_no_ext = pname_norm[:-4] if pname_norm.endswith(".exe") else pname_norm
+                        if query_norm in pname_norm or query_norm in pname_no_ext:
+                            return True
+                    except Exception:
+                        continue
+                return False
+
+            initial_running = _is_target_running()
+            if not initial_running:
+                return _json(
+                    {
+                        "ok": True,
+                        "mode": mode_norm,
+                        "name": query_raw,
+                        "initial_running": False,
+                        "exited": True,
+                        "elapsed_seconds": 0.0,
+                        "timeout_seconds": timeout_sec,
+                    }
+                )
+
+            while (time.time() - start_ts) < timeout_sec:
+                if not _is_target_running():
+                    elapsed = round(max(0.0, time.time() - start_ts), 2)
+                    notified = False
+                    if bool(notify):
+                        try:
+                            import winsound
+
+                            winsound.MessageBeep(winsound.MB_ICONEXCLAMATION)
+                            notified = True
+                        except Exception:
+                            notified = False
+                    return _json(
+                        {
+                            "ok": True,
+                            "mode": mode_norm,
+                            "name": query_raw,
+                            "initial_running": True,
+                            "exited": True,
+                            "elapsed_seconds": elapsed,
+                            "timeout_seconds": timeout_sec,
+                            "notified": notified,
+                        }
+                    )
+                time.sleep(1.0)
+
+            elapsed = round(max(0.0, time.time() - start_ts), 2)
+            return _json(
+                {
+                    "ok": True,
+                    "mode": mode_norm,
+                    "name": query_raw,
+                    "initial_running": True,
+                    "exited": False,
+                    "elapsed_seconds": elapsed,
+                    "timeout_seconds": timeout_sec,
+                }
+            )
         if mode_norm == "app_memory_total":
             query_raw = (name or "").strip()
             if not query_raw:
@@ -4870,6 +5067,44 @@ $obj | ConvertTo-Json -Compress
                 return _json({"ok": True, "mode": mode_norm, "pid": target_pid, "path": p.exe()})
             except Exception as exc:
                 return self._error(f"path_by_pid failed: {exc}")
+        if mode_norm == "path_by_name":
+            query_raw = (name or "").strip()
+            if not query_raw:
+                return self._error("name is required")
+            query_norm = query_raw.casefold()
+            if query_norm.endswith(".exe"):
+                query_norm = query_norm[:-4]
+            matches: list[dict[str, Any]] = []
+            for proc in psutil.process_iter(["pid", "name"]):
+                try:
+                    pname = str(proc.info.get("name") or "").strip()
+                    if not pname:
+                        continue
+                    pname_norm = pname.casefold()
+                    pname_no_ext = pname_norm[:-4] if pname_norm.endswith(".exe") else pname_norm
+                    if query_norm not in pname_norm and query_norm not in pname_no_ext:
+                        continue
+                    pexe = proc.exe()
+                    if not pexe:
+                        continue
+                    matches.append(
+                        {
+                            "pid": int(proc.info.get("pid") or 0),
+                            "name": pname,
+                            "path": str(pexe),
+                        }
+                    )
+                except Exception:
+                    continue
+            return _json(
+                {
+                    "ok": True,
+                    "mode": mode_norm,
+                    "query": query_raw,
+                    "count": len(matches),
+                    "items": matches[:20],
+                }
+            )
         if mode_norm in {"cpu_by_pid", "ram_by_pid", "threads_by_pid", "start_time_by_pid"}:
             try:
                 target_pid = int(pid)
@@ -4943,6 +5178,24 @@ $obj | ConvertTo-Json -Compress
                 )
             except Exception as exc:
                 return self._error(f"set_priority failed: {exc}")
+        if mode_norm in {"blacklist_app", "whitelist_app", "list_blacklist_apps"}:
+            if mode_norm == "list_blacklist_apps":
+                return _json(
+                    {
+                        "ok": True,
+                        "mode": mode_norm,
+                        "items": sorted(self.APP_LAUNCH_BLACKLIST),
+                        "count": len(self.APP_LAUNCH_BLACKLIST),
+                    }
+                )
+            app_token = self._normalize_app_token(name)
+            if not app_token:
+                return self._error("name is required")
+            if mode_norm == "blacklist_app":
+                self.APP_LAUNCH_BLACKLIST.add(app_token)
+                return _json({"ok": True, "mode": mode_norm, "name": app_token, "count": len(self.APP_LAUNCH_BLACKLIST)})
+            self.APP_LAUNCH_BLACKLIST.discard(app_token)
+            return _json({"ok": True, "mode": mode_norm, "name": app_token, "count": len(self.APP_LAUNCH_BLACKLIST)})
         if mode_norm == "suspend_pid":
             try:
                 target_pid = int(pid)
@@ -6696,6 +6949,9 @@ $obj | ConvertTo-Json -Compress
     def _app_tools(self, mode: str, app: str = "", dry_run: bool = False, max_kill: Any = None) -> str:
         mode_norm = (mode or "").strip().lower()
         if mode_norm == "open_default_browser":
+            blacklisted, blocked_item = self._is_launch_blacklisted("browser")
+            if blacklisted:
+                return self._error(f"launch blocked by blacklist: {blocked_item}")
             ok, out = _run_powershell("Start-Process 'https://www.bing.com'", timeout=10)
             return _json({"ok": True, "mode": mode_norm}) if ok else self._error(out or "open default browser failed")
         mapping = {
@@ -6742,6 +6998,9 @@ $obj | ConvertTo-Json -Compress
         }
         if mode_norm in mapping:
             target = mapping[mode_norm]
+            blacklisted, blocked_item = self._is_launch_blacklisted(target)
+            if blacklisted:
+                return self._error(f"launch blocked by blacklist: {blocked_item}")
             ok, out = _run_powershell(f"Start-Process '{target}'", timeout=12)
             return _json({"ok": True, "mode": mode_norm, "target": target}) if ok else self._error(out or f"{mode_norm} failed")
         if mode_norm == "close_all_apps":
@@ -6768,6 +7027,9 @@ $obj | ConvertTo-Json -Compress
             q = (app or "").strip()
             if not q:
                 return self._error("app is required")
+            blacklisted, blocked_item = self._is_launch_blacklisted(q)
+            if blacklisted:
+                return self._error(f"launch blocked by blacklist: {blocked_item}")
             return self._launch_start_app(q)
         return self._error(f"unsupported app_tools mode: {mode_norm}")
 
