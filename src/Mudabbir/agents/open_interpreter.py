@@ -3377,6 +3377,65 @@ Required JSON schema:
                     "content": f"فشل قراءة التطبيقات المثبتة: {e}" if arabic else f"Failed to list installed apps: {e}",
                 }
 
+        # WhatsApp "latest message/sender" requests must use image-based vision analysis,
+        # not generated pyautogui scripts from the model.
+        if has_any(normalized, ("واتساب", "whatsapp")) and has_any(
+            normalized,
+            ("اخر", "آخر", "latest", "last", "recent"),
+        ) and has_any(
+            normalized,
+            ("رساله", "رسالة", "message", "messaged", "بعت", "بعث", "ارسل", "أرسل"),
+        ):
+            try:
+                from Mudabbir.tools.builtin.desktop import DesktopTool
+
+                raw = await DesktopTool().execute(action="vision_tools", mode="describe_screen")
+                data, err = parse_tool_json(raw)
+                if err:
+                    return {
+                        "type": "message",
+                        "content": "ما قدرت أحلل الشاشة حالياً." if arabic else "I couldn't analyze the screen right now.",
+                    }
+                data = data if isinstance(data, dict) else {}
+                source = str(data.get("source", "") or "")
+                if source == "vision":
+                    top_app = str(data.get("top_app", "") or "").strip()
+                    summary = str(data.get("ui_summary", "") or "").strip()
+                    if arabic:
+                        msg = "حلّلت الشاشة بالصورة."
+                        if top_app:
+                            msg += f"\nالتطبيق الأوضح: {top_app}"
+                        if summary:
+                            msg += f"\n{summary}"
+                        return {"type": "message", "content": msg}
+                    msg = "I analyzed the screen from the image."
+                    if top_app:
+                        msg += f"\nTop app: {top_app}"
+                    if summary:
+                        msg += f"\n{summary}"
+                    return {"type": "message", "content": msg}
+
+                if arabic:
+                    return {
+                        "type": "message",
+                        "content": (
+                            "تحليل الصورة غير مفعّل حالياً، لذلك ما بقدر أحدد آخر رسالة واتساب بدقة.\n"
+                            "فعّل مزوّد Vision (OpenAI/Gemini) من الإعدادات."
+                        ),
+                    }
+                return {
+                    "type": "message",
+                    "content": (
+                        "Image vision is not configured, so I can't reliably identify the latest WhatsApp message.\n"
+                        "Enable an OpenAI/Gemini vision provider in settings."
+                    ),
+                }
+            except Exception as e:
+                return {
+                    "type": "message",
+                    "content": f"فشل تحليل الشاشة: {e}" if arabic else f"Screen analysis failed: {e}",
+                }
+
         # Running apps/processes overview.
         if has_any(
             normalized,
