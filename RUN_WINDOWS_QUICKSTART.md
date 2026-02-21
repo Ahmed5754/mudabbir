@@ -47,6 +47,14 @@ If command is not found:
 python -m Mudabbir
 ```
 
+## 4.1) If CTRL+C does not stop it
+
+Use built-in force stop:
+
+```powershell
+mudabbir --stop
+```
+
 ## 5) Quick smoke commands to try
 
 - `control mouse`
@@ -57,4 +65,3 @@ python -m Mudabbir
 - `netstat -b`
 - `netsh wlan show profiles`
 - `nbtstat -a FILESRV`
-

@@ -15,6 +15,7 @@ Changes:
 import argparse
 import asyncio
 import importlib.util
+import json
 import logging
 import os
 import subprocess
@@ -74,7 +75,7 @@ def _sanitize_sys_path() -> None:
 
 _sanitize_sys_path()
 
-from Mudabbir.config import Settings, get_config_path, get_settings  # noqa: E402
+from Mudabbir.config import Settings, get_config_dir, get_config_path, get_settings  # noqa: E402
 from Mudabbir.logging_setup import setup_logging  # noqa: E402
 
 
@@ -111,6 +112,110 @@ logger = logging.getLogger(__name__)
 
 _AUTO_UPDATE_GUARD_ENV = "MUDABBIR_AUTO_UPDATE_DONE"
 _AUTO_UPDATE_DISABLE_ENV = "MUDABBIR_DISABLE_AUTO_UPDATE"
+
+
+def _pid_file_path() -> Path:
+    return get_config_dir() / "runtime.pid"
+
+
+def _write_runtime_pid() -> None:
+    try:
+        p = _pid_file_path()
+        p.parent.mkdir(parents=True, exist_ok=True)
+        p.write_text(str(os.getpid()), encoding="utf-8")
+    except Exception:
+        pass
+
+
+def _clear_runtime_pid() -> None:
+    try:
+        p = _pid_file_path()
+        if not p.exists():
+            return
+        content = p.read_text(encoding="utf-8").strip()
+        if content == str(os.getpid()):
+            p.unlink(missing_ok=True)
+    except Exception:
+        pass
+
+
+def _stop_running_instances() -> int:
+    """Best-effort stop for stuck Mudabbir processes.
+
+    Returns number of processes targeted for stop.
+    """
+    current_pid = os.getpid()
+    target_pids: set[int] = set()
+
+    # 1) PID file (most reliable for normal single-instance usage).
+    try:
+        p = _pid_file_path()
+        if p.exists():
+            raw = p.read_text(encoding="utf-8").strip()
+            pid = int(raw)
+            if pid > 0 and pid != current_pid:
+                target_pids.add(pid)
+    except Exception:
+        pass
+
+    # 2) Windows process scan by commandline (covers stale/no pid-file cases).
+    if os.name == "nt":
+        ps = rf"""
+$ErrorActionPreference='SilentlyContinue'
+$self={current_pid}
+$rows = Get-CimInstance Win32_Process | Where-Object {{
+  $_.Name -eq 'python.exe' -and
+  $_.ProcessId -ne $self -and
+  ($_.CommandLine -match '(-m\s+Mudabbir\b|\\Mudabbir\\__main__\.py|\bmudabbir(\.exe)?\b)')
+}} | Select-Object -ExpandProperty ProcessId
+$rows | ConvertTo-Json -Compress
+"""
+        try:
+            proc = subprocess.run(
+                ["powershell", "-NoProfile", "-Command", ps],
+                capture_output=True,
+                text=True,
+                timeout=10,
+            )
+            out = (proc.stdout or "").strip()
+            if out:
+                parsed = json.loads(out)
+                if isinstance(parsed, int):
+                    if parsed != current_pid:
+                        target_pids.add(parsed)
+                elif isinstance(parsed, list):
+                    for item in parsed:
+                        try:
+                            pid = int(item)
+                            if pid != current_pid:
+                                target_pids.add(pid)
+                        except Exception:
+                            continue
+        except Exception:
+            pass
+
+    stopped = 0
+    for pid in sorted(target_pids):
+        try:
+            if os.name == "nt":
+                subprocess.run(
+                    ["taskkill", "/F", "/PID", str(pid)],
+                    capture_output=True,
+                    text=True,
+                    timeout=8,
+                )
+            else:
+                os.kill(pid, 15)
+            stopped += 1
+        except Exception:
+            continue
+
+    try:
+        if stopped > 0:
+            _pid_file_path().unlink(missing_ok=True)
+    except Exception:
+        pass
+    return stopped
 
 
 def _should_auto_update_on_boot(argv: list[str]) -> bool:
@@ -819,8 +924,21 @@ Examples:
     parser.add_argument(
         "--version", "-v", action="version", version=f"%(prog)s {_runtime_version()}"
     )
+    parser.add_argument(
+        "--stop",
+        action="store_true",
+        help="Force-stop running Mudabbir instance(s) (useful when CTRL+C is ignored)",
+    )
 
     args = parser.parse_args()
+
+    if args.stop:
+        count = _stop_running_instances()
+        if count > 0:
+            print(f"Stopped {count} Mudabbir process(es).")
+        else:
+            print("No running Mudabbir process found.")
+        raise SystemExit(0)
 
     # Fail fast if optional deps are missing for the chosen mode
     _check_extras_installed(args)
@@ -896,6 +1014,7 @@ Examples:
     )
 
     try:
+        _write_runtime_pid()
         if args.check_ollama:
             exit_code = asyncio.run(check_ollama(settings))
             raise SystemExit(exit_code)
@@ -925,6 +1044,7 @@ Examples:
         except RuntimeError:
             # Event loop already closed — best-effort sync cleanup
             pass
+        _clear_runtime_pid()
 
 
 if __name__ == "__main__":
