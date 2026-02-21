@@ -815,6 +815,8 @@ RULES: tuple[IntentRule, ...] = (
     IntentRule("keyboard.type_time", "type_text", "", "safe", ("type current time", "كتابة الوقت الحالي")),
     IntentRule("keyboard.repeat_key", "automation_tools", "repeat_key", "safe", ("repeat key", "تكرار ضغطة زر", "تكرار ضغطة مفتاح"), params=("key", "repeat_count")),
     IntentRule("automation.delay", "automation_tools", "delay", "safe", ("delay", "wait", "sleep seconds", "انتظر", "تأخير", "مهلة"), params=("seconds",)),
+    IntentRule("automation.popup_message", "automation_tools", "popup", "safe", ("popup message", "show popup", "show message", "اظهر رسالة", "اعرض رسالة", "رسالة منبثقة", "تنبيه منبثق"), params=("text",)),
+    IntentRule("automation.tts", "automation_tools", "tts", "safe", ("text to speech", "speak text", "نطق نص", "اقرأ النص", "حول النص لصوت"), params=("text",)),
     IntentRule("session.repeat_last", "automation_tools", "repeat_last", "safe", ("repeat last command", "repeat last", "كرر", "عيد", "كرر آخر أمر", "كرر اخر امر", "كرر الامر الاخير", "عيد اخر امر"), params=("repeat_count",)),
     IntentRule("keyboard.mouse_keys", "automation_tools", "mouse_keys_toggle", "safe", ("mouse keys", "الماوس بالكيبورد")),
     IntentRule("keyboard.emoji_panel", "shell_tools", "emoji_panel", "safe", ("emoji panel", "لوحه الايموجي")),
@@ -1104,6 +1106,8 @@ def _build_params(rule: IntentRule, raw_text: str, normalized: str) -> dict[str,
                     r"(?:type string|type text|اكتب نص)\s+(.+)$",
                     r"(?:rename window title|اعاده تسميه عنوان النافذه|إعادة تسمية عنوان النافذة)\s*(?:to|الى|إلى)?\s*(.+)$",
                     r"(?:text to file|تحويل نص)\s*(?:الى|to)?\s*(.+)$",
+                    r"(?:popup message|show popup|show message|اظهر رسالة|اعرض رسالة|رسالة منبثقة|تنبيه منبثق)\s*(?:[:：]|to|:)?\s*(.+)$",
+                    r"(?:text to speech|speak text|نطق نص|اقرأ النص|حول النص لصوت)\s*(?:[:：]|to|:)?\s*(.+)$",
                 ),
             )
             if q:

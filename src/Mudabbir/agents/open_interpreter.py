@@ -4560,47 +4560,6 @@ Required JSON schema:
                 return {"type": "message", "content": f"عدد النوافذ المفتوحة حاليًا: {count}"}
             return {"type": "message", "content": f"Open windows count: {count}"}
 
-        # Mouse move shortcuts.
-        if has_any(normalized, ("حرك مؤشر الماوس للاعلى", "حرك الماوس للاعلى", "move mouse up", "mouse up")):
-            try:
-                import pyautogui
-
-                pyautogui.FAILSAFE = False
-                pyautogui.moveRel(0, -100, duration=0.2)
-                return {"type": "message", "content": "تم تحريك مؤشر الماوس للأعلى." if arabic else "Moved mouse up."}
-            except Exception as e:
-                return {"type": "message", "content": f"فشل تحريك الماوس: {e}" if arabic else f"Mouse move failed: {e}"}
-
-        if has_any(normalized, ("حرك مؤشر الماوس للاسفل", "حرك الماوس للاسفل", "move mouse down", "mouse down")):
-            try:
-                import pyautogui
-
-                pyautogui.FAILSAFE = False
-                pyautogui.moveRel(0, 100, duration=0.2)
-                return {"type": "message", "content": "تم تحريك مؤشر الماوس للأسفل." if arabic else "Moved mouse down."}
-            except Exception as e:
-                return {"type": "message", "content": f"فشل تحريك الماوس: {e}" if arabic else f"Mouse move failed: {e}"}
-
-        if has_any(normalized, ("حرك مؤشر الماوس لليمين", "حرك الماوس لليمين", "move mouse right", "mouse right")):
-            try:
-                import pyautogui
-
-                pyautogui.FAILSAFE = False
-                pyautogui.moveRel(100, 0, duration=0.2)
-                return {"type": "message", "content": "تم تحريك مؤشر الماوس لليمين." if arabic else "Moved mouse right."}
-            except Exception as e:
-                return {"type": "message", "content": f"فشل تحريك الماوس: {e}" if arabic else f"Mouse move failed: {e}"}
-
-        if has_any(normalized, ("حرك مؤشر الماوس لليسار", "حرك الماوس لليسار", "move mouse left", "mouse left")):
-            try:
-                import pyautogui
-
-                pyautogui.FAILSAFE = False
-                pyautogui.moveRel(-100, 0, duration=0.2)
-                return {"type": "message", "content": "تم تحريك مؤشر الماوس لليسار." if arabic else "Moved mouse left."}
-            except Exception as e:
-                return {"type": "message", "content": f"فشل تحريك الماوس: {e}" if arabic else f"Mouse move failed: {e}"}
-
         # Volume shortcuts.
         if has_any(normalized, ("ارفع الصوت", "علي الصوت", "volume up")):
             try:

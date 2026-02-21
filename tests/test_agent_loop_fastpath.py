@@ -1564,3 +1564,22 @@ async def test_global_fastpath_repeat_last_with_count_replays_multiple_times(
     assert len(calls) == 4
     assert all(call[0] == "volume" for call in calls)
     assert all(call[1].get("mode") == "mute" for call in calls)
+
+
+@pytest.mark.asyncio
+async def test_global_fastpath_popup_message_human_reply(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class DummyDesktopTool:
+        async def execute(self, action: str, **kwargs):
+            assert action == "automation_tools"
+            assert kwargs.get("mode") == "popup"
+            return '{"ok": true, "mode": "popup"}'
+
+    monkeypatch.setattr("Mudabbir.tools.builtin.desktop.DesktopTool", DummyDesktopTool)
+    loop = AgentLoop()
+    handled, reply = await loop._try_global_windows_fastpath(
+        text='اظهر رسالة "تم النسخ"', session_key="s39popup"
+    )
+    assert handled is True
+    assert "رسالة" in str(reply) or "popup" in str(reply).lower()

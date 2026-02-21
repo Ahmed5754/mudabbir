@@ -185,6 +185,22 @@ def test_resolve_browser_unmute_only_phrase() -> None:
     assert result.params.get("mode") == "unmute_browser_only"
 
 
+def test_resolve_popup_message_phrase() -> None:
+    result = resolve_windows_intent('اظهر رسالة "تم النسخ بنجاح"')
+    assert result.matched is True
+    assert result.action == "automation_tools"
+    assert result.params.get("mode") == "popup"
+    assert result.params.get("text") == "تم النسخ بنجاح"
+
+
+def test_resolve_tts_phrase() -> None:
+    result = resolve_windows_intent("نطق نص: أهلا بك")
+    assert result.matched is True
+    assert result.action == "automation_tools"
+    assert result.params.get("mode") == "tts"
+    assert "أهلا" in str(result.params.get("text") or "")
+
+
 def test_resolve_type_current_date_and_time() -> None:
     date_result = resolve_windows_intent("type current date")
     time_result = resolve_windows_intent("type current time")

@@ -2057,6 +2057,29 @@ class AgentLoop:
                 if msg:
                     return True, msg
 
+        if action == "automation_tools":
+            mode = str(params.get("mode", "")).lower()
+            auto_msgs_ar = {
+                "popup": "🪟 ظهرت رسالة التنبيه.",
+                "tts": "🔊 تم نطق النص.",
+                "delay": "⏳ تم الانتظار.",
+                "repeat_key": "⌨️ تم تكرار المفتاح.",
+                "mouse_lock_window": "🖱️ تم حجز الماوس داخل النافذة.",
+                "mouse_lock_off": "🖱️ تم فك حجز الماوس.",
+            }
+            auto_msgs_en = {
+                "popup": "🪟 Popup message shown.",
+                "tts": "🔊 Text spoken.",
+                "delay": "⏳ Wait completed.",
+                "repeat_key": "⌨️ Key repeated.",
+                "mouse_lock_window": "🖱️ Mouse locked to the active window.",
+                "mouse_lock_off": "🖱️ Mouse lock released.",
+            }
+            if mode:
+                msg = auto_msgs_ar.get(mode) if arabic else auto_msgs_en.get(mode)
+                if msg:
+                    return True, msg
+
         if isinstance(parsed, dict) and "ok" in parsed and "message" in parsed:
             return True, str(parsed.get("message") or "")
 
