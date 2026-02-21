@@ -815,7 +815,7 @@ RULES: tuple[IntentRule, ...] = (
     IntentRule("keyboard.type_time", "type_text", "", "safe", ("type current time", "كتابة الوقت الحالي")),
     IntentRule("keyboard.repeat_key", "automation_tools", "repeat_key", "safe", ("repeat key", "تكرار ضغطة زر", "تكرار ضغطة مفتاح"), params=("key", "repeat_count")),
     IntentRule("automation.delay", "automation_tools", "delay", "safe", ("delay", "wait", "sleep seconds", "انتظر", "تأخير", "مهلة"), params=("seconds",)),
-    IntentRule("session.repeat_last", "automation_tools", "repeat_last", "safe", ("repeat last command", "repeat last", "كرر", "عيد", "كرر آخر أمر", "كرر اخر امر", "كرر الامر الاخير", "عيد اخر امر")),
+    IntentRule("session.repeat_last", "automation_tools", "repeat_last", "safe", ("repeat last command", "repeat last", "كرر", "عيد", "كرر آخر أمر", "كرر اخر امر", "كرر الامر الاخير", "عيد اخر امر"), params=("repeat_count",)),
     IntentRule("keyboard.mouse_keys", "automation_tools", "mouse_keys_toggle", "safe", ("mouse keys", "الماوس بالكيبورد")),
     IntentRule("keyboard.emoji_panel", "shell_tools", "emoji_panel", "safe", ("emoji panel", "لوحه الايموجي")),
     IntentRule("keyboard.start_menu", "shell_tools", "start_menu", "safe", ("windows key", "start menu", "قائمه ابدا")),

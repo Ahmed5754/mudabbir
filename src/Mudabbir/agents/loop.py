@@ -333,7 +333,13 @@ class AgentLoop:
 
         session_state = self._windows_session_state.setdefault(session_key, {})
         resolved_initial = resolve_windows_intent(text)
+        repeat_count = 1
         if bool(getattr(resolved_initial, "matched", False)) and str(getattr(resolved_initial, "capability_id", "") or "") == "session.repeat_last":
+            try:
+                repeat_count = int(getattr(resolved_initial, "params", {}).get("repeat_count", 1))
+            except Exception:
+                repeat_count = 1
+            repeat_count = max(1, min(20, repeat_count))
             last_resolution = session_state.get("last_resolution")
             if isinstance(last_resolution, dict) and str(last_resolution.get("action", "")).strip():
                 resolution = {
@@ -588,22 +594,25 @@ class AgentLoop:
         ):
             params["text"] = str(session_state.get("last_window", "")).strip()
 
-        raw = await DesktopTool().execute(action=action, **params)
-        raw_text = str(raw or "")
-        if raw_text.lower().startswith("error:"):
-            return True, raw_text
+        parsed: Any = None
+        raw: Any = None
+        for _ in range(repeat_count):
+            raw = await DesktopTool().execute(action=action, **params)
+            raw_text = str(raw or "")
+            if raw_text.lower().startswith("error:"):
+                return True, raw_text
 
-        parsed: Any = raw
-        if isinstance(raw, str):
-            try:
-                parsed = json.loads(raw)
-            except Exception:
-                parsed = raw
-        if isinstance(parsed, dict) and parsed.get("ok") is False:
-            err = str(parsed.get("error") or parsed.get("message") or "").strip()
-            if arabic:
-                return True, (f"فشل التنفيذ: {err}" if err else "فشل التنفيذ.")
-            return True, (f"Execution failed: {err}" if err else "Execution failed.")
+            parsed = raw
+            if isinstance(raw, str):
+                try:
+                    parsed = json.loads(raw)
+                except Exception:
+                    parsed = raw
+            if isinstance(parsed, dict) and parsed.get("ok") is False:
+                err = str(parsed.get("error") or parsed.get("message") or "").strip()
+                if arabic:
+                    return True, (f"فشل التنفيذ: {err}" if err else "فشل التنفيذ.")
+                return True, (f"Execution failed: {err}" if err else "Execution failed.")
         if isinstance(parsed, dict):
             remembered_app = str(parsed.get("query") or params.get("name") or "").strip()
             if remembered_app:
