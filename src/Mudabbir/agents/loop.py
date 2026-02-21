@@ -667,12 +667,12 @@ class AgentLoop:
                 actual = str(parsed.get("connected_ssid") or "").strip()
                 if arabic:
                     if connected is True:
-                        return True, f"📶 تم الاتصال بالشبكة: {actual or requested}."
+                        return True, f"📶 تم الاتصال بالشبكة: {actual or requested}. تريد أعمل فحص اتصال سريع؟"
                     if connected is False:
                         return True, f"⚠️ ما تم الاتصال بـ {requested}."
                     return True, f"📶 تم إرسال طلب الاتصال بـ {requested}."
                 if connected is True:
-                    return True, f"📶 Connected to Wi-Fi: {actual or requested}."
+                    return True, f"📶 Connected to Wi-Fi: {actual or requested}. Want a quick connectivity check?"
                 if connected is False:
                     return True, f"⚠️ Could not connect to Wi-Fi: {requested}."
                 return True, f"📶 Sent Wi-Fi connect request: {requested}."
@@ -744,6 +744,10 @@ class AgentLoop:
             }
             msg = network_msgs_ar.get(mode) if arabic else network_msgs_en.get(mode)
             if msg:
+                if arabic and mode == "wifi_off":
+                    return True, f"{msg} تريد أفعّل وضع الطيران كمان؟"
+                if (not arabic) and mode == "wifi_off":
+                    return True, f"{msg} Want me to enable airplane mode too?"
                 return True, msg
 
         if action == "power_user_tools":
@@ -1734,6 +1738,10 @@ class AgentLoop:
             }
             msg = window_msgs_ar.get(mode) if arabic else window_msgs_en.get(mode)
             if msg:
+                if arabic and mode == "show_desktop_verified":
+                    return True, f"{msg} إذا بدك برجعلك النوافذ."
+                if (not arabic) and mode == "show_desktop_verified":
+                    return True, f"{msg} I can restore all windows if you want."
                 return True, msg
 
         if action == "app_tools":
