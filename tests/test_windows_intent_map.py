@@ -162,6 +162,20 @@ def test_resolve_screen_record_phrase() -> None:
     assert result.params.get("seconds") == 5
 
 
+def test_resolve_browser_mute_only_phrase() -> None:
+    result = resolve_windows_intent("كتم صوت المتصفح فقط")
+    assert result.matched is True
+    assert result.action == "media_tools"
+    assert result.params.get("mode") == "mute_browser_only"
+
+
+def test_resolve_browser_unmute_only_phrase() -> None:
+    result = resolve_windows_intent("الغاء كتم صوت المتصفح")
+    assert result.matched is True
+    assert result.action == "media_tools"
+    assert result.params.get("mode") == "unmute_browser_only"
+
+
 def test_resolve_type_current_date_and_time() -> None:
     date_result = resolve_windows_intent("type current date")
     time_result = resolve_windows_intent("type current time")

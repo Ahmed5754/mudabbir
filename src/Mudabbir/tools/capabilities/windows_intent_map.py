@@ -850,6 +850,8 @@ RULES: tuple[IntentRule, ...] = (
     IntentRule("browser.zoom_out", "browser_control", "zoom_out", "safe", ("zoom out", "تصغير الصفحة")),
     IntentRule("browser.zoom_reset", "browser_control", "zoom_reset", "safe", ("zoom 100", "الحجم الطبيعي", "ارجاع الزوم 100")),
     IntentRule("browser.save_pdf", "browser_control", "save_pdf", "safe", ("save page pdf", "حفظ الصفحة pdf")),
+    IntentRule("media.browser_mute_only", "media_tools", "mute_browser_only", "safe", ("mute browser only", "كتم صوت المتصفح فقط", "كتم المتصفح")),
+    IntentRule("media.browser_unmute_only", "media_tools", "unmute_browser_only", "safe", ("unmute browser only", "الغاء كتم صوت المتصفح", "إلغاء كتم صوت المتصفح", "رجع صوت المتصفح", "افتح صوت المتصفح")),
     IntentRule("media.screen_record", "media_tools", "screen_record", "safe", ("screen record", "record screen", "screen recording", "تسجيل فيديو للشاشة", "سجل الشاشة", "تسجيل الشاشة"), params=("seconds",)),
     IntentRule("tasks.list", "task_tools", "list", "safe", ("task scheduler list", "قائمة المهام المجدولة")),
     IntentRule("tasks.running", "task_tools", "running", "safe", ("running scheduled tasks", "المهام المجدولة الجارية", "المهام الجارية")),

@@ -1665,6 +1665,15 @@ class AgentLoop:
                 if arabic:
                     return True, ("🎥 تم تسجيل الشاشة." + (f"\n{path}" if path else ""))
                 return True, ("🎥 Screen recording completed." + (f"\n{path}" if path else ""))
+            if mode in {"mute_browser_only", "unmute_browser_only"} and isinstance(parsed, dict):
+                count = int(parsed.get("changed_sessions") or 0)
+                if arabic:
+                    if mode == "mute_browser_only":
+                        return True, f"🔇 تم كتم صوت المتصفح فقط ({count})."
+                    return True, f"🔊 تم إلغاء كتم صوت المتصفح ({count})."
+                if mode == "mute_browser_only":
+                    return True, f"🔇 Browser audio muted only ({count})."
+                return True, f"🔊 Browser audio unmuted ({count})."
             media_msgs_ar = {
                 "stop_all_media": "⏸️ تم إيقاف الوسائط.",
                 "youtube_open": "▶️ تم فتح الفيديو.",

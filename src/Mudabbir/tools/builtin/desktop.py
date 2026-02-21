@@ -7476,6 +7476,41 @@ $obj | ConvertTo-Json -Compress
             return self._media_control("previous")
         if mode_norm == "play_pause":
             return self._media_control("play_pause")
+        if mode_norm in {"mute_browser_only", "unmute_browser_only"}:
+            try:
+                from pycaw.pycaw import AudioUtilities
+
+                browser_names = {"chrome.exe", "msedge.exe", "firefox.exe", "opera.exe", "brave.exe"}
+                target_mute = 1 if mode_norm == "mute_browser_only" else 0
+                changed = 0
+                touched: list[str] = []
+                for session in AudioUtilities.GetAllSessions():
+                    try:
+                        proc = getattr(session, "Process", None)
+                        pname = str(proc.name() if proc else "").strip().lower()
+                        if not pname or pname not in browser_names:
+                            continue
+                        volume = getattr(session, "SimpleAudioVolume", None)
+                        if volume is None:
+                            continue
+                        volume.SetMute(int(target_mute), None)
+                        changed += 1
+                        if pname not in touched:
+                            touched.append(pname)
+                    except Exception:
+                        continue
+                if changed == 0:
+                    return self._error("no active browser audio sessions found")
+                return _json(
+                    {
+                        "ok": True,
+                        "mode": mode_norm,
+                        "changed_sessions": changed,
+                        "browsers": touched,
+                    }
+                )
+            except Exception as exc:
+                return self._error(f"browser audio control failed: {exc}")
         if mode_norm in {"screen_record", "screen_record_short"}:
             try:
                 duration = float(seconds if seconds is not None else 6.0)

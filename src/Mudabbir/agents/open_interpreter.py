@@ -4166,7 +4166,9 @@ Required JSON schema:
         # Mouse click by coordinates.
         if has_any(normalized, ("اكبس", "اضغط", "انقر", "click")):
             coords = extract_first_two_numbers()
-            if coords is not None and has_any(normalized, ("mouse", "ماوس", "المؤشر", "cursor", "هنا", "here")):
+            if coords is not None and (
+                self._wants_pointer_control(text) or has_any(normalized, ("هنا", "here"))
+            ):
                 try:
                     from Mudabbir.tools.builtin.desktop import DesktopTool
 
