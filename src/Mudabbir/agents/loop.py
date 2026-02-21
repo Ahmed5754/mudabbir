@@ -1556,6 +1556,14 @@ class AgentLoop:
             }
             msg = disk_msgs_ar.get(mode) if arabic else disk_msgs_en.get(mode)
             if msg:
+                if arabic and mode == "disk_usage":
+                    return True, f"{msg} تريد أطلع أكبر الملفات كمان؟"
+                if arabic and mode == "chkdsk_scan":
+                    return True, f"{msg} إذا بدك بعطيك ملخص النتيجة بعد ما يخلص."
+                if (not arabic) and mode == "disk_usage":
+                    return True, f"{msg} Want me to list the largest files too?"
+                if (not arabic) and mode == "chkdsk_scan":
+                    return True, f"{msg} I can summarize results when it finishes."
                 return True, msg
 
         if action == "registry_tools":
@@ -1603,6 +1611,10 @@ class AgentLoop:
             }
             msg = search_msgs_ar.get(mode) if arabic else search_msgs_en.get(mode)
             if msg:
+                if arabic and mode in {"find_images", "find_videos", "search_text"}:
+                    return True, f"{msg} تريد أرتب النتائج بالأحدث؟"
+                if (not arabic) and mode in {"find_images", "find_videos", "search_text"}:
+                    return True, f"{msg} Want results sorted by newest first?"
                 return True, msg
 
         if action == "web_tools":
