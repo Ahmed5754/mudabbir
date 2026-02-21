@@ -6539,6 +6539,38 @@ $obj | ConvertTo-Json -Compress
             )
             ok, out = _run_powershell(ps, timeout=12)
             return out if ok and out else self._error(out or "mouse lock region failed")
+        if mode_norm == "mouse_lock_window":
+            try:
+                import pygetwindow as gw
+
+                target = gw.getActiveWindow()
+                if target is None:
+                    return self._error("no active window found for mouse_lock_window")
+                rx = int(getattr(target, "left", 0) or 0)
+                ry = int(getattr(target, "top", 0) or 0)
+                rw = max(20, int(getattr(target, "width", 0) or 0))
+                rh = max(20, int(getattr(target, "height", 0) or 0))
+            except Exception as exc:
+                return self._error(f"mouse_lock_window target failed: {exc}")
+            ps = (
+                "$sig='[DllImport(\"user32.dll\")]public static extern bool ClipCursor(ref RECT rect);"
+                "public struct RECT { public int Left; public int Top; public int Right; public int Bottom; }'; "
+                "Add-Type -Name NativeMethods -Namespace Win32 -MemberDefinition $sig; "
+                "$r=New-Object Win32.NativeMethods+RECT; "
+                f"$r.Left={rx}; $r.Top={ry}; $r.Right={rx + rw}; $r.Bottom={ry + rh}; "
+                "[void][Win32.NativeMethods]::ClipCursor([ref]$r); "
+                "@{ok=$true; mode='mouse_lock_window'; x="
+                + str(rx)
+                + "; y="
+                + str(ry)
+                + "; width="
+                + str(rw)
+                + "; height="
+                + str(rh)
+                + "} | ConvertTo-Json -Compress"
+            )
+            ok, out = _run_powershell(ps, timeout=12)
+            return out if ok and out else self._error(out or "mouse lock window failed")
         if mode_norm == "battery_guard":
             try:
                 threshold_pct = float(seconds if seconds is not None else 15.0)

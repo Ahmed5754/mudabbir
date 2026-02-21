@@ -140,6 +140,20 @@ def test_resolve_repeat_last_command_phrase() -> None:
     assert result.params.get("mode") == "repeat_last"
 
 
+def test_resolve_mouse_lock_window_phrase() -> None:
+    result = resolve_windows_intent("حجز الماوس داخل النافذة")
+    assert result.matched is True
+    assert result.action == "automation_tools"
+    assert result.params.get("mode") == "mouse_lock_window"
+
+
+def test_resolve_mouse_unlock_phrase() -> None:
+    result = resolve_windows_intent("فك حجز الماوس")
+    assert result.matched is True
+    assert result.action == "automation_tools"
+    assert result.params.get("mode") == "mouse_lock_off"
+
+
 def test_resolve_type_current_date_and_time() -> None:
     date_result = resolve_windows_intent("type current date")
     time_result = resolve_windows_intent("type current time")
