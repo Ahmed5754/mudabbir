@@ -1283,6 +1283,12 @@ async def test_global_fastpath_app_tools_extra_replies(
     assert handled_mic is True
     assert "microphone" in str(reply_mic).lower() or "الميكروفون" in str(reply_mic)
 
+    handled_music, reply_music = await loop._try_global_windows_fastpath(
+        text="open music player", session_key="s35m"
+    )
+    assert handled_music is True
+    assert "music" in str(reply_music).lower() or "الموسيقى" in str(reply_music)
+
     handled_inetcpl, reply_inetcpl = await loop._try_global_windows_fastpath(
         text="inetcpl.cpl", session_key="s35i"
     )

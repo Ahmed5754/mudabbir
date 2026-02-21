@@ -64,6 +64,7 @@ def test_confirmation_message_detection() -> None:
         ("افتح إعدادات التطبيقات", "open_settings_page", None),
         ("افتح إعدادات الصوت", "open_settings_page", None),
         ("اغلاق كل البرامج المفتوحة", "app_tools", "close_all_apps"),
+        ("فتح مشغل الموسيقى الافتراضي", "app_tools", "open_music_player"),
         ("فحص حالة القرص الصلب", "disk_tools", "smart_status"),
         ("مفاتيح الاختصار المتاحة", "shell_tools", "list_shortcuts"),
         ("افراغ الرام", "maintenance_tools", "empty_ram"),

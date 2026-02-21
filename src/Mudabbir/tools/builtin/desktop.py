@@ -6687,6 +6687,7 @@ $obj | ConvertTo-Json -Compress
             "open_camera": "microsoft.windows.camera:",
             "open_calendar": "outlookcal:",
             "open_mail": "mailto:",
+            "open_music_player": "mswindowsmusic:",
             "open_chrome": "chrome.exe",
             "open_edge": "msedge.exe",
             "open_add_remove_programs": "appwiz.cpl",

@@ -428,6 +428,13 @@ RULES: tuple[IntentRule, ...] = (
     IntentRule("apps.open_store", "app_tools", "open_store", "safe", ("microsoft store", "متجر مايكروسوفت", "متجر ميكروسوفت")),
     IntentRule("apps.open_registry", "app_tools", "open_registry", "destructive", ("registry editor", "regedit", "محرر السجل")),
     IntentRule("apps.open_add_remove", "app_tools", "open_add_remove_programs", "safe", ("add remove programs", "appwiz.cpl", "اضافه او ازاله البرامج")),
+    IntentRule(
+        "apps.open_music_player",
+        "app_tools",
+        "open_music_player",
+        "safe",
+        ("open music player", "default music player", "فتح مشغل الموسيقى الافتراضي", "فتح مشغل الموسيقى"),
+    ),
     IntentRule("apps.open_sound_cpl", "app_tools", "open_sound_cpl", "safe", ("mmsys.cpl", "sound settings classic", "اعدادات الصوت الكلاسيكية", "اعدادات الصوت الكلاسيكيه")),
     IntentRule("apps.open_network_connections", "app_tools", "open_network_connections", "safe", ("ncpa.cpl", "network connections", "اتصالات الشبكة", "اتصالات الشبكه")),
     IntentRule("apps.open_netconnections_cpl", "app_tools", "open_netconnections_cpl", "safe", ("control netconnections", "network connections control panel", "لوحة اتصالات الشبكة")),
