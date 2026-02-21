@@ -1861,6 +1861,60 @@ class AgentLoop:
                 if msg:
                     return True, msg
 
+        if action == "file_tools":
+            mode = str(params.get("mode", "")).lower()
+            file_msgs_ar = {
+                "open_documents": "📁 تم فتح المستندات.",
+                "open_downloads": "📁 تم فتح التنزيلات.",
+                "open_pictures": "📁 تم فتح الصور.",
+                "open_videos": "📁 تم فتح الفيديوهات.",
+                "create_folder": "📁 تم إنشاء المجلد.",
+                "delete": "🗑️ تم حذف الملف.",
+                "empty_recycle_bin": "🧹 تم إفراغ سلة المهملات.",
+                "copy": "📄 تم نسخ الملف.",
+                "move": "📦 تم نقل الملف.",
+                "rename": "✏️ تم تغيير اسم الملف.",
+                "zip": "🗜️ تم ضغط الملف.",
+                "unzip": "📂 تم فك الضغط.",
+                "search_ext": "🔎 تم البحث حسب الامتداد.",
+                "show_hidden": "👁️ تم إظهار الملفات المخفية.",
+                "hide_hidden": "🙈 تم إخفاء الملفات المخفية.",
+                "folder_size": "📏 تم حساب حجم المجلد.",
+                "open_cmd_here": "🖥️ تم فتح CMD في المسار.",
+                "open_powershell_here": "🖥️ تم فتح PowerShell في المسار.",
+            }
+            file_msgs_en = {
+                "open_documents": "📁 Opened Documents.",
+                "open_downloads": "📁 Opened Downloads.",
+                "open_pictures": "📁 Opened Pictures.",
+                "open_videos": "📁 Opened Videos.",
+                "create_folder": "📁 Folder created.",
+                "delete": "🗑️ File deleted.",
+                "empty_recycle_bin": "🧹 Recycle Bin emptied.",
+                "copy": "📄 File copied.",
+                "move": "📦 File moved.",
+                "rename": "✏️ File renamed.",
+                "zip": "🗜️ File compressed.",
+                "unzip": "📂 Archive extracted.",
+                "search_ext": "🔎 Extension search completed.",
+                "show_hidden": "👁️ Hidden files are now visible.",
+                "hide_hidden": "🙈 Hidden files are now hidden.",
+                "folder_size": "📏 Folder size calculated.",
+                "open_cmd_here": "🖥️ Opened CMD in folder.",
+                "open_powershell_here": "🖥️ Opened PowerShell in folder.",
+            }
+            msg = file_msgs_ar.get(mode) if arabic else file_msgs_en.get(mode)
+            if msg:
+                if arabic and mode in {"copy", "move"}:
+                    return True, f"{msg} تريد ألصقه بالمكان الحالي؟"
+                if arabic and mode == "delete":
+                    return True, f"{msg} إذا بدك برجع أتحقق من وجوده."
+                if (not arabic) and mode in {"copy", "move"}:
+                    return True, f"{msg} Want me to paste it in the current folder?"
+                if (not arabic) and mode == "delete":
+                    return True, f"{msg} I can verify it is gone."
+                return True, msg
+
         if action == "dev_tools":
             mode = str(params.get("mode", "")).lower()
             dev_msgs_ar = {
