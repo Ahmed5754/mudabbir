@@ -332,21 +332,8 @@ class AgentLoop:
         cancel_tokens = ("cancel", "stop", "no", "لا", "الغاء", "إلغاء", "وقف")
 
         session_state = self._windows_session_state.setdefault(session_key, {})
-        repeat_tokens = {
-            "كرر",
-            "كررها",
-            "عيد",
-            "اعيد",
-            "اعد",
-            "اعدها",
-            "مره ثانيه",
-            "مرة ثانية",
-            "repeat",
-            "again",
-            "same again",
-            "do it again",
-        }
-        if normalized in repeat_tokens:
+        resolved_initial = resolve_windows_intent(text)
+        if bool(getattr(resolved_initial, "matched", False)) and str(getattr(resolved_initial, "capability_id", "") or "") == "session.repeat_last":
             last_resolution = session_state.get("last_resolution")
             if isinstance(last_resolution, dict) and str(last_resolution.get("action", "")).strip():
                 resolution = {
@@ -378,7 +365,7 @@ class AgentLoop:
                 )
         else:
             if resolution is None:
-                resolved = resolve_windows_intent(text)
+                resolved = resolved_initial
             else:
                 resolved = None
             if resolution is None and (not resolved or not resolved.matched):

@@ -1254,7 +1254,7 @@ class OpenInterpreterAgent:
         return _contains_any(message, GUI_KEYWORDS)
 
     def _wants_pointer_control(self, message: str) -> bool:
-        """Higher-level pointer intent check using intent-map aliases first."""
+        """Pointer-intent check using intent-map/context, not rigid keyword lists."""
         text = str(message or "")
         try:
             resolved = resolve_windows_intent(text)
@@ -1272,7 +1272,8 @@ class OpenInterpreterAgent:
             pointer_aliases: set[str] = set()
             for rule in WINDOWS_INTENT_RULES:
                 cap_id = str(getattr(rule, "capability_id", "") or "")
-                if not cap_id.startswith("mouse."):
+                action_id = str(getattr(rule, "action", "") or "")
+                if not (cap_id.startswith("mouse.") or action_id in {"mouse_move", "click"}):
                     continue
                 for alias in tuple(getattr(rule, "aliases", ()) or ()):
                     alias_norm = _normalize_text_for_match(str(alias or ""))
@@ -1282,13 +1283,12 @@ class OpenInterpreterAgent:
                 return True
         except Exception:
             pass
-        return bool(
-            re.search(
-                r"\b(mouse|cursor|pointer|trackpad|touchpad)\b|(?:ال)?ماوس|(?:ال)?مؤشر|الماوس",
-                normalized,
-                re.IGNORECASE,
-            )
+        # Context fallback: movement/click verbs + coordinates usually imply pointer control.
+        has_coords = bool(re.search(r"-?\d+\s*[,،]\s*-?\d+", normalized))
+        has_pointer_verb = bool(
+            re.search(r"\b(move|click|hover|drag|drop|scroll|حرك|حرّك|انقر|اضغط|اسحب|مرر)\b", normalized, re.IGNORECASE)
         )
+        return has_coords and has_pointer_verb
 
     def _is_task_manager_request(self, message: str) -> bool:
         """Detect requests that mention Task Manager."""

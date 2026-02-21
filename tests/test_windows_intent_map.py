@@ -124,6 +124,22 @@ def test_resolve_repeat_key_with_count() -> None:
     assert result.params.get("repeat_count") == 7
 
 
+def test_resolve_automation_delay_with_seconds() -> None:
+    result = resolve_windows_intent("انتظر 8 ثواني")
+    assert result.matched is True
+    assert result.action == "automation_tools"
+    assert result.params.get("mode") == "delay"
+    assert result.params.get("seconds") == 8
+
+
+def test_resolve_repeat_last_command_phrase() -> None:
+    result = resolve_windows_intent("كرر")
+    assert result.matched is True
+    assert result.action == "automation_tools"
+    assert result.capability_id == "session.repeat_last"
+    assert result.params.get("mode") == "repeat_last"
+
+
 def test_resolve_type_current_date_and_time() -> None:
     date_result = resolve_windows_intent("type current date")
     time_result = resolve_windows_intent("type current time")
