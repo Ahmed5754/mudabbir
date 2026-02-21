@@ -195,6 +195,15 @@ def test_resolve_browser_unmute_only_phrase() -> None:
     assert result.params.get("mode") == "unmute_browser_only"
 
 
+def test_resolve_set_app_volume_phrase() -> None:
+    result = resolve_windows_intent("خلي صوت تطبيق Chrome 30")
+    assert result.matched is True
+    assert result.action == "media_tools"
+    assert result.params.get("mode") == "app_volume_set"
+    assert str(result.params.get("name") or "").lower() == "chrome"
+    assert result.params.get("level") == 30
+
+
 def test_resolve_popup_message_phrase() -> None:
     result = resolve_windows_intent('اظهر رسالة "تم النسخ بنجاح"')
     assert result.matched is True

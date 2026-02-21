@@ -706,6 +706,8 @@ class DesktopTool(BaseTool):
                     mode=str(params.get("mode", "stop_all_media") or "stop_all_media"),
                     url=str(params.get("url", "") or ""),
                     seconds=params.get("seconds"),
+                    name=str(params.get("name", "") or ""),
+                    level=params.get("level"),
                 )
             if action_normalized == "browser_deep_tools":
                 return self._browser_deep_tools(
@@ -7454,7 +7456,14 @@ $obj | ConvertTo-Json -Compress
                 return self._error(f"cpu_popup failed: {exc}")
         return self._error(f"unsupported performance_tools mode: {mode_norm}")
 
-    def _media_tools(self, mode: str, url: str = "", seconds: Any = None) -> str:
+    def _media_tools(
+        self,
+        mode: str,
+        url: str = "",
+        seconds: Any = None,
+        name: str = "",
+        level: Any = None,
+    ) -> str:
         mode_norm = (mode or "").strip().lower()
         if mode_norm == "stop_all_media":
             try:
@@ -7511,6 +7520,51 @@ $obj | ConvertTo-Json -Compress
                 )
             except Exception as exc:
                 return self._error(f"browser audio control failed: {exc}")
+        if mode_norm in {"app_volume_set"}:
+            app_name = str(name or "").strip().lower()
+            if not app_name:
+                return self._error("name is required")
+            try:
+                level_value = int(level if level is not None else 50)
+            except Exception:
+                level_value = 50
+            level_value = max(0, min(100, level_value))
+            target_name = app_name if app_name.endswith(".exe") else f"{app_name}.exe"
+            try:
+                from pycaw.pycaw import AudioUtilities
+
+                changed = 0
+                touched: list[str] = []
+                scalar = float(level_value) / 100.0
+                for session in AudioUtilities.GetAllSessions():
+                    try:
+                        proc = getattr(session, "Process", None)
+                        pname = str(proc.name() if proc else "").strip().lower()
+                        if not pname or pname != target_name:
+                            continue
+                        volume = getattr(session, "SimpleAudioVolume", None)
+                        if volume is None:
+                            continue
+                        volume.SetMasterVolume(float(scalar), None)
+                        changed += 1
+                        if pname not in touched:
+                            touched.append(pname)
+                    except Exception:
+                        continue
+                if changed == 0:
+                    return self._error(f"no active audio sessions found for {target_name}")
+                return _json(
+                    {
+                        "ok": True,
+                        "mode": mode_norm,
+                        "name": target_name,
+                        "level": level_value,
+                        "changed_sessions": changed,
+                        "apps": touched,
+                    }
+                )
+            except Exception as exc:
+                return self._error(f"app volume control failed: {exc}")
         if mode_norm in {"screen_record", "screen_record_short"}:
             try:
                 duration = float(seconds if seconds is not None else 6.0)

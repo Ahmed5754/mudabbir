@@ -1714,6 +1714,13 @@ class AgentLoop:
                 if mode == "mute_browser_only":
                     return True, f"🔇 Browser audio muted only ({count})."
                 return True, f"🔊 Browser audio unmuted ({count})."
+            if mode == "app_volume_set" and isinstance(parsed, dict):
+                app_name = str(parsed.get("name") or params.get("name") or "").strip()
+                level_value = parsed.get("level", params.get("level"))
+                count = int(parsed.get("changed_sessions") or 0)
+                if arabic:
+                    return True, f"🔉 تم ضبط صوت {app_name or 'التطبيق'} على {level_value}% ({count})."
+                return True, f"🔉 Set {app_name or 'app'} volume to {level_value}% ({count})."
             media_msgs_ar = {
                 "stop_all_media": "⏸️ تم إيقاف الوسائط.",
                 "youtube_open": "▶️ تم فتح الفيديو.",

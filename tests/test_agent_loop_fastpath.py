@@ -1586,6 +1586,28 @@ async def test_global_fastpath_popup_message_human_reply(
 
 
 @pytest.mark.asyncio
+async def test_global_fastpath_set_app_volume_human_reply(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class DummyDesktopTool:
+        async def execute(self, action: str, **kwargs):
+            assert action == "media_tools"
+            assert kwargs.get("mode") == "app_volume_set"
+            assert str(kwargs.get("name", "")).lower() == "chrome"
+            assert int(kwargs.get("level")) == 30
+            return '{"ok": true, "mode": "app_volume_set", "name": "chrome.exe", "level": 30, "changed_sessions": 2}'
+
+    monkeypatch.setattr("Mudabbir.tools.builtin.desktop.DesktopTool", DummyDesktopTool)
+    loop = AgentLoop()
+    handled, reply = await loop._try_global_windows_fastpath(
+        text="خلي صوت تطبيق Chrome 30", session_key="s39appv"
+    )
+    assert handled is True
+    assert "30" in str(reply)
+    assert "chrome" in str(reply).lower()
+
+
+@pytest.mark.asyncio
 async def test_global_fastpath_repeat_last_interval_replays_multiple_times(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
