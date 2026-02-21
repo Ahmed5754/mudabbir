@@ -296,6 +296,425 @@ async def test_global_fastpath_process_top_cpu_human_reply(
 
 
 @pytest.mark.asyncio
+async def test_global_fastpath_process_app_memory_total_human_reply(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class DummyDesktopTool:
+        async def execute(self, action: str, **kwargs):
+            assert action == "process_tools"
+            assert kwargs.get("mode") == "app_memory_total"
+            assert kwargs.get("name") == "Cursor"
+            return '{"ok": true, "mode": "app_memory_total", "query": "Cursor", "process_count": 24, "total_ram_mb": 4058.4}'
+
+    monkeypatch.setattr("Mudabbir.tools.builtin.desktop.DesktopTool", DummyDesktopTool)
+    loop = AgentLoop()
+    handled, reply = await loop._try_global_windows_fastpath(
+        text="كل عمليات تطبيق Cursor سوا كم تستهلك", session_key="s10a"
+    )
+    assert handled is True
+    assert "Cursor" in str(reply)
+    assert "4058.4" in str(reply)
+    assert "24" in str(reply)
+
+
+@pytest.mark.asyncio
+async def test_global_fastpath_process_app_cpu_total_human_reply(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class DummyDesktopTool:
+        async def execute(self, action: str, **kwargs):
+            assert action == "process_tools"
+            assert kwargs.get("mode") == "app_cpu_total"
+            assert kwargs.get("name") == "Cursor"
+            return '{"ok": true, "mode": "app_cpu_total", "query": "Cursor", "process_count": 24, "total_cpu_percent": 18.7}'
+
+    monkeypatch.setattr("Mudabbir.tools.builtin.desktop.DesktopTool", DummyDesktopTool)
+    loop = AgentLoop()
+    handled, reply = await loop._try_global_windows_fastpath(
+        text="اجمالي cpu تطبيق Cursor", session_key="s10b"
+    )
+    assert handled is True
+    assert "Cursor" in str(reply)
+    assert "18.7" in str(reply)
+
+
+@pytest.mark.asyncio
+async def test_global_fastpath_process_app_disk_total_human_reply(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class DummyDesktopTool:
+        async def execute(self, action: str, **kwargs):
+            assert action == "process_tools"
+            assert kwargs.get("mode") == "app_disk_total"
+            assert kwargs.get("name") == "Cursor"
+            return '{"ok": true, "mode": "app_disk_total", "query": "Cursor", "process_count": 24, "total_disk_mb": 921.5}'
+
+    monkeypatch.setattr("Mudabbir.tools.builtin.desktop.DesktopTool", DummyDesktopTool)
+    loop = AgentLoop()
+    handled, reply = await loop._try_global_windows_fastpath(
+        text="app total disk Cursor", session_key="s10c"
+    )
+    assert handled is True
+    assert "Cursor" in str(reply)
+    assert "921.5" in str(reply)
+
+
+@pytest.mark.asyncio
+async def test_global_fastpath_process_app_network_total_human_reply(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class DummyDesktopTool:
+        async def execute(self, action: str, **kwargs):
+            assert action == "process_tools"
+            assert kwargs.get("mode") == "app_network_total"
+            assert kwargs.get("name") == "Cursor"
+            return (
+                '{"ok": true, "mode": "app_network_total", "query": "Cursor", '
+                '"process_count": 24, "total_connections": 31, "established_connections": 12, "unique_remote_ips": 7}'
+            )
+
+    monkeypatch.setattr("Mudabbir.tools.builtin.desktop.DesktopTool", DummyDesktopTool)
+    loop = AgentLoop()
+    handled, reply = await loop._try_global_windows_fastpath(
+        text="app total network Cursor", session_key="s10d"
+    )
+    assert handled is True
+    assert "Cursor" in str(reply)
+    assert "31" in str(reply)
+    assert "12" in str(reply)
+    assert "7" in str(reply)
+
+
+@pytest.mark.asyncio
+async def test_global_fastpath_process_app_resource_summary_human_reply(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class DummyDesktopTool:
+        async def execute(self, action: str, **kwargs):
+            assert action == "process_tools"
+            assert kwargs.get("mode") == "app_resource_summary"
+            assert kwargs.get("name") == "Cursor"
+            return (
+                '{"ok": true, "mode": "app_resource_summary", "query": "Cursor", '
+                '"process_count": 24, "total_ram_mb": 4058.4, "total_cpu_percent": 18.7, '
+                '"total_disk_mb": 921.5, "total_connections": 31}'
+            )
+
+    monkeypatch.setattr("Mudabbir.tools.builtin.desktop.DesktopTool", DummyDesktopTool)
+    loop = AgentLoop()
+    handled, reply = await loop._try_global_windows_fastpath(
+        text="ملخص استهلاك تطبيق Cursor", session_key="s10e"
+    )
+    assert handled is True
+    assert "Cursor" in str(reply)
+    assert "4058.4" in str(reply)
+    assert "18.7" in str(reply)
+    assert "921.5" in str(reply)
+    assert "31" in str(reply)
+
+
+@pytest.mark.asyncio
+async def test_global_fastpath_process_app_compare_human_reply(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class DummyDesktopTool:
+        async def execute(self, action: str, **kwargs):
+            assert action == "process_tools"
+            assert kwargs.get("mode") == "app_compare"
+            assert kwargs.get("name") == "Cursor"
+            assert kwargs.get("target") == "Ollama"
+            return (
+                '{"ok": true, "mode": "app_compare", '
+                '"left": {"ok": true, "query": "Cursor", "total_ram_mb": 4058.4, "total_cpu_percent": 18.7, "total_disk_mb": 921.5, "total_connections": 31}, '
+                '"right": {"ok": true, "query": "Ollama", "total_ram_mb": 502.5, "total_cpu_percent": 4.1, "total_disk_mb": 110.0, "total_connections": 3}, '
+                '"winners": {"ram":"Cursor","cpu":"Cursor","disk":"Cursor","network":"Cursor"}, '
+                '"recommendations": ["ram_hotspot=Cursor","cpu_hotspot=Cursor"]}'
+            )
+
+    monkeypatch.setattr("Mudabbir.tools.builtin.desktop.DesktopTool", DummyDesktopTool)
+    loop = AgentLoop()
+    handled, reply = await loop._try_global_windows_fastpath(
+        text="قارن بين Cursor و Ollama", session_key="s10f"
+    )
+    assert handled is True
+    assert "Cursor" in str(reply)
+    assert "Ollama" in str(reply)
+    assert "4058.4" in str(reply)
+    assert "502.5" in str(reply)
+    assert "CPU" in str(reply) or "cpu" in str(reply)
+    assert "Heavier" in str(reply) or "الأثقل" in str(reply)
+    assert "Recommendation" in str(reply) or "التوصية" in str(reply)
+    assert "Practical action" in str(reply) or "إجراء عملي" in str(reply)
+
+
+@pytest.mark.asyncio
+async def test_global_fastpath_process_app_reduce_ram_plan_human_reply(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class DummyDesktopTool:
+        async def execute(self, action: str, **kwargs):
+            assert action == "process_tools"
+            assert kwargs.get("mode") == "app_reduce_ram_plan"
+            assert kwargs.get("name") == "Cursor"
+            return (
+                '{"ok": true, "mode": "app_reduce_ram_plan", "query": "Cursor", '
+                '"process_count": 24, "total_ram_mb": 4058.4, "reclaimable_mb_estimate": 1100.0, '
+                '"top_processes": [{"pid": 1, "name": "Cursor.exe", "ram_mb": 1355.3}, {"pid": 2, "name": "Cursor.exe", "ram_mb": 357.1}]}'
+            )
+
+    monkeypatch.setattr("Mudabbir.tools.builtin.desktop.DesktopTool", DummyDesktopTool)
+    loop = AgentLoop()
+    handled, reply = await loop._try_global_windows_fastpath(
+        text="قلل استهلاك تطبيق Cursor", session_key="s10g"
+    )
+    assert handled is True
+    assert "Cursor" in str(reply)
+    assert "4058.4" in str(reply)
+    assert "1100.0" in str(reply)
+
+
+@pytest.mark.asyncio
+async def test_global_fastpath_process_app_reduce_ram_execute_confirmation_flow(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class DummyDesktopTool:
+        async def execute(self, action: str, **kwargs):
+            assert action == "process_tools"
+            assert kwargs.get("mode") == "app_reduce_ram_execute"
+            assert kwargs.get("name") == "Cursor"
+            return (
+                '{"ok": true, "mode": "app_reduce_ram_execute", "query": "Cursor", '
+                '"killed_count": 5, "protected_name": "Cursor.exe", "protected_pid": 12712}'
+            )
+
+    monkeypatch.setattr("Mudabbir.tools.builtin.desktop.DesktopTool", DummyDesktopTool)
+    loop = AgentLoop()
+
+    handled_wait, reply_wait = await loop._try_global_windows_fastpath(
+        text="نفذ تخفيف تطبيق Cursor", session_key="s10h"
+    )
+    assert handled_wait is True
+    assert "yes" in str(reply_wait).lower() or "تأكيد" in str(reply_wait)
+
+    handled_exec, reply_exec = await loop._try_global_windows_fastpath(
+        text="نعم", session_key="s10h"
+    )
+    assert handled_exec is True
+    assert "Cursor" in str(reply_exec)
+    assert "5" in str(reply_exec)
+
+
+@pytest.mark.asyncio
+async def test_global_fastpath_process_app_reduce_ram_execute_preview_with_limit(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class DummyDesktopTool:
+        async def execute(self, action: str, **kwargs):
+            assert action == "process_tools"
+            assert kwargs.get("mode") == "app_reduce_ram_execute"
+            assert kwargs.get("name") == "Cursor"
+            assert kwargs.get("dry_run") is True
+            assert kwargs.get("max_kill") == 3
+            return (
+                '{"ok": true, "mode": "app_reduce_ram_execute", "query": "Cursor", '
+                '"dry_run": true, "max_kill": 3, "killed_count": 3, "protected_name": "Cursor.exe", "protected_pid": 12712}'
+            )
+
+    monkeypatch.setattr("Mudabbir.tools.builtin.desktop.DesktopTool", DummyDesktopTool)
+    loop = AgentLoop()
+
+    handled_exec, reply_exec = await loop._try_global_windows_fastpath(
+        text="preview app ram reduction Cursor max_kill 3", session_key="s10i"
+    )
+    assert handled_exec is True
+    assert "Previewed" in str(reply_exec) or "معاينة" in str(reply_exec)
+    assert "3" in str(reply_exec)
+
+
+@pytest.mark.asyncio
+async def test_global_fastpath_preview_close_all_apps_without_confirmation(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class DummyDesktopTool:
+        async def execute(self, action: str, **kwargs):
+            assert action == "app_tools"
+            assert kwargs.get("mode") == "close_all_apps"
+            assert kwargs.get("dry_run") is True
+            assert kwargs.get("max_kill") == 2
+            return '{"ok": true, "mode": "close_all_apps", "dry_run": true, "max_kill": 2, "count": 2}'
+
+    monkeypatch.setattr("Mudabbir.tools.builtin.desktop.DesktopTool", DummyDesktopTool)
+    loop = AgentLoop()
+    handled, reply = await loop._try_global_windows_fastpath(
+        text="preview close all apps max_kill 2", session_key="s10j"
+    )
+    assert handled is True
+    assert "Preview" in str(reply) or "معاينة" in str(reply)
+
+
+@pytest.mark.asyncio
+async def test_global_fastpath_preview_kill_high_cpu_without_confirmation(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class DummyDesktopTool:
+        async def execute(self, action: str, **kwargs):
+            assert action == "process_tools"
+            assert kwargs.get("mode") == "kill_high_cpu"
+            assert kwargs.get("dry_run") is True
+            assert kwargs.get("threshold") == 60
+            return '{"ok": true, "mode": "kill_high_cpu", "dry_run": true, "threshold": 60, "count": 4}'
+
+    monkeypatch.setattr("Mudabbir.tools.builtin.desktop.DesktopTool", DummyDesktopTool)
+    loop = AgentLoop()
+    handled, reply = await loop._try_global_windows_fastpath(
+        text="preview kill high cpu 60", session_key="s10k"
+    )
+    assert handled is True
+    assert "Previewed" in str(reply) or "معاينة" in str(reply)
+    assert "60" in str(reply)
+
+
+@pytest.mark.asyncio
+async def test_global_fastpath_process_app_reduce_cpu_plan_reply(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class DummyDesktopTool:
+        async def execute(self, action: str, **kwargs):
+            assert action == "process_tools"
+            assert kwargs.get("mode") == "app_reduce_cpu_plan"
+            assert kwargs.get("name") == "Cursor"
+            return '{"ok": true, "mode": "app_reduce_cpu_plan", "query": "Cursor", "process_count": 24, "total_cpu_percent": 28.4, "reclaimable_cpu_estimate": 11.2}'
+
+    monkeypatch.setattr("Mudabbir.tools.builtin.desktop.DesktopTool", DummyDesktopTool)
+    loop = AgentLoop()
+    handled, reply = await loop._try_global_windows_fastpath(
+        text="reduce app cpu Cursor", session_key="s10l"
+    )
+    assert handled is True
+    assert "Cursor" in str(reply)
+    assert "28.4" in str(reply)
+
+
+@pytest.mark.asyncio
+async def test_global_fastpath_process_app_reduce_cpu_execute_preview_no_confirmation(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class DummyDesktopTool:
+        async def execute(self, action: str, **kwargs):
+            assert action == "process_tools"
+            assert kwargs.get("mode") == "app_reduce_cpu_execute"
+            assert kwargs.get("name") == "Cursor"
+            assert kwargs.get("dry_run") is True
+            assert kwargs.get("threshold") == 25
+            assert kwargs.get("max_kill") == 2
+            return '{"ok": true, "mode": "app_reduce_cpu_execute", "query": "Cursor", "dry_run": true, "threshold": 25, "killed_count": 2, "protected_name": "Cursor.exe", "protected_pid": 12712}'
+
+    monkeypatch.setattr("Mudabbir.tools.builtin.desktop.DesktopTool", DummyDesktopTool)
+    loop = AgentLoop()
+    handled, reply = await loop._try_global_windows_fastpath(
+        text="preview app cpu reduction Cursor 25 max_kill 2", session_key="s10m"
+    )
+    assert handled is True
+    assert "Previewed" in str(reply) or "معاينة" in str(reply)
+    assert "25" in str(reply)
+
+
+@pytest.mark.asyncio
+async def test_global_fastpath_process_app_reduce_disk_plan_reply(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class DummyDesktopTool:
+        async def execute(self, action: str, **kwargs):
+            assert action == "process_tools"
+            assert kwargs.get("mode") == "app_reduce_disk_plan"
+            assert kwargs.get("name") == "Cursor"
+            return '{"ok": true, "mode": "app_reduce_disk_plan", "query": "Cursor", "process_count": 24, "total_disk_mb": 921.5, "reclaimable_disk_estimate": 312.0}'
+
+    monkeypatch.setattr("Mudabbir.tools.builtin.desktop.DesktopTool", DummyDesktopTool)
+    loop = AgentLoop()
+    handled, reply = await loop._try_global_windows_fastpath(
+        text="reduce app disk Cursor", session_key="s10m1"
+    )
+    assert handled is True
+    assert "Cursor" in str(reply)
+    assert "921.5" in str(reply)
+
+
+@pytest.mark.asyncio
+async def test_global_fastpath_process_app_reduce_disk_execute_confirmation_flow(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class DummyDesktopTool:
+        async def execute(self, action: str, **kwargs):
+            assert action == "process_tools"
+            assert kwargs.get("mode") == "app_reduce_disk_execute"
+            assert kwargs.get("name") == "Cursor"
+            return '{"ok": true, "mode": "app_reduce_disk_execute", "query": "Cursor", "threshold": 80, "killed_count": 2, "protected_name": "Cursor.exe", "protected_pid": 12712}'
+
+    monkeypatch.setattr("Mudabbir.tools.builtin.desktop.DesktopTool", DummyDesktopTool)
+    loop = AgentLoop()
+
+    handled_wait, reply_wait = await loop._try_global_windows_fastpath(
+        text="execute app disk reduction Cursor 80", session_key="s10m2"
+    )
+    assert handled_wait is True
+    assert "yes" in str(reply_wait).lower() or "تأكيد" in str(reply_wait)
+
+    handled_exec, reply_exec = await loop._try_global_windows_fastpath(
+        text="yes", session_key="s10m2"
+    )
+    assert handled_exec is True
+    assert "Cursor" in str(reply_exec)
+    assert "80" in str(reply_exec)
+
+
+@pytest.mark.asyncio
+async def test_global_fastpath_process_app_reduce_network_execute_preview_no_confirmation(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class DummyDesktopTool:
+        async def execute(self, action: str, **kwargs):
+            assert action == "process_tools"
+            assert kwargs.get("mode") == "app_reduce_network_execute"
+            assert kwargs.get("name") == "Cursor"
+            assert kwargs.get("dry_run") is True
+            assert kwargs.get("threshold") == 4
+            assert kwargs.get("max_kill") == 2
+            return '{"ok": true, "mode": "app_reduce_network_execute", "query": "Cursor", "dry_run": true, "threshold": 4, "killed_count": 2, "protected_name": "Cursor.exe", "protected_pid": 12712}'
+
+    monkeypatch.setattr("Mudabbir.tools.builtin.desktop.DesktopTool", DummyDesktopTool)
+    loop = AgentLoop()
+    handled, reply = await loop._try_global_windows_fastpath(
+        text="preview app network reduction Cursor 4 max_kill 2", session_key="s10m3"
+    )
+    assert handled is True
+    assert "Previewed" in str(reply) or "معاينة" in str(reply)
+    assert "4" in str(reply)
+
+
+@pytest.mark.asyncio
+async def test_global_fastpath_process_app_reduce_generic_plan_route(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class DummyDesktopTool:
+        async def execute(self, action: str, **kwargs):
+            assert action == "process_tools"
+            assert kwargs.get("mode") == "app_reduce"
+            assert kwargs.get("name") == "Cursor"
+            assert kwargs.get("resource") == "ram"
+            assert kwargs.get("stage") == "plan"
+            return '{"ok": true, "mode": "app_reduce", "resource": "ram", "stage": "plan"}'
+
+    monkeypatch.setattr("Mudabbir.tools.builtin.desktop.DesktopTool", DummyDesktopTool)
+    loop = AgentLoop()
+    handled, reply = await loop._try_global_windows_fastpath(
+        text="app reduce plan Cursor ram", session_key="s10n"
+    )
+    assert handled is True
+    assert "success" in str(reply).lower() or "plan" in str(reply).lower()
+
+
+@pytest.mark.asyncio
 async def test_global_fastpath_service_and_security_replies(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

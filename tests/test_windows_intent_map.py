@@ -152,6 +152,177 @@ def test_resolve_colloquial_top_ram_phrase() -> None:
     assert result.params.get("mode") == "top_ram"
 
 
+def test_resolve_app_memory_total_phrase() -> None:
+    result = resolve_windows_intent("كل عمليات تطبيق Cursor سوا كم تستهلك")
+    assert result.matched is True
+    assert result.action == "process_tools"
+    assert result.params.get("mode") == "app_memory_total"
+    assert str(result.params.get("name") or "").lower() == "cursor"
+
+
+def test_resolve_app_cpu_total_phrase() -> None:
+    result = resolve_windows_intent("اجمالي cpu تطبيق Cursor")
+    assert result.matched is True
+    assert result.action == "process_tools"
+    assert result.params.get("mode") == "app_cpu_total"
+    assert str(result.params.get("name") or "").lower() == "cursor"
+
+
+def test_resolve_app_disk_total_phrase() -> None:
+    result = resolve_windows_intent("app total disk Cursor")
+    assert result.matched is True
+    assert result.action == "process_tools"
+    assert result.params.get("mode") == "app_disk_total"
+    assert str(result.params.get("name") or "").lower() == "cursor"
+
+
+def test_resolve_app_network_total_phrase() -> None:
+    result = resolve_windows_intent("app total network Cursor")
+    assert result.matched is True
+    assert result.action == "process_tools"
+    assert result.params.get("mode") == "app_network_total"
+    assert str(result.params.get("name") or "").lower() == "cursor"
+
+
+def test_resolve_app_resource_summary_phrase() -> None:
+    result = resolve_windows_intent("ملخص استهلاك تطبيق Cursor")
+    assert result.matched is True
+    assert result.action == "process_tools"
+    assert result.params.get("mode") == "app_resource_summary"
+    assert str(result.params.get("name") or "").lower() == "cursor"
+
+
+def test_resolve_app_compare_phrase() -> None:
+    result = resolve_windows_intent("قارن بين Cursor و Ollama")
+    assert result.matched is True
+    assert result.action == "process_tools"
+    assert result.params.get("mode") == "app_compare"
+    assert str(result.params.get("name") or "").lower() == "cursor"
+    assert str(result.params.get("target") or "").lower() == "ollama"
+
+
+def test_resolve_app_reduce_ram_plan_phrase() -> None:
+    result = resolve_windows_intent("قلل استهلاك تطبيق Cursor")
+    assert result.matched is True
+    assert result.action == "process_tools"
+    assert result.params.get("mode") == "app_reduce_ram_plan"
+    assert str(result.params.get("name") or "").lower() == "cursor"
+
+
+def test_resolve_app_reduce_ram_execute_phrase() -> None:
+    result = resolve_windows_intent("نفذ تخفيف تطبيق Cursor")
+    assert result.matched is True
+    assert result.action == "process_tools"
+    assert result.params.get("mode") == "app_reduce_ram_execute"
+    assert str(result.params.get("name") or "").lower() == "cursor"
+    assert result.risk_level == "destructive"
+
+
+def test_resolve_app_reduce_ram_execute_preview_with_max_kill_phrase() -> None:
+    result = resolve_windows_intent("preview app ram reduction Cursor max_kill 3")
+    assert result.matched is True
+    assert result.action == "process_tools"
+    assert result.params.get("mode") == "app_reduce_ram_execute"
+    assert str(result.params.get("name") or "").lower() == "cursor"
+    assert result.params.get("dry_run") is True
+    assert result.params.get("max_kill") == 3
+    assert result.risk_level == "safe"
+
+
+def test_resolve_preview_close_all_apps_is_safe() -> None:
+    result = resolve_windows_intent("preview close all apps max_kill 2")
+    assert result.matched is True
+    assert result.action == "app_tools"
+    assert result.params.get("mode") == "close_all_apps"
+    assert result.params.get("dry_run") is True
+    assert result.params.get("max_kill") == 2
+    assert result.risk_level == "safe"
+
+
+def test_resolve_preview_kill_high_cpu_is_safe() -> None:
+    result = resolve_windows_intent("preview kill high cpu 60")
+    assert result.matched is True
+    assert result.action == "process_tools"
+    assert result.params.get("mode") == "kill_high_cpu"
+    assert result.params.get("dry_run") is True
+    assert result.params.get("threshold") == 60
+    assert result.risk_level == "safe"
+
+
+def test_resolve_app_reduce_cpu_plan_phrase() -> None:
+    result = resolve_windows_intent("reduce app cpu Cursor")
+    assert result.matched is True
+    assert result.action == "process_tools"
+    assert result.params.get("mode") == "app_reduce_cpu_plan"
+    assert str(result.params.get("name") or "").lower() == "cursor"
+    assert result.risk_level == "safe"
+
+
+def test_resolve_app_reduce_cpu_execute_preview_phrase() -> None:
+    result = resolve_windows_intent("preview app cpu reduction Cursor 25 max_kill 2")
+    assert result.matched is True
+    assert result.action == "process_tools"
+    assert result.params.get("mode") == "app_reduce_cpu_execute"
+    assert str(result.params.get("name") or "").lower() == "cursor"
+    assert result.params.get("dry_run") is True
+    assert result.params.get("threshold") == 25
+    assert result.params.get("max_kill") == 2
+    assert result.risk_level == "safe"
+
+
+def test_resolve_app_reduce_disk_plan_phrase() -> None:
+    result = resolve_windows_intent("reduce app disk Cursor")
+    assert result.matched is True
+    assert result.action == "process_tools"
+    assert result.params.get("mode") == "app_reduce_disk_plan"
+    assert str(result.params.get("name") or "").lower() == "cursor"
+    assert result.risk_level == "safe"
+
+
+def test_resolve_app_reduce_disk_execute_preview_phrase() -> None:
+    result = resolve_windows_intent("preview app disk reduction Cursor 80 max_kill 2")
+    assert result.matched is True
+    assert result.action == "process_tools"
+    assert result.params.get("mode") == "app_reduce_disk_execute"
+    assert str(result.params.get("name") or "").lower() == "cursor"
+    assert result.params.get("dry_run") is True
+    assert result.params.get("threshold") == 80
+    assert result.params.get("max_kill") == 2
+    assert result.risk_level == "safe"
+
+
+def test_resolve_app_reduce_network_plan_phrase() -> None:
+    result = resolve_windows_intent("reduce app network Cursor")
+    assert result.matched is True
+    assert result.action == "process_tools"
+    assert result.params.get("mode") == "app_reduce_network_plan"
+    assert str(result.params.get("name") or "").lower() == "cursor"
+    assert result.risk_level == "safe"
+
+
+def test_resolve_app_reduce_network_execute_preview_phrase() -> None:
+    result = resolve_windows_intent("preview app network reduction Cursor 4 max_kill 2")
+    assert result.matched is True
+    assert result.action == "process_tools"
+    assert result.params.get("mode") == "app_reduce_network_execute"
+    assert str(result.params.get("name") or "").lower() == "cursor"
+    assert result.params.get("dry_run") is True
+    assert result.params.get("threshold") == 4
+    assert result.params.get("max_kill") == 2
+    assert result.risk_level == "safe"
+
+
+def test_resolve_app_reduce_generic_plan_phrase() -> None:
+    result = resolve_windows_intent("app reduce plan Cursor ram")
+    assert result.matched is True
+    assert result.action == "process_tools"
+    assert result.params.get("mode") == "app_reduce"
+    assert result.params.get("stage") == "plan"
+    assert result.params.get("resource") == "ram"
+    assert str(result.params.get("name") or "").lower() == "cursor"
+    assert result.risk_level == "safe"
+
+
 def test_resolve_colloquial_show_desktop_phrase() -> None:
     result = resolve_windows_intent("صغر كل النوافذ")
     assert result.matched is True

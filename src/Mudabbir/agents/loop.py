@@ -548,6 +548,310 @@ class AgentLoop:
                     metric = "CPU" if mode == "top_cpu" else "RAM"
                     unit = "%" if mode == "top_cpu" else " MB"
                     return True, f"Top process now: {name} (PID: {pid}) - {metric}: {value}{unit}."
+            if mode == "app_memory_total" and isinstance(parsed, dict):
+                query = str(parsed.get("query") or params.get("name") or "").strip()
+                process_count = int(parsed.get("process_count") or 0)
+                total_ram_mb = parsed.get("total_ram_mb")
+                if query and total_ram_mb is not None:
+                    if arabic:
+                        return True, f"إجمالي استهلاك تطبيق {query}: {total_ram_mb} MB عبر {process_count} عملية."
+                    return True, f"Total memory for app {query}: {total_ram_mb} MB across {process_count} processes."
+            if mode == "app_cpu_total" and isinstance(parsed, dict):
+                query = str(parsed.get("query") or params.get("name") or "").strip()
+                process_count = int(parsed.get("process_count") or 0)
+                total_cpu = parsed.get("total_cpu_percent")
+                if query and total_cpu is not None:
+                    if arabic:
+                        return True, f"إجمالي CPU لتطبيق {query}: {total_cpu}% عبر {process_count} عملية."
+                    return True, f"Total CPU for app {query}: {total_cpu}% across {process_count} processes."
+            if mode == "app_disk_total" and isinstance(parsed, dict):
+                query = str(parsed.get("query") or params.get("name") or "").strip()
+                process_count = int(parsed.get("process_count") or 0)
+                total_disk_mb = parsed.get("total_disk_mb")
+                if query and total_disk_mb is not None:
+                    if arabic:
+                        return True, f"إجمالي نشاط القرص لتطبيق {query}: {total_disk_mb} MB عبر {process_count} عملية."
+                    return True, f"Total disk activity for app {query}: {total_disk_mb} MB across {process_count} processes."
+            if mode == "app_network_total" and isinstance(parsed, dict):
+                query = str(parsed.get("query") or params.get("name") or "").strip()
+                process_count = int(parsed.get("process_count") or 0)
+                total_connections = int(parsed.get("total_connections") or 0)
+                established_connections = int(parsed.get("established_connections") or 0)
+                unique_remote_ips = int(parsed.get("unique_remote_ips") or 0)
+                if query:
+                    if arabic:
+                        return True, (
+                            f"نشاط الشبكة لتطبيق {query}: {total_connections} اتصال "
+                            f"(منها {established_connections} نشط) عبر {process_count} عملية، "
+                            f"ومع {unique_remote_ips} عناوين IP بعيدة."
+                        )
+                    return True, (
+                        f"Network activity for app {query}: {total_connections} connections "
+                        f"({established_connections} established) across {process_count} processes, "
+                        f"with {unique_remote_ips} unique remote IPs."
+                    )
+            if mode == "app_resource_summary" and isinstance(parsed, dict):
+                query = str(parsed.get("query") or params.get("name") or "").strip()
+                if query:
+                    process_count = int(parsed.get("process_count") or 0)
+                    total_ram_mb = parsed.get("total_ram_mb")
+                    total_cpu = parsed.get("total_cpu_percent")
+                    total_disk_mb = parsed.get("total_disk_mb")
+                    total_connections = int(parsed.get("total_connections") or 0)
+                    if arabic:
+                        return True, (
+                            f"ملخص {query}: RAM={total_ram_mb} MB، CPU={total_cpu}%، "
+                            f"Disk={total_disk_mb} MB، Network={total_connections} اتصال، "
+                            f"وعبر {process_count} عملية."
+                        )
+                    return True, (
+                        f"Summary for {query}: RAM={total_ram_mb} MB, CPU={total_cpu}%, "
+                        f"Disk={total_disk_mb} MB, Network={total_connections} connections, "
+                        f"across {process_count} processes."
+                    )
+            if mode == "app_compare" and isinstance(parsed, dict):
+                left = parsed.get("left") if isinstance(parsed.get("left"), dict) else {}
+                right = parsed.get("right") if isinstance(parsed.get("right"), dict) else {}
+                winners = parsed.get("winners") if isinstance(parsed.get("winners"), dict) else {}
+                recommendations = parsed.get("recommendations") if isinstance(parsed.get("recommendations"), list) else []
+                lq = str(left.get("query") or params.get("name") or "").strip()
+                rq = str(right.get("query") or params.get("target") or "").strip()
+                if lq and rq:
+                    lram = left.get("total_ram_mb")
+                    rram = right.get("total_ram_mb")
+                    lcpu = left.get("total_cpu_percent")
+                    rcpu = right.get("total_cpu_percent")
+                    ldisk = left.get("total_disk_mb")
+                    rdisk = right.get("total_disk_mb")
+                    lnet = left.get("total_connections")
+                    rnet = right.get("total_connections")
+                    ram_w = str(winners.get("ram") or "equal")
+                    cpu_w = str(winners.get("cpu") or "equal")
+                    disk_w = str(winners.get("disk") or "equal")
+                    net_w = str(winners.get("network") or "equal")
+                    rec_line = ", ".join(str(r) for r in recommendations[:4]) if recommendations else ""
+                    practical_tips: list[str] = []
+                    for rec in recommendations:
+                        token = str(rec or "").strip().lower()
+                        if token.startswith("ram_hotspot="):
+                            appn = rec.split("=", 1)[1] if "=" in rec else "this app"
+                            practical_tips.append(
+                                f"خفّف RAM بإغلاق نوافذ/تبويبات {appn} غير الضرورية"
+                                if arabic
+                                else f"Reduce RAM first by closing unnecessary {appn} windows/tabs"
+                            )
+                        elif token.startswith("cpu_hotspot="):
+                            appn = rec.split("=", 1)[1] if "=" in rec else "this app"
+                            practical_tips.append(
+                                f"خفّف CPU بإيقاف مهام الخلفية داخل {appn}"
+                                if arabic
+                                else f"Reduce CPU by stopping heavy background tasks in {appn}"
+                            )
+                        elif token.startswith("disk_hotspot="):
+                            appn = rec.split("=", 1)[1] if "=" in rec else "this app"
+                            practical_tips.append(
+                                f"خفّف Disk بإيقاف تنزيلات/فهرسة {appn} مؤقتاً"
+                                if arabic
+                                else f"Reduce Disk by pausing downloads/indexing in {appn}"
+                            )
+                        elif token.startswith("network_hotspot="):
+                            appn = rec.split("=", 1)[1] if "=" in rec else "this app"
+                            practical_tips.append(
+                                f"خفّف Network بتقليل مزامنة أو اتصالات {appn}"
+                                if arabic
+                                else f"Reduce Network by limiting sync/connections in {appn}"
+                            )
+                    practical = " | ".join(practical_tips[:2])
+                    if arabic:
+                        return True, (
+                            f"مقارنة {lq} vs {rq}: RAM {lram}/{rram} MB، CPU {lcpu}/{rcpu}%، "
+                            f"Disk {ldisk}/{rdisk} MB، Network {lnet}/{rnet}. "
+                            f"الأثقل: RAM={ram_w}، CPU={cpu_w}، Disk={disk_w}، Network={net_w}."
+                            + (f" التوصية: {rec_line}." if rec_line else "")
+                            + (f" إجراء عملي: {practical}." if practical else "")
+                        )
+                    return True, (
+                        f"Comparison {lq} vs {rq}: RAM {lram}/{rram} MB, CPU {lcpu}/{rcpu}%, "
+                        f"Disk {ldisk}/{rdisk} MB, Network {lnet}/{rnet}. "
+                        f"Heavier: RAM={ram_w}, CPU={cpu_w}, Disk={disk_w}, Network={net_w}."
+                        + (f" Recommendation: {rec_line}." if rec_line else "")
+                        + (f" Practical action: {practical}." if practical else "")
+                    )
+            if mode == "app_reduce_ram_plan" and isinstance(parsed, dict):
+                query = str(parsed.get("query") or params.get("name") or "").strip()
+                total_ram_mb = parsed.get("total_ram_mb")
+                process_count = int(parsed.get("process_count") or 0)
+                reclaimable = parsed.get("reclaimable_mb_estimate")
+                top = parsed.get("top_processes") if isinstance(parsed.get("top_processes"), list) else []
+                top_hint = ""
+                if top:
+                    p0 = top[0] if isinstance(top[0], dict) else {}
+                    p1 = top[1] if len(top) > 1 and isinstance(top[1], dict) else {}
+                    n0 = str(p0.get("name") or "")
+                    m0 = p0.get("ram_mb")
+                    n1 = str(p1.get("name") or "")
+                    m1 = p1.get("ram_mb")
+                    if n0 and m0 is not None:
+                        top_hint = f" أكبر عملية: {n0} ({m0} MB)." if arabic else f" Top process: {n0} ({m0} MB)."
+                    if n1 and m1 is not None:
+                        top_hint += (
+                            f" ثاني أكبر: {n1} ({m1} MB)."
+                            if arabic
+                            else f" Second largest: {n1} ({m1} MB)."
+                        )
+                if query and total_ram_mb is not None:
+                    if arabic:
+                        return True, (
+                            f"خطة تخفيف RAM لتطبيق {query}: الإجمالي {total_ram_mb} MB عبر {process_count} عملية. "
+                            f"تقدير الاسترجاع السريع: {reclaimable} MB."
+                            f"{top_hint} الإجراءات: اغلاق النوافذ/التبويبات الزائدة ثم إعادة تشغيل التطبيق إذا لزم."
+                        )
+                    return True, (
+                        f"RAM reduction plan for {query}: total {total_ram_mb} MB across {process_count} processes. "
+                        f"Quick reclaim estimate: {reclaimable} MB."
+                        f"{top_hint} Actions: close extra windows/tabs, then restart app if needed."
+                    )
+            if mode == "app_reduce_ram_execute" and isinstance(parsed, dict):
+                query = str(parsed.get("query") or params.get("name") or "").strip()
+                killed_count = int(parsed.get("killed_count") or 0)
+                protected_name = str(parsed.get("protected_name") or "")
+                protected_pid = parsed.get("protected_pid")
+                dry_run = bool(parsed.get("dry_run"))
+                max_kill = parsed.get("max_kill")
+                if query:
+                    if arabic:
+                        return True, (
+                            (f"معاينة تخفيف RAM لتطبيق {query}. " if dry_run else f"تم تنفيذ تخفيف RAM لتطبيق {query}. ")
+                            + f"تم {'تحديد' if dry_run else 'إغلاق'} {killed_count} عملية ثانوية"
+                            + (f" (حد أقصى {max_kill})" if max_kill is not None else "")
+                            + f"، مع إبقاء العملية الرئيسية {protected_name} (PID: {protected_pid})."
+                        )
+                    return True, (
+                        (f"Previewed RAM reduction for {query}. " if dry_run else f"Executed RAM reduction for {query}. ")
+                        + f"{'Selected' if dry_run else 'Closed'} {killed_count} secondary processes"
+                        + (f" (max_kill={max_kill})" if max_kill is not None else "")
+                        + f", while keeping main process {protected_name} (PID: {protected_pid})."
+                    )
+            if mode == "app_reduce_cpu_plan" and isinstance(parsed, dict):
+                query = str(parsed.get("query") or params.get("name") or "").strip()
+                total_cpu = parsed.get("total_cpu_percent")
+                process_count = int(parsed.get("process_count") or 0)
+                reclaimable = parsed.get("reclaimable_cpu_estimate")
+                if query and total_cpu is not None:
+                    if arabic:
+                        return True, (
+                            f"خطة تخفيف CPU لتطبيق {query}: الإجمالي {total_cpu}% عبر {process_count} عملية. "
+                            f"تقدير التخفيض السريع: {reclaimable}%."
+                        )
+                    return True, (
+                        f"CPU reduction plan for {query}: total {total_cpu}% across {process_count} processes. "
+                        f"Quick reduction estimate: {reclaimable}%."
+                    )
+            if mode == "app_reduce_cpu_execute" and isinstance(parsed, dict):
+                query = str(parsed.get("query") or params.get("name") or "").strip()
+                killed_count = int(parsed.get("killed_count") or 0)
+                protected_name = str(parsed.get("protected_name") or "")
+                protected_pid = parsed.get("protected_pid")
+                threshold = parsed.get("threshold")
+                dry_run = bool(parsed.get("dry_run"))
+                if query:
+                    if arabic:
+                        return True, (
+                            (f"معاينة تخفيف CPU لتطبيق {query} (عتبة {threshold}%): " if dry_run else f"تم تنفيذ تخفيف CPU لتطبيق {query} (عتبة {threshold}%): ")
+                            + f"{'سيتم' if dry_run else 'تم'} التعامل مع {killed_count} عملية ثانوية "
+                            + f"مع إبقاء العملية الرئيسية {protected_name} (PID: {protected_pid})."
+                        )
+                    return True, (
+                        (f"Previewed CPU reduction for {query} (threshold {threshold}%): " if dry_run else f"Executed CPU reduction for {query} (threshold {threshold}%): ")
+                        + f"{'would handle' if dry_run else 'handled'} {killed_count} secondary processes, "
+                        + f"while keeping main process {protected_name} (PID: {protected_pid})."
+                    )
+            if mode == "app_reduce_disk_plan" and isinstance(parsed, dict):
+                query = str(parsed.get("query") or params.get("name") or "").strip()
+                total_disk = parsed.get("total_disk_mb")
+                process_count = int(parsed.get("process_count") or 0)
+                reclaimable = parsed.get("reclaimable_disk_estimate")
+                if query and total_disk is not None:
+                    if arabic:
+                        return True, (
+                            f"خطة تخفيف Disk لتطبيق {query}: الإجمالي {total_disk} MB عبر {process_count} عملية. "
+                            f"تقدير التخفيض السريع: {reclaimable} MB."
+                        )
+                    return True, (
+                        f"Disk reduction plan for {query}: total {total_disk} MB across {process_count} processes. "
+                        f"Quick reduction estimate: {reclaimable} MB."
+                    )
+            if mode == "app_reduce_disk_execute" and isinstance(parsed, dict):
+                query = str(parsed.get("query") or params.get("name") or "").strip()
+                killed_count = int(parsed.get("killed_count") or 0)
+                protected_name = str(parsed.get("protected_name") or "")
+                protected_pid = parsed.get("protected_pid")
+                threshold = parsed.get("threshold")
+                dry_run = bool(parsed.get("dry_run"))
+                if query:
+                    if arabic:
+                        return True, (
+                            (f"معاينة تخفيف Disk لتطبيق {query} (عتبة {threshold} MB): " if dry_run else f"تم تنفيذ تخفيف Disk لتطبيق {query} (عتبة {threshold} MB): ")
+                            + f"{'سيتم' if dry_run else 'تم'} التعامل مع {killed_count} عملية ثانوية "
+                            + f"مع إبقاء العملية الرئيسية {protected_name} (PID: {protected_pid})."
+                        )
+                    return True, (
+                        (f"Previewed Disk reduction for {query} (threshold {threshold} MB): " if dry_run else f"Executed Disk reduction for {query} (threshold {threshold} MB): ")
+                        + f"{'would handle' if dry_run else 'handled'} {killed_count} secondary processes, "
+                        + f"while keeping main process {protected_name} (PID: {protected_pid})."
+                    )
+            if mode == "app_reduce_network_plan" and isinstance(parsed, dict):
+                query = str(parsed.get("query") or params.get("name") or "").strip()
+                total_conn = int(parsed.get("total_connections") or 0)
+                process_count = int(parsed.get("process_count") or 0)
+                reclaimable = int(parsed.get("reclaimable_network_estimate") or 0)
+                if query:
+                    if arabic:
+                        return True, (
+                            f"خطة تخفيف Network لتطبيق {query}: الإجمالي {total_conn} اتصال عبر {process_count} عملية. "
+                            f"تقدير التخفيض السريع: {reclaimable} اتصال."
+                        )
+                    return True, (
+                        f"Network reduction plan for {query}: total {total_conn} connections across {process_count} processes. "
+                        f"Quick reduction estimate: {reclaimable} connections."
+                    )
+            if mode == "app_reduce_network_execute" and isinstance(parsed, dict):
+                query = str(parsed.get("query") or params.get("name") or "").strip()
+                killed_count = int(parsed.get("killed_count") or 0)
+                protected_name = str(parsed.get("protected_name") or "")
+                protected_pid = parsed.get("protected_pid")
+                threshold = parsed.get("threshold")
+                dry_run = bool(parsed.get("dry_run"))
+                if query:
+                    if arabic:
+                        return True, (
+                            (f"معاينة تخفيف Network لتطبيق {query} (عتبة {threshold} اتصالات): " if dry_run else f"تم تنفيذ تخفيف Network لتطبيق {query} (عتبة {threshold} اتصالات): ")
+                            + f"{'سيتم' if dry_run else 'تم'} التعامل مع {killed_count} عملية ثانوية "
+                            + f"مع إبقاء العملية الرئيسية {protected_name} (PID: {protected_pid})."
+                        )
+                    return True, (
+                        (f"Previewed Network reduction for {query} (threshold {threshold} connections): " if dry_run else f"Executed Network reduction for {query} (threshold {threshold} connections): ")
+                        + f"{'would handle' if dry_run else 'handled'} {killed_count} secondary processes, "
+                        + f"while keeping main process {protected_name} (PID: {protected_pid})."
+                    )
+            if mode == "kill_high_cpu" and isinstance(parsed, dict):
+                count = int(parsed.get("count") or 0)
+                threshold = parsed.get("threshold")
+                dry_run = bool(parsed.get("dry_run"))
+                max_kill = parsed.get("max_kill")
+                if arabic:
+                    return True, (
+                        (f"معاينة kill_high_cpu عند عتبة {threshold}%: " if dry_run else f"تم تنفيذ kill_high_cpu عند عتبة {threshold}%: ")
+                        + f"{'سيتم' if dry_run else 'تم'} التعامل مع {count} عملية"
+                        + (f" (حد أقصى {max_kill})" if max_kill is not None else "")
+                        + "."
+                    )
+                return True, (
+                    (f"Previewed kill_high_cpu at threshold {threshold}%: " if dry_run else f"Executed kill_high_cpu at threshold {threshold}%: ")
+                    + f"{'would handle' if dry_run else 'handled'} {count} process(es)"
+                    + (f" (max_kill={max_kill})" if max_kill is not None else "")
+                    + "."
+                )
             process_msgs_ar = {
                 "restart_explorer": "تمت إعادة تشغيل واجهة ويندوز (Explorer).",
             }
@@ -1057,6 +1361,23 @@ class AgentLoop:
 
         if action == "app_tools":
             mode = str(params.get("mode", "")).lower()
+            if mode == "close_all_apps" and isinstance(parsed, dict):
+                count = int(parsed.get("count") or 0)
+                dry_run = bool(parsed.get("dry_run"))
+                max_kill = parsed.get("max_kill")
+                if arabic:
+                    return True, (
+                        ("معاينة إغلاق كل البرامج: " if dry_run else "تم تنفيذ إغلاق البرامج: ")
+                        + f"{'سيتم' if dry_run else 'تم'} التأثير على {count} تطبيق"
+                        + (f" (حد أقصى {max_kill})" if max_kill is not None else "")
+                        + "."
+                    )
+                return True, (
+                    ("Preview close-all-apps: " if dry_run else "Executed close-all-apps: ")
+                    + f"{'would affect' if dry_run else 'affected'} {count} app(s)"
+                    + (f" (max_kill={max_kill})" if max_kill is not None else "")
+                    + "."
+                )
             app_msgs_ar = {
                 "open_task_manager": "تم فتح مدير المهام.",
                 "open_notepad": "تم فتح المفكرة.",

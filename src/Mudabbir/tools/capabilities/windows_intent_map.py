@@ -345,7 +345,19 @@ RULES: tuple[IntentRule, ...] = (
     IntentRule("apps.open_paint", "app_tools", "open_paint", "safe", ("open paint", "افتح الرسام")),
     IntentRule("apps.open_task_manager", "app_tools", "open_task_manager", "safe", ("open task manager", "افتح مدير المهام", "taskmgr", "مدير المهام")),
     IntentRule("apps.close_app", "close_app", "", "elevated", ("close app", "اغلاق برنامج", "اغلق التطبيق"), params=("process_name",)),
-    IntentRule("apps.close_all", "app_tools", "close_all_apps", "elevated", ("close all apps", "اغلاق كل البرامج", "اغلاق كل البرامج المفتوحة")),
+    IntentRule(
+        "apps.close_all",
+        "app_tools",
+        "close_all_apps",
+        "destructive",
+        (
+            "close all apps",
+            "اغلاق كل البرامج",
+            "اغلاق كل البرامج المفتوحة",
+            "preview close all apps",
+            "عاين اغلاق كل البرامج",
+        ),
+    ),
     IntentRule(
         "apps.open_control_panel",
         "app_tools",
@@ -410,6 +422,243 @@ RULES: tuple[IntentRule, ...] = (
             "شو اكتر مهمة تستهلك رامات",
             "اكتر عملية تستهلك رام",
         ),
+    ),
+    IntentRule(
+        "process.kill_high_cpu",
+        "process_tools",
+        "kill_high_cpu",
+        "destructive",
+        (
+            "kill high cpu",
+            "kill processes above cpu",
+            "انهاء العمليات عالية المعالج",
+            "اقتل العمليات عالية المعالج",
+            "preview kill high cpu",
+            "عاين قتل العمليات عالية المعالج",
+        ),
+    ),
+    IntentRule(
+        "process.app_memory_total",
+        "process_tools",
+        "app_memory_total",
+        "safe",
+        (
+            "كل عمليات تطبيق",
+            "اجمالي استهلاك تطبيق",
+            "مجموع استهلاك تطبيق",
+            "كل عمليات برنامج",
+            "total app memory",
+            "total memory for app",
+            "sum memory for app",
+            "app total ram",
+        ),
+        params=("name",),
+    ),
+    IntentRule(
+        "process.app_cpu_total",
+        "process_tools",
+        "app_cpu_total",
+        "safe",
+        (
+            "اجمالي cpu تطبيق",
+            "مجموع cpu تطبيق",
+            "app total cpu",
+            "total cpu for app",
+            "sum cpu for app",
+        ),
+        params=("name",),
+    ),
+    IntentRule(
+        "process.app_disk_total",
+        "process_tools",
+        "app_disk_total",
+        "safe",
+        (
+            "اجمالي disk تطبيق",
+            "اجمالي القرص لتطبيق",
+            "مجموع disk تطبيق",
+            "app total disk",
+            "total disk for app",
+            "sum disk for app",
+        ),
+        params=("name",),
+    ),
+    IntentRule(
+        "process.app_network_total",
+        "process_tools",
+        "app_network_total",
+        "safe",
+        (
+            "اجمالي نت تطبيق",
+            "اجمالي شبكة تطبيق",
+            "مجموع اتصالات تطبيق",
+            "app total network",
+            "total network for app",
+            "app network connections",
+        ),
+        params=("name",),
+    ),
+    IntentRule(
+        "process.app_resource_summary",
+        "process_tools",
+        "app_resource_summary",
+        "safe",
+        (
+            "ملخص استهلاك تطبيق",
+            "ملخص تطبيق",
+            "app resource summary",
+            "app usage summary",
+            "total usage for app",
+        ),
+        params=("name",),
+    ),
+    IntentRule(
+        "process.app_compare",
+        "process_tools",
+        "app_compare",
+        "safe",
+        (
+            "قارن تطبيق",
+            "قارن بين",
+            "compare app",
+            "compare between",
+            "app compare",
+        ),
+        params=("name", "target"),
+    ),
+    IntentRule(
+        "process.app_reduce_ram_plan",
+        "process_tools",
+        "app_reduce_ram_plan",
+        "safe",
+        (
+            "قلل استهلاك تطبيق",
+            "خفف استهلاك تطبيق",
+            "reduce app memory",
+            "reduce ram for app",
+            "optimize app memory",
+        ),
+        params=("name",),
+    ),
+    IntentRule(
+        "process.app_reduce_ram_execute",
+        "process_tools",
+        "app_reduce_ram_execute",
+        "destructive",
+        (
+            "نفذ تخفيف تطبيق",
+            "طبق تخفيف تطبيق",
+            "execute app memory reduction",
+            "apply app ram reduction",
+            "preview app ram reduction",
+            "عاين تخفيف تطبيق",
+        ),
+        params=("name",),
+    ),
+    IntentRule(
+        "process.app_reduce_cpu_plan",
+        "process_tools",
+        "app_reduce_cpu_plan",
+        "safe",
+        (
+            "قلل cpu تطبيق",
+            "خفف cpu تطبيق",
+            "reduce app cpu",
+            "optimize app cpu",
+        ),
+        params=("name",),
+    ),
+    IntentRule(
+        "process.app_reduce_cpu_execute",
+        "process_tools",
+        "app_reduce_cpu_execute",
+        "destructive",
+        (
+            "نفذ تخفيف cpu تطبيق",
+            "apply app cpu reduction",
+            "execute app cpu reduction",
+            "preview app cpu reduction",
+            "عاين تخفيف cpu تطبيق",
+        ),
+        params=("name",),
+    ),
+    IntentRule(
+        "process.app_reduce_disk_plan",
+        "process_tools",
+        "app_reduce_disk_plan",
+        "safe",
+        (
+            "قلل disk تطبيق",
+            "خفف disk تطبيق",
+            "قلل القرص تطبيق",
+            "reduce app disk",
+            "optimize app disk",
+        ),
+        params=("name",),
+    ),
+    IntentRule(
+        "process.app_reduce_disk_execute",
+        "process_tools",
+        "app_reduce_disk_execute",
+        "destructive",
+        (
+            "نفذ تخفيف disk تطبيق",
+            "عاين تخفيف disk تطبيق",
+            "apply app disk reduction",
+            "execute app disk reduction",
+            "preview app disk reduction",
+        ),
+        params=("name",),
+    ),
+    IntentRule(
+        "process.app_reduce_network_plan",
+        "process_tools",
+        "app_reduce_network_plan",
+        "safe",
+        (
+            "قلل network تطبيق",
+            "خفف network تطبيق",
+            "قلل الشبكة تطبيق",
+            "reduce app network",
+            "optimize app network",
+        ),
+        params=("name",),
+    ),
+    IntentRule(
+        "process.app_reduce_network_execute",
+        "process_tools",
+        "app_reduce_network_execute",
+        "destructive",
+        (
+            "نفذ تخفيف network تطبيق",
+            "عاين تخفيف network تطبيق",
+            "apply app network reduction",
+            "execute app network reduction",
+            "preview app network reduction",
+        ),
+        params=("name",),
+    ),
+    IntentRule(
+        "process.app_reduce_generic_plan",
+        "process_tools",
+        "app_reduce",
+        "safe",
+        (
+            "app reduce plan",
+            "خطة تخفيف تطبيق",
+        ),
+        params=("name", "resource"),
+    ),
+    IntentRule(
+        "process.app_reduce_generic_execute",
+        "process_tools",
+        "app_reduce",
+        "destructive",
+        (
+            "app reduce execute",
+            "نفذ تخفيف عام تطبيق",
+        ),
+        params=("name", "resource"),
     ),
     IntentRule("dev.sfc_scan", "dev_tools", "sfc_scan", "elevated", ("sfc scan", "فحص ملفات النظام")),
     IntentRule("dev.chkdsk", "dev_tools", "chkdsk", "elevated", ("chkdsk", "فحص القرص")),
@@ -1003,6 +1252,229 @@ def _build_params(rule: IntentRule, raw_text: str, normalized: str) -> dict[str,
         )
         if q:
             params["text"] = q
+    if rule.capability_id == "process.app_memory_total":
+        q = _extract_named_value(
+            raw_text,
+            (
+                r"(?:كل عمليات تطبيق|اجمالي استهلاك تطبيق|مجموع استهلاك تطبيق|كل عمليات برنامج)\s+([A-Za-z0-9._-]+)",
+                r"(?:total memory for app|sum memory for app|app total ram|total app memory)\s+([A-Za-z0-9._-]+)",
+                r"(?:تطبيق|برنامج|app)\s+([A-Za-z0-9._-]+)",
+            ),
+        )
+        if q:
+            params["name"] = q
+    if rule.capability_id == "process.app_compare":
+        m = re.search(
+            r"(?:قارن(?: بين)?|compare(?: between)?|app compare)\s+([A-Za-z0-9._-]+)\s+(?:مع|و|vs|and)\s+([A-Za-z0-9._-]+)",
+            raw_text or "",
+            re.IGNORECASE,
+        )
+        if m:
+            params["name"] = (m.group(1) or "").strip()
+            params["target"] = (m.group(2) or "").strip()
+        else:
+            quoted = _extract_quoted_chunks(raw_text)
+            if len(quoted) >= 2:
+                params["name"] = quoted[0]
+                params["target"] = quoted[1]
+    if rule.capability_id == "process.app_reduce_ram_plan":
+        q = _extract_named_value(
+            raw_text,
+            (
+                r"(?:قلل استهلاك تطبيق|خفف استهلاك تطبيق)\s+([A-Za-z0-9._-]+)",
+                r"(?:reduce app memory|reduce ram for app|optimize app memory)\s+([A-Za-z0-9._-]+)",
+                r"(?:تطبيق|برنامج|app)\s+([A-Za-z0-9._-]+)",
+            ),
+        )
+        if q:
+            params["name"] = q
+    if rule.capability_id == "process.app_reduce_ram_execute":
+        q = _extract_named_value(
+            raw_text,
+            (
+                r"(?:نفذ تخفيف تطبيق|طبق تخفيف تطبيق)\s+([A-Za-z0-9._-]+)",
+                r"(?:execute app memory reduction|apply app ram reduction|preview app ram reduction|عاين تخفيف تطبيق)\s+([A-Za-z0-9._-]+)",
+                r"(?:تطبيق|برنامج|app)\s+([A-Za-z0-9._-]+)",
+            ),
+        )
+        if q:
+            params["name"] = q
+        if _contains_any(normalized, ("preview", "عاين", "معاينة", "معاينه", "بدون تنفيذ")):
+            params["dry_run"] = True
+        mk = _extract_named_value(
+            raw_text,
+            (
+                r"(?:max(?: |_)?kill|max kills)\s*[:=]?\s*(\d+)",
+                r"(?:حد اقصى|حد أقصى)\s*(?:للاغلاق|للإغلاق|اغلاق|إغلاق)?\s*(\d+)",
+            ),
+        )
+        if mk and str(mk).isdigit():
+            params["max_kill"] = int(mk)
+    if rule.capability_id == "process.app_reduce_cpu_plan":
+        q = _extract_named_value(
+            raw_text,
+            (
+                r"(?:قلل cpu تطبيق|خفف cpu تطبيق)\s+([A-Za-z0-9._-]+)",
+                r"(?:reduce app cpu|optimize app cpu)\s+([A-Za-z0-9._-]+)",
+                r"(?:تطبيق|برنامج|app)\s+([A-Za-z0-9._-]+)",
+            ),
+        )
+        if q:
+            params["name"] = q
+    if rule.capability_id == "process.app_reduce_cpu_execute":
+        q = _extract_named_value(
+            raw_text,
+            (
+                r"(?:نفذ تخفيف cpu تطبيق|عاين تخفيف cpu تطبيق)\s+([A-Za-z0-9._-]+)",
+                r"(?:apply app cpu reduction|execute app cpu reduction|preview app cpu reduction)\s+([A-Za-z0-9._-]+)",
+                r"(?:تطبيق|برنامج|app)\s+([A-Za-z0-9._-]+)",
+            ),
+        )
+        if q:
+            params["name"] = q
+        if _contains_any(normalized, ("preview", "عاين", "معاينة", "معاينه", "بدون تنفيذ")):
+            params["dry_run"] = True
+        mk = _extract_named_value(
+            raw_text,
+            (
+                r"(?:max(?: |_)?kill|max kills)\s*[:=]?\s*(\d+)",
+                r"(?:حد اقصى|حد أقصى)\s*(?:للاغلاق|للإغلاق|اغلاق|إغلاق)?\s*(\d+)",
+            ),
+        )
+        if mk and str(mk).isdigit():
+            params["max_kill"] = int(mk)
+        value = _extract_first_int(raw_text)
+        if value is not None:
+            params["threshold"] = max(1, min(100, abs(value)))
+    if rule.capability_id == "process.app_reduce_disk_plan":
+        q = _extract_named_value(
+            raw_text,
+            (
+                r"(?:قلل disk تطبيق|خفف disk تطبيق|قلل القرص تطبيق)\s+([A-Za-z0-9._-]+)",
+                r"(?:reduce app disk|optimize app disk)\s+([A-Za-z0-9._-]+)",
+                r"(?:تطبيق|برنامج|app)\s+([A-Za-z0-9._-]+)",
+            ),
+        )
+        if q:
+            params["name"] = q
+    if rule.capability_id == "process.app_reduce_disk_execute":
+        q = _extract_named_value(
+            raw_text,
+            (
+                r"(?:نفذ تخفيف disk تطبيق|عاين تخفيف disk تطبيق)\s+([A-Za-z0-9._-]+)",
+                r"(?:apply app disk reduction|execute app disk reduction|preview app disk reduction)\s+([A-Za-z0-9._-]+)",
+                r"(?:تطبيق|برنامج|app)\s+([A-Za-z0-9._-]+)",
+            ),
+        )
+        if q:
+            params["name"] = q
+        if _contains_any(normalized, ("preview", "عاين", "معاينة", "معاينه", "بدون تنفيذ")):
+            params["dry_run"] = True
+        mk = _extract_named_value(
+            raw_text,
+            (
+                r"(?:max(?: |_)?kill|max kills)\s*[:=]?\s*(\d+)",
+                r"(?:حد اقصى|حد أقصى)\s*(?:للاغلاق|للإغلاق|اغلاق|إغلاق)?\s*(\d+)",
+            ),
+        )
+        if mk and str(mk).isdigit():
+            params["max_kill"] = int(mk)
+        value = _extract_first_int(raw_text)
+        if value is not None:
+            params["threshold"] = max(1, abs(value))
+    if rule.capability_id == "process.app_reduce_network_plan":
+        q = _extract_named_value(
+            raw_text,
+            (
+                r"(?:قلل network تطبيق|خفف network تطبيق|قلل الشبكة تطبيق)\s+([A-Za-z0-9._-]+)",
+                r"(?:reduce app network|optimize app network)\s+([A-Za-z0-9._-]+)",
+                r"(?:تطبيق|برنامج|app)\s+([A-Za-z0-9._-]+)",
+            ),
+        )
+        if q:
+            params["name"] = q
+    if rule.capability_id == "process.app_reduce_network_execute":
+        q = _extract_named_value(
+            raw_text,
+            (
+                r"(?:نفذ تخفيف network تطبيق|عاين تخفيف network تطبيق)\s+([A-Za-z0-9._-]+)",
+                r"(?:apply app network reduction|execute app network reduction|preview app network reduction)\s+([A-Za-z0-9._-]+)",
+                r"(?:تطبيق|برنامج|app)\s+([A-Za-z0-9._-]+)",
+            ),
+        )
+        if q:
+            params["name"] = q
+        if _contains_any(normalized, ("preview", "عاين", "معاينة", "معاينه", "بدون تنفيذ")):
+            params["dry_run"] = True
+        mk = _extract_named_value(
+            raw_text,
+            (
+                r"(?:max(?: |_)?kill|max kills)\s*[:=]?\s*(\d+)",
+                r"(?:حد اقصى|حد أقصى)\s*(?:للاغلاق|للإغلاق|اغلاق|إغلاق)?\s*(\d+)",
+            ),
+        )
+        if mk and str(mk).isdigit():
+            params["max_kill"] = int(mk)
+        value = _extract_first_int(raw_text)
+        if value is not None:
+            params["threshold"] = max(1, abs(value))
+    if rule.capability_id in {"process.app_reduce_generic_plan", "process.app_reduce_generic_execute"}:
+        q = _extract_named_value(
+            raw_text,
+            (
+                r"(?:app reduce plan|app reduce execute|خطة تخفيف تطبيق|نفذ تخفيف عام تطبيق)\s+([A-Za-z0-9._-]+)",
+                r"(?:تطبيق|برنامج|app)\s+([A-Za-z0-9._-]+)",
+            ),
+        )
+        if q:
+            params["name"] = q
+        if _contains_any(normalized, ("ram", "ذاكره", "ذاكرة", "رام")):
+            params["resource"] = "ram"
+        elif _contains_any(normalized, ("cpu", "معالج")):
+            params["resource"] = "cpu"
+        elif _contains_any(normalized, ("disk", "قرص", "ديسك")):
+            params["resource"] = "disk"
+        elif _contains_any(normalized, ("network", "شبكه", "شبكة", "نت")):
+            params["resource"] = "network"
+        params["stage"] = "plan" if rule.capability_id.endswith("_plan") else "execute"
+        if params["stage"] == "plan":
+            params["dry_run"] = True
+        elif _contains_any(normalized, ("preview", "عاين", "معاينة", "معاينه", "بدون تنفيذ")):
+            params["dry_run"] = True
+    if rule.capability_id == "apps.close_all":
+        if _contains_any(normalized, ("preview", "عاين", "معاينة", "معاينه", "بدون تنفيذ")):
+            params["dry_run"] = True
+        mk = _extract_named_value(
+            raw_text,
+            (
+                r"(?:max(?: |_)?kill|max closes)\s*[:=]?\s*(\d+)",
+                r"(?:حد اقصى|حد أقصى)\s*(?:للاغلاق|للإغلاق|اغلاق|إغلاق)?\s*(\d+)",
+            ),
+        )
+        if mk and str(mk).isdigit():
+            params["max_kill"] = int(mk)
+    if rule.capability_id == "process.kill_high_cpu":
+        if _contains_any(normalized, ("preview", "عاين", "معاينة", "معاينه", "بدون تنفيذ")):
+            params["dry_run"] = True
+        value = _extract_first_int(raw_text)
+        if value is not None:
+            params["threshold"] = max(5, min(100, abs(value)))
+    if rule.capability_id in {
+        "process.app_cpu_total",
+        "process.app_disk_total",
+        "process.app_network_total",
+        "process.app_resource_summary",
+    }:
+        q = _extract_named_value(
+            raw_text,
+            (
+                r"(?:اجمالي cpu تطبيق|مجموع cpu تطبيق|اجمالي disk تطبيق|مجموع disk تطبيق|اجمالي القرص لتطبيق|اجمالي نت تطبيق|اجمالي شبكة تطبيق|مجموع اتصالات تطبيق|ملخص استهلاك تطبيق|ملخص تطبيق)\s+([A-Za-z0-9._-]+)",
+                r"(?:total cpu for app|sum cpu for app|app total cpu|total disk for app|sum disk for app|app total disk|total network for app|app total network|app network connections|app resource summary|app usage summary|total usage for app)\s+([A-Za-z0-9._-]+)",
+                r"(?:تطبيق|برنامج|app)\s+([A-Za-z0-9._-]+)",
+            ),
+        )
+        if q:
+            params["name"] = q
     if rule.capability_id == "apps.close_app" and not params.get("process_name"):
         params["process_name"] = "notepad"
     if rule.capability_id == "files.create_folder" and not params.get("name"):
@@ -1190,12 +1662,15 @@ def resolve_windows_intent(message: str) -> IntentResolution:
                     unsupported_reason=rule.unsupported_reason,
                 )
             params = _build_params(rule, raw, normalized)
+            risk_level = rule.risk_level
+            if rule.capability_id in {"process.app_reduce_ram_execute", "process.app_reduce_cpu_execute", "process.app_reduce_disk_execute", "process.app_reduce_network_execute", "process.app_reduce_generic_execute", "apps.close_all", "process.kill_high_cpu"} and bool(params.get("dry_run")):
+                risk_level = "safe"
             return IntentResolution(
                 matched=True,
                 capability_id=rule.capability_id,
                 action=rule.action,
                 params=params,
-                risk_level=rule.risk_level,
+                risk_level=risk_level,
             )
 
     # Unsupported but explicitly known asks from requested catalog.

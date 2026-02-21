@@ -549,7 +549,12 @@ class DesktopTool(BaseTool):
                 return self._process_tools(
                     mode=str(params.get("mode", "list") or "list"),
                     pid=params.get("pid"),
-                    name=str(params.get("name", "") or ""),
+                    name=str(params.get("name", "") or params.get("process_name", "") or ""),
+                    other_name=str(params.get("other_name", "") or params.get("target", "") or ""),
+                    dry_run=bool(params.get("dry_run", False)),
+                    max_kill=params.get("max_kill"),
+                    resource=str(params.get("resource", "") or ""),
+                    stage=str(params.get("stage", "") or ""),
                     priority=str(params.get("priority", "") or ""),
                     threshold=params.get("threshold"),
                 )
@@ -647,6 +652,8 @@ class DesktopTool(BaseTool):
                 return self._app_tools(
                     mode=str(params.get("mode", "open_default_browser") or "open_default_browser"),
                     app=str(params.get("app", "") or ""),
+                    dry_run=bool(params.get("dry_run", False)),
+                    max_kill=params.get("max_kill"),
                 )
             if action_normalized == "info_tools":
                 return self._info_tools(
@@ -3580,14 +3587,40 @@ $obj | ConvertTo-Json -Compress
         mode: str,
         pid: Any = None,
         name: str = "",
+        other_name: str = "",
+        dry_run: bool = False,
+        max_kill: Any = None,
+        resource: str = "",
+        stage: str = "",
         priority: str = "",
         threshold: Any = None,
     ) -> str:
         mode_norm = (mode or "").strip().lower()
+        resource_norm = (resource or "").strip().lower()
+        stage_norm = (stage or "").strip().lower()
         try:
             import psutil
         except Exception as exc:
             return self._error(f"psutil unavailable: {exc}")
+
+        if mode_norm == "app_reduce":
+            if resource_norm not in {"ram", "cpu", "disk", "network"}:
+                return self._error("resource must be ram|cpu|disk|network")
+            if stage_norm not in {"plan", "execute"}:
+                stage_norm = "execute" if not bool(dry_run) else "plan"
+            routed_mode = f"app_reduce_{resource_norm}_{stage_norm}"
+            return self._process_tools(
+                mode=routed_mode,
+                pid=pid,
+                name=name,
+                other_name=other_name,
+                dry_run=dry_run,
+                max_kill=max_kill,
+                resource=resource,
+                stage=stage,
+                priority=priority,
+                threshold=threshold,
+            )
 
         if mode_norm == "list":
             items = []
@@ -3628,6 +3661,873 @@ $obj | ConvertTo-Json -Compress
             key = "cpu" if mode_norm == "top_cpu" else "ram_mb"
             items.sort(key=lambda x: float(x.get(key, 0.0) or 0.0), reverse=True)
             return _json({"ok": True, "mode": mode_norm, "items": items[:10]})
+        if mode_norm == "app_memory_total":
+            query_raw = (name or "").strip()
+            if not query_raw:
+                return self._error("name is required")
+            query_norm = query_raw.casefold()
+            if query_norm.endswith(".exe"):
+                query_norm = query_norm[:-4]
+            items = []
+            total_ram_mb = 0.0
+            for p in psutil.process_iter(["pid", "name", "memory_info"]):
+                try:
+                    info = p.info
+                    pname = str(info.get("name") or "").strip()
+                    if not pname:
+                        continue
+                    pname_norm = pname.casefold()
+                    pname_no_ext = pname_norm[:-4] if pname_norm.endswith(".exe") else pname_norm
+                    if query_norm not in pname_norm and query_norm not in pname_no_ext:
+                        continue
+                    ram_mb = round((info.get("memory_info").rss or 0) / (1024 * 1024), 2) if info.get("memory_info") else 0.0
+                    total_ram_mb += ram_mb
+                    items.append(
+                        {
+                            "pid": info.get("pid"),
+                            "name": pname,
+                            "ram_mb": ram_mb,
+                        }
+                    )
+                except Exception:
+                    continue
+            items.sort(key=lambda x: float(x.get("ram_mb", 0.0) or 0.0), reverse=True)
+            return _json(
+                {
+                    "ok": True,
+                    "mode": mode_norm,
+                    "query": query_raw,
+                    "process_count": len(items),
+                    "total_ram_mb": round(total_ram_mb, 2),
+                    "items": items[:30],
+                }
+            )
+        if mode_norm == "app_cpu_total":
+            query_raw = (name or "").strip()
+            if not query_raw:
+                return self._error("name is required")
+            query_norm = query_raw.casefold()
+            if query_norm.endswith(".exe"):
+                query_norm = query_norm[:-4]
+            matched: list[dict[str, Any]] = []
+            for p in psutil.process_iter(["pid", "name"]):
+                try:
+                    info = p.info
+                    pname = str(info.get("name") or "").strip()
+                    if not pname:
+                        continue
+                    pname_norm = pname.casefold()
+                    pname_no_ext = pname_norm[:-4] if pname_norm.endswith(".exe") else pname_norm
+                    if query_norm not in pname_norm and query_norm not in pname_no_ext:
+                        continue
+                    matched.append({"pid": int(info.get("pid") or 0), "name": pname, "proc": p})
+                except Exception:
+                    continue
+            for item in matched:
+                try:
+                    item["proc"].cpu_percent(interval=None)
+                except Exception:
+                    item["cpu"] = 0.0
+            time.sleep(0.6)
+            total_cpu = 0.0
+            items: list[dict[str, Any]] = []
+            for item in matched:
+                p = item.get("proc")
+                try:
+                    cpu_val = round(float(p.cpu_percent(interval=None)), 2)
+                except Exception:
+                    cpu_val = 0.0
+                total_cpu += cpu_val
+                items.append({"pid": item.get("pid"), "name": item.get("name"), "cpu": cpu_val})
+            items.sort(key=lambda x: float(x.get("cpu", 0.0) or 0.0), reverse=True)
+            return _json(
+                {
+                    "ok": True,
+                    "mode": mode_norm,
+                    "query": query_raw,
+                    "process_count": len(items),
+                    "total_cpu_percent": round(total_cpu, 2),
+                    "items": items[:30],
+                }
+            )
+        if mode_norm == "app_disk_total":
+            query_raw = (name or "").strip()
+            if not query_raw:
+                return self._error("name is required")
+            query_norm = query_raw.casefold()
+            if query_norm.endswith(".exe"):
+                query_norm = query_norm[:-4]
+            items: list[dict[str, Any]] = []
+            total_read_mb = 0.0
+            total_write_mb = 0.0
+            for p in psutil.process_iter(["pid", "name", "io_counters"]):
+                try:
+                    info = p.info
+                    pname = str(info.get("name") or "").strip()
+                    if not pname:
+                        continue
+                    pname_norm = pname.casefold()
+                    pname_no_ext = pname_norm[:-4] if pname_norm.endswith(".exe") else pname_norm
+                    if query_norm not in pname_norm and query_norm not in pname_no_ext:
+                        continue
+                    io = info.get("io_counters")
+                    if not io:
+                        continue
+                    rb = float(getattr(io, "read_bytes", 0.0) or 0.0)
+                    wb = float(getattr(io, "write_bytes", 0.0) or 0.0)
+                    read_mb = round(rb / (1024 * 1024), 2)
+                    write_mb = round(wb / (1024 * 1024), 2)
+                    total_read_mb += read_mb
+                    total_write_mb += write_mb
+                    items.append(
+                        {
+                            "pid": info.get("pid"),
+                            "name": pname,
+                            "read_mb": read_mb,
+                            "write_mb": write_mb,
+                            "total_mb": round(read_mb + write_mb, 2),
+                        }
+                    )
+                except Exception:
+                    continue
+            items.sort(key=lambda x: float(x.get("total_mb", 0.0) or 0.0), reverse=True)
+            return _json(
+                {
+                    "ok": True,
+                    "mode": mode_norm,
+                    "query": query_raw,
+                    "process_count": len(items),
+                    "total_read_mb": round(total_read_mb, 2),
+                    "total_write_mb": round(total_write_mb, 2),
+                    "total_disk_mb": round(total_read_mb + total_write_mb, 2),
+                    "items": items[:30],
+                }
+            )
+        if mode_norm == "app_network_total":
+            query_raw = (name or "").strip()
+            if not query_raw:
+                return self._error("name is required")
+            query_norm = query_raw.casefold()
+            if query_norm.endswith(".exe"):
+                query_norm = query_norm[:-4]
+            matched: list[dict[str, Any]] = []
+            matched_pids: set[int] = set()
+            for p in psutil.process_iter(["pid", "name"]):
+                try:
+                    info = p.info
+                    pname = str(info.get("name") or "").strip()
+                    if not pname:
+                        continue
+                    pname_norm = pname.casefold()
+                    pname_no_ext = pname_norm[:-4] if pname_norm.endswith(".exe") else pname_norm
+                    if query_norm not in pname_norm and query_norm not in pname_no_ext:
+                        continue
+                    pid_val = int(info.get("pid") or 0)
+                    if pid_val <= 0:
+                        continue
+                    matched_pids.add(pid_val)
+                    matched.append({"pid": pid_val, "name": pname})
+                except Exception:
+                    continue
+            conn_count_by_pid: dict[int, int] = {}
+            established_by_pid: dict[int, int] = {}
+            remotes_by_pid: dict[int, set[str]] = {}
+            try:
+                for conn in psutil.net_connections(kind="inet"):
+                    try:
+                        pid_val = int(getattr(conn, "pid", 0) or 0)
+                        if pid_val not in matched_pids:
+                            continue
+                        conn_count_by_pid[pid_val] = int(conn_count_by_pid.get(pid_val, 0)) + 1
+                        status = str(getattr(conn, "status", "") or "").upper()
+                        if status == "ESTABLISHED":
+                            established_by_pid[pid_val] = int(established_by_pid.get(pid_val, 0)) + 1
+                        raddr = getattr(conn, "raddr", None)
+                        remote_ip = ""
+                        if raddr and isinstance(raddr, tuple) and len(raddr) >= 1:
+                            remote_ip = str(raddr[0] or "")
+                        if remote_ip:
+                            remotes_by_pid.setdefault(pid_val, set()).add(remote_ip)
+                    except Exception:
+                        continue
+            except Exception as exc:
+                return self._error(f"network connection enumeration failed: {exc}")
+            items: list[dict[str, Any]] = []
+            total_connections = 0
+            total_established = 0
+            all_remote_ips: set[str] = set()
+            for proc in matched:
+                pid_val = int(proc.get("pid") or 0)
+                conn_count = int(conn_count_by_pid.get(pid_val, 0))
+                est_count = int(established_by_pid.get(pid_val, 0))
+                remotes = remotes_by_pid.get(pid_val, set())
+                total_connections += conn_count
+                total_established += est_count
+                all_remote_ips.update(remotes)
+                items.append(
+                    {
+                        "pid": pid_val,
+                        "name": str(proc.get("name") or ""),
+                        "connections": conn_count,
+                        "established": est_count,
+                        "remote_ips": len(remotes),
+                    }
+                )
+            items.sort(key=lambda x: int(x.get("connections", 0)), reverse=True)
+            return _json(
+                {
+                    "ok": True,
+                    "mode": mode_norm,
+                    "query": query_raw,
+                    "process_count": len(matched),
+                    "total_connections": total_connections,
+                    "established_connections": total_established,
+                    "unique_remote_ips": len(all_remote_ips),
+                    "items": items[:30],
+                }
+            )
+        if mode_norm == "app_resource_summary":
+            query_raw = (name or "").strip()
+            if not query_raw:
+                return self._error("name is required")
+            query_norm = query_raw.casefold()
+            if query_norm.endswith(".exe"):
+                query_norm = query_norm[:-4]
+            matched: list[dict[str, Any]] = []
+            matched_pids: set[int] = set()
+            total_ram_mb = 0.0
+            total_read_mb = 0.0
+            total_write_mb = 0.0
+            for p in psutil.process_iter(["pid", "name", "memory_info", "io_counters"]):
+                try:
+                    info = p.info
+                    pname = str(info.get("name") or "").strip()
+                    if not pname:
+                        continue
+                    pname_norm = pname.casefold()
+                    pname_no_ext = pname_norm[:-4] if pname_norm.endswith(".exe") else pname_norm
+                    if query_norm not in pname_norm and query_norm not in pname_no_ext:
+                        continue
+                    pid_val = int(info.get("pid") or 0)
+                    if pid_val <= 0:
+                        continue
+                    matched_pids.add(pid_val)
+                    ram_mb = round((info.get("memory_info").rss or 0) / (1024 * 1024), 2) if info.get("memory_info") else 0.0
+                    total_ram_mb += ram_mb
+                    io = info.get("io_counters")
+                    rb = float(getattr(io, "read_bytes", 0.0) or 0.0) if io else 0.0
+                    wb = float(getattr(io, "write_bytes", 0.0) or 0.0) if io else 0.0
+                    read_mb = round(rb / (1024 * 1024), 2)
+                    write_mb = round(wb / (1024 * 1024), 2)
+                    total_read_mb += read_mb
+                    total_write_mb += write_mb
+                    matched.append({"pid": pid_val, "name": pname, "proc": p, "ram_mb": ram_mb, "read_mb": read_mb, "write_mb": write_mb})
+                except Exception:
+                    continue
+            for item in matched:
+                try:
+                    item["proc"].cpu_percent(interval=None)
+                except Exception:
+                    item["cpu"] = 0.0
+            time.sleep(0.6)
+            total_cpu = 0.0
+            items: list[dict[str, Any]] = []
+            for item in matched:
+                p = item.get("proc")
+                try:
+                    cpu_val = round(float(p.cpu_percent(interval=None)), 2)
+                except Exception:
+                    cpu_val = 0.0
+                total_cpu += cpu_val
+                items.append(
+                    {
+                        "pid": int(item.get("pid") or 0),
+                        "name": str(item.get("name") or ""),
+                        "cpu": cpu_val,
+                        "ram_mb": float(item.get("ram_mb") or 0.0),
+                        "read_mb": float(item.get("read_mb") or 0.0),
+                        "write_mb": float(item.get("write_mb") or 0.0),
+                    }
+                )
+            conn_count_by_pid: dict[int, int] = {}
+            established_by_pid: dict[int, int] = {}
+            all_remote_ips: set[str] = set()
+            try:
+                for conn in psutil.net_connections(kind="inet"):
+                    try:
+                        pid_val = int(getattr(conn, "pid", 0) or 0)
+                        if pid_val not in matched_pids:
+                            continue
+                        conn_count_by_pid[pid_val] = int(conn_count_by_pid.get(pid_val, 0)) + 1
+                        status = str(getattr(conn, "status", "") or "").upper()
+                        if status == "ESTABLISHED":
+                            established_by_pid[pid_val] = int(established_by_pid.get(pid_val, 0)) + 1
+                        raddr = getattr(conn, "raddr", None)
+                        remote_ip = ""
+                        if raddr and isinstance(raddr, tuple) and len(raddr) >= 1:
+                            remote_ip = str(raddr[0] or "")
+                        if remote_ip:
+                            all_remote_ips.add(remote_ip)
+                    except Exception:
+                        continue
+            except Exception:
+                pass
+            total_connections = 0
+            total_established = 0
+            for row in items:
+                pid_val = int(row.get("pid") or 0)
+                c = int(conn_count_by_pid.get(pid_val, 0))
+                e = int(established_by_pid.get(pid_val, 0))
+                row["connections"] = c
+                row["established"] = e
+                total_connections += c
+                total_established += e
+            items.sort(key=lambda x: float(x.get("ram_mb", 0.0) or 0.0), reverse=True)
+            return _json(
+                {
+                    "ok": True,
+                    "mode": mode_norm,
+                    "query": query_raw,
+                    "process_count": len(items),
+                    "total_ram_mb": round(total_ram_mb, 2),
+                    "total_cpu_percent": round(total_cpu, 2),
+                    "total_read_mb": round(total_read_mb, 2),
+                    "total_write_mb": round(total_write_mb, 2),
+                    "total_disk_mb": round(total_read_mb + total_write_mb, 2),
+                    "total_connections": total_connections,
+                    "established_connections": total_established,
+                    "unique_remote_ips": len(all_remote_ips),
+                    "items": items[:30],
+                }
+            )
+        if mode_norm == "app_compare":
+            left_name = (name or "").strip()
+            right_name = (other_name or "").strip()
+            if not left_name or not right_name:
+                return self._error("name and other_name are required")
+            try:
+                left_raw = self._process_tools("app_resource_summary", name=left_name)
+                right_raw = self._process_tools("app_resource_summary", name=right_name)
+                left = json.loads(left_raw) if isinstance(left_raw, str) else {}
+                right = json.loads(right_raw) if isinstance(right_raw, str) else {}
+            except Exception as exc:
+                return self._error(f"app_compare failed: {exc}")
+            if not isinstance(left, dict) or not left.get("ok"):
+                return self._error("failed to summarize first app")
+            if not isinstance(right, dict) or not right.get("ok"):
+                return self._error("failed to summarize second app")
+            winners: dict[str, str] = {}
+            metrics = (
+                ("ram", "total_ram_mb"),
+                ("cpu", "total_cpu_percent"),
+                ("disk", "total_disk_mb"),
+                ("network", "total_connections"),
+            )
+            left_query = str(left.get("query") or left_name)
+            right_query = str(right.get("query") or right_name)
+            for label, key in metrics:
+                lv = float(left.get(key) or 0.0)
+                rv = float(right.get(key) or 0.0)
+                if lv > rv:
+                    winners[label] = left_query
+                elif rv > lv:
+                    winners[label] = right_query
+                else:
+                    winners[label] = "equal"
+            recommendations: list[str] = []
+            if winners.get("ram") not in {"", "equal"}:
+                recommendations.append(f"ram_hotspot={winners['ram']}")
+            if winners.get("cpu") not in {"", "equal"}:
+                recommendations.append(f"cpu_hotspot={winners['cpu']}")
+            if winners.get("disk") not in {"", "equal"}:
+                recommendations.append(f"disk_hotspot={winners['disk']}")
+            if winners.get("network") not in {"", "equal"}:
+                recommendations.append(f"network_hotspot={winners['network']}")
+            if not recommendations:
+                recommendations.append("balanced_usage")
+            return _json(
+                {
+                    "ok": True,
+                    "mode": mode_norm,
+                    "left": left,
+                    "right": right,
+                    "winners": winners,
+                    "recommendations": recommendations,
+                }
+            )
+        if mode_norm == "app_reduce_ram_plan":
+            query_raw = (name or "").strip()
+            if not query_raw:
+                return self._error("name is required")
+            query_norm = query_raw.casefold()
+            if query_norm.endswith(".exe"):
+                query_norm = query_norm[:-4]
+            items: list[dict[str, Any]] = []
+            total_ram_mb = 0.0
+            for p in psutil.process_iter(["pid", "name", "memory_info"]):
+                try:
+                    info = p.info
+                    pname = str(info.get("name") or "").strip()
+                    if not pname:
+                        continue
+                    pname_norm = pname.casefold()
+                    pname_no_ext = pname_norm[:-4] if pname_norm.endswith(".exe") else pname_norm
+                    if query_norm not in pname_norm and query_norm not in pname_no_ext:
+                        continue
+                    ram_mb = round((info.get("memory_info").rss or 0) / (1024 * 1024), 2) if info.get("memory_info") else 0.0
+                    total_ram_mb += ram_mb
+                    items.append({"pid": int(info.get("pid") or 0), "name": pname, "ram_mb": ram_mb})
+                except Exception:
+                    continue
+            items.sort(key=lambda x: float(x.get("ram_mb", 0.0) or 0.0), reverse=True)
+            top = items[:5]
+            reclaimable_mb = round(sum(float(x.get("ram_mb", 0.0) or 0.0) for x in top[1:]), 2) if len(top) > 1 else 0.0
+            plan = [
+                "close_heaviest_secondary_processes",
+                "close_extra_windows_or_tabs",
+                "restart_app_if_needed",
+            ]
+            return _json(
+                {
+                    "ok": True,
+                    "mode": mode_norm,
+                    "query": query_raw,
+                    "process_count": len(items),
+                    "total_ram_mb": round(total_ram_mb, 2),
+                    "reclaimable_mb_estimate": reclaimable_mb,
+                    "top_processes": top,
+                    "plan": plan,
+                }
+            )
+        if mode_norm == "app_reduce_ram_execute":
+            query_raw = (name or "").strip()
+            if not query_raw:
+                return self._error("name is required")
+            kill_limit = 9999
+            if max_kill is not None:
+                try:
+                    kill_limit = max(0, int(max_kill))
+                except Exception:
+                    kill_limit = 9999
+            query_norm = query_raw.casefold()
+            if query_norm.endswith(".exe"):
+                query_norm = query_norm[:-4]
+            items: list[dict[str, Any]] = []
+            for p in psutil.process_iter(["pid", "name", "memory_info"]):
+                try:
+                    info = p.info
+                    pname = str(info.get("name") or "").strip()
+                    if not pname:
+                        continue
+                    pname_norm = pname.casefold()
+                    pname_no_ext = pname_norm[:-4] if pname_norm.endswith(".exe") else pname_norm
+                    if query_norm not in pname_norm and query_norm not in pname_no_ext:
+                        continue
+                    ram_mb = round((info.get("memory_info").rss or 0) / (1024 * 1024), 2) if info.get("memory_info") else 0.0
+                    items.append({"pid": int(info.get("pid") or 0), "name": pname, "ram_mb": ram_mb, "proc": p})
+                except Exception:
+                    continue
+            items.sort(key=lambda x: float(x.get("ram_mb", 0.0) or 0.0), reverse=True)
+            if not items:
+                return _json(
+                    {
+                        "ok": True,
+                        "mode": mode_norm,
+                        "query": query_raw,
+                        "process_count": 0,
+                        "killed_count": 0,
+                        "killed": [],
+                    }
+                )
+            protected = items[0]
+            killed: list[dict[str, Any]] = []
+            for item in items[1:]:
+                if len(killed) >= kill_limit:
+                    break
+                p = item.get("proc")
+                try:
+                    if not dry_run:
+                        p.kill()
+                    killed.append(
+                        {
+                            "pid": int(item.get("pid") or 0),
+                            "name": str(item.get("name") or ""),
+                            "ram_mb": float(item.get("ram_mb") or 0.0),
+                        }
+                    )
+                except Exception:
+                    continue
+            return _json(
+                {
+                    "ok": True,
+                    "mode": mode_norm,
+                    "query": query_raw,
+                    "process_count": len(items),
+                    "dry_run": bool(dry_run),
+                    "max_kill": int(kill_limit),
+                    "protected_pid": int(protected.get("pid") or 0),
+                    "protected_name": str(protected.get("name") or ""),
+                    "protected_ram_mb": float(protected.get("ram_mb") or 0.0),
+                    "killed_count": len(killed),
+                    "killed": killed[:30],
+                }
+            )
+        if mode_norm == "app_reduce_cpu_plan":
+            query_raw = (name or "").strip()
+            if not query_raw:
+                return self._error("name is required")
+            query_norm = query_raw.casefold()
+            if query_norm.endswith(".exe"):
+                query_norm = query_norm[:-4]
+            matched: list[dict[str, Any]] = []
+            for p in psutil.process_iter(["pid", "name"]):
+                try:
+                    info = p.info
+                    pname = str(info.get("name") or "").strip()
+                    if not pname:
+                        continue
+                    pname_norm = pname.casefold()
+                    pname_no_ext = pname_norm[:-4] if pname_norm.endswith(".exe") else pname_norm
+                    if query_norm not in pname_norm and query_norm not in pname_no_ext:
+                        continue
+                    matched.append({"pid": int(info.get("pid") or 0), "name": pname, "proc": p})
+                except Exception:
+                    continue
+            for item in matched:
+                try:
+                    item["proc"].cpu_percent(interval=None)
+                except Exception:
+                    item["cpu"] = 0.0
+            time.sleep(0.6)
+            items: list[dict[str, Any]] = []
+            total_cpu = 0.0
+            for item in matched:
+                p = item.get("proc")
+                try:
+                    cpu_val = round(float(p.cpu_percent(interval=None)), 2)
+                except Exception:
+                    cpu_val = 0.0
+                total_cpu += cpu_val
+                items.append({"pid": int(item.get("pid") or 0), "name": str(item.get("name") or ""), "cpu": cpu_val})
+            items.sort(key=lambda x: float(x.get("cpu", 0.0) or 0.0), reverse=True)
+            reclaimable = round(sum(float(x.get("cpu", 0.0) or 0.0) for x in items[1:5]), 2) if len(items) > 1 else 0.0
+            return _json(
+                {
+                    "ok": True,
+                    "mode": mode_norm,
+                    "query": query_raw,
+                    "process_count": len(items),
+                    "total_cpu_percent": round(total_cpu, 2),
+                    "reclaimable_cpu_estimate": reclaimable,
+                    "top_processes": items[:5],
+                }
+            )
+        if mode_norm == "app_reduce_cpu_execute":
+            query_raw = (name or "").strip()
+            if not query_raw:
+                return self._error("name is required")
+            kill_threshold = float(threshold) if threshold is not None else 5.0
+            kill_threshold = max(1.0, min(100.0, kill_threshold))
+            kill_limit = 9999
+            if max_kill is not None:
+                try:
+                    kill_limit = max(0, int(max_kill))
+                except Exception:
+                    kill_limit = 9999
+            query_norm = query_raw.casefold()
+            if query_norm.endswith(".exe"):
+                query_norm = query_norm[:-4]
+            matched: list[dict[str, Any]] = []
+            for p in psutil.process_iter(["pid", "name"]):
+                try:
+                    info = p.info
+                    pname = str(info.get("name") or "").strip()
+                    if not pname:
+                        continue
+                    pname_norm = pname.casefold()
+                    pname_no_ext = pname_norm[:-4] if pname_norm.endswith(".exe") else pname_norm
+                    if query_norm not in pname_norm and query_norm not in pname_no_ext:
+                        continue
+                    matched.append({"pid": int(info.get("pid") or 0), "name": pname, "proc": p})
+                except Exception:
+                    continue
+            for item in matched:
+                try:
+                    item["proc"].cpu_percent(interval=None)
+                except Exception:
+                    item["cpu"] = 0.0
+            time.sleep(0.6)
+            sampled: list[dict[str, Any]] = []
+            for item in matched:
+                p = item.get("proc")
+                try:
+                    cpu_val = round(float(p.cpu_percent(interval=None)), 2)
+                except Exception:
+                    cpu_val = 0.0
+                sampled.append({"pid": int(item.get("pid") or 0), "name": str(item.get("name") or ""), "cpu": cpu_val, "proc": p})
+            sampled.sort(key=lambda x: float(x.get("cpu", 0.0) or 0.0), reverse=True)
+            protected = sampled[0] if sampled else None
+            killed: list[dict[str, Any]] = []
+            for item in sampled[1:]:
+                if len(killed) >= kill_limit:
+                    break
+                cpu_val = float(item.get("cpu") or 0.0)
+                if cpu_val < kill_threshold:
+                    continue
+                p = item.get("proc")
+                try:
+                    if not dry_run:
+                        p.kill()
+                    killed.append({"pid": int(item.get("pid") or 0), "name": str(item.get("name") or ""), "cpu": round(cpu_val, 2)})
+                except Exception:
+                    continue
+            return _json(
+                {
+                    "ok": True,
+                    "mode": mode_norm,
+                    "query": query_raw,
+                    "dry_run": bool(dry_run),
+                    "max_kill": int(kill_limit),
+                    "threshold": kill_threshold,
+                    "process_count": len(sampled),
+                    "protected_pid": int((protected or {}).get("pid") or 0),
+                    "protected_name": str((protected or {}).get("name") or ""),
+                    "protected_cpu": float((protected or {}).get("cpu") or 0.0),
+                    "killed_count": len(killed),
+                    "killed": killed[:30],
+                }
+            )
+        if mode_norm == "app_reduce_disk_plan":
+            query_raw = (name or "").strip()
+            if not query_raw:
+                return self._error("name is required")
+            query_norm = query_raw.casefold()
+            if query_norm.endswith(".exe"):
+                query_norm = query_norm[:-4]
+            items: list[dict[str, Any]] = []
+            total_disk_mb = 0.0
+            for p in psutil.process_iter(["pid", "name", "io_counters"]):
+                try:
+                    info = p.info
+                    pname = str(info.get("name") or "").strip()
+                    if not pname:
+                        continue
+                    pname_norm = pname.casefold()
+                    pname_no_ext = pname_norm[:-4] if pname_norm.endswith(".exe") else pname_norm
+                    if query_norm not in pname_norm and query_norm not in pname_no_ext:
+                        continue
+                    io = info.get("io_counters")
+                    if not io:
+                        continue
+                    rb = float(getattr(io, "read_bytes", 0.0) or 0.0)
+                    wb = float(getattr(io, "write_bytes", 0.0) or 0.0)
+                    total_mb = round((rb + wb) / (1024 * 1024), 2)
+                    total_disk_mb += total_mb
+                    items.append({"pid": int(info.get("pid") or 0), "name": pname, "disk_mb": total_mb})
+                except Exception:
+                    continue
+            items.sort(key=lambda x: float(x.get("disk_mb", 0.0) or 0.0), reverse=True)
+            reclaimable = round(sum(float(x.get("disk_mb", 0.0) or 0.0) for x in items[1:5]), 2) if len(items) > 1 else 0.0
+            return _json(
+                {
+                    "ok": True,
+                    "mode": mode_norm,
+                    "query": query_raw,
+                    "process_count": len(items),
+                    "total_disk_mb": round(total_disk_mb, 2),
+                    "reclaimable_disk_estimate": reclaimable,
+                    "top_processes": items[:5],
+                }
+            )
+        if mode_norm == "app_reduce_disk_execute":
+            query_raw = (name or "").strip()
+            if not query_raw:
+                return self._error("name is required")
+            kill_threshold = float(threshold) if threshold is not None else 50.0
+            kill_threshold = max(1.0, kill_threshold)
+            kill_limit = 9999
+            if max_kill is not None:
+                try:
+                    kill_limit = max(0, int(max_kill))
+                except Exception:
+                    kill_limit = 9999
+            query_norm = query_raw.casefold()
+            if query_norm.endswith(".exe"):
+                query_norm = query_norm[:-4]
+            items: list[dict[str, Any]] = []
+            for p in psutil.process_iter(["pid", "name", "io_counters"]):
+                try:
+                    info = p.info
+                    pname = str(info.get("name") or "").strip()
+                    if not pname:
+                        continue
+                    pname_norm = pname.casefold()
+                    pname_no_ext = pname_norm[:-4] if pname_norm.endswith(".exe") else pname_norm
+                    if query_norm not in pname_norm and query_norm not in pname_no_ext:
+                        continue
+                    io = info.get("io_counters")
+                    if not io:
+                        continue
+                    rb = float(getattr(io, "read_bytes", 0.0) or 0.0)
+                    wb = float(getattr(io, "write_bytes", 0.0) or 0.0)
+                    total_mb = round((rb + wb) / (1024 * 1024), 2)
+                    items.append({"pid": int(info.get("pid") or 0), "name": pname, "disk_mb": total_mb, "proc": p})
+                except Exception:
+                    continue
+            items.sort(key=lambda x: float(x.get("disk_mb", 0.0) or 0.0), reverse=True)
+            protected = items[0] if items else None
+            killed: list[dict[str, Any]] = []
+            for item in items[1:]:
+                if len(killed) >= kill_limit:
+                    break
+                if float(item.get("disk_mb") or 0.0) < kill_threshold:
+                    continue
+                try:
+                    if not dry_run:
+                        item["proc"].kill()
+                    killed.append({"pid": int(item.get("pid") or 0), "name": str(item.get("name") or ""), "disk_mb": float(item.get("disk_mb") or 0.0)})
+                except Exception:
+                    continue
+            return _json(
+                {
+                    "ok": True,
+                    "mode": mode_norm,
+                    "query": query_raw,
+                    "dry_run": bool(dry_run),
+                    "max_kill": int(kill_limit),
+                    "threshold": kill_threshold,
+                    "process_count": len(items),
+                    "protected_pid": int((protected or {}).get("pid") or 0),
+                    "protected_name": str((protected or {}).get("name") or ""),
+                    "protected_disk_mb": float((protected or {}).get("disk_mb") or 0.0),
+                    "killed_count": len(killed),
+                    "killed": killed[:30],
+                }
+            )
+        if mode_norm == "app_reduce_network_plan":
+            query_raw = (name or "").strip()
+            if not query_raw:
+                return self._error("name is required")
+            query_norm = query_raw.casefold()
+            if query_norm.endswith(".exe"):
+                query_norm = query_norm[:-4]
+            matched: list[dict[str, Any]] = []
+            pids: set[int] = set()
+            for p in psutil.process_iter(["pid", "name"]):
+                try:
+                    info = p.info
+                    pname = str(info.get("name") or "").strip()
+                    if not pname:
+                        continue
+                    pname_norm = pname.casefold()
+                    pname_no_ext = pname_norm[:-4] if pname_norm.endswith(".exe") else pname_norm
+                    if query_norm not in pname_norm and query_norm not in pname_no_ext:
+                        continue
+                    pid_val = int(info.get("pid") or 0)
+                    if pid_val <= 0:
+                        continue
+                    pids.add(pid_val)
+                    matched.append({"pid": pid_val, "name": pname})
+                except Exception:
+                    continue
+            counts: dict[int, int] = {}
+            for conn in psutil.net_connections(kind="inet"):
+                try:
+                    pid_val = int(getattr(conn, "pid", 0) or 0)
+                    if pid_val in pids:
+                        counts[pid_val] = int(counts.get(pid_val, 0)) + 1
+                except Exception:
+                    continue
+            items = [{"pid": m["pid"], "name": m["name"], "connections": int(counts.get(m["pid"], 0))} for m in matched]
+            items.sort(key=lambda x: int(x.get("connections", 0)), reverse=True)
+            total_connections = sum(int(x.get("connections", 0)) for x in items)
+            reclaimable = sum(int(x.get("connections", 0)) for x in items[1:5]) if len(items) > 1 else 0
+            return _json(
+                {
+                    "ok": True,
+                    "mode": mode_norm,
+                    "query": query_raw,
+                    "process_count": len(items),
+                    "total_connections": total_connections,
+                    "reclaimable_network_estimate": reclaimable,
+                    "top_processes": items[:5],
+                }
+            )
+        if mode_norm == "app_reduce_network_execute":
+            query_raw = (name or "").strip()
+            if not query_raw:
+                return self._error("name is required")
+            kill_threshold = float(threshold) if threshold is not None else 3.0
+            kill_threshold = max(1.0, kill_threshold)
+            kill_limit = 9999
+            if max_kill is not None:
+                try:
+                    kill_limit = max(0, int(max_kill))
+                except Exception:
+                    kill_limit = 9999
+            query_norm = query_raw.casefold()
+            if query_norm.endswith(".exe"):
+                query_norm = query_norm[:-4]
+            matched: list[dict[str, Any]] = []
+            pids: set[int] = set()
+            procs: dict[int, Any] = {}
+            for p in psutil.process_iter(["pid", "name"]):
+                try:
+                    info = p.info
+                    pname = str(info.get("name") or "").strip()
+                    if not pname:
+                        continue
+                    pname_norm = pname.casefold()
+                    pname_no_ext = pname_norm[:-4] if pname_norm.endswith(".exe") else pname_norm
+                    if query_norm not in pname_norm and query_norm not in pname_no_ext:
+                        continue
+                    pid_val = int(info.get("pid") or 0)
+                    if pid_val <= 0:
+                        continue
+                    pids.add(pid_val)
+                    procs[pid_val] = p
+                    matched.append({"pid": pid_val, "name": pname})
+                except Exception:
+                    continue
+            counts: dict[int, int] = {}
+            for conn in psutil.net_connections(kind="inet"):
+                try:
+                    pid_val = int(getattr(conn, "pid", 0) or 0)
+                    if pid_val in pids:
+                        counts[pid_val] = int(counts.get(pid_val, 0)) + 1
+                except Exception:
+                    continue
+            items = [{"pid": m["pid"], "name": m["name"], "connections": int(counts.get(m["pid"], 0))} for m in matched]
+            items.sort(key=lambda x: int(x.get("connections", 0)), reverse=True)
+            protected = items[0] if items else None
+            killed: list[dict[str, Any]] = []
+            for item in items[1:]:
+                if len(killed) >= kill_limit:
+                    break
+                if float(item.get("connections") or 0.0) < kill_threshold:
+                    continue
+                try:
+                    if not dry_run:
+                        procs[int(item["pid"])].kill()
+                    killed.append({"pid": int(item.get("pid") or 0), "name": str(item.get("name") or ""), "connections": int(item.get("connections") or 0)})
+                except Exception:
+                    continue
+            return _json(
+                {
+                    "ok": True,
+                    "mode": mode_norm,
+                    "query": query_raw,
+                    "dry_run": bool(dry_run),
+                    "max_kill": int(kill_limit),
+                    "threshold": kill_threshold,
+                    "process_count": len(items),
+                    "protected_pid": int((protected or {}).get("pid") or 0),
+                    "protected_name": str((protected or {}).get("name") or ""),
+                    "protected_connections": int((protected or {}).get("connections") or 0),
+                    "killed_count": len(killed),
+                    "killed": killed[:30],
+                }
+            )
 
         if mode_norm == "kill_pid":
             try:
@@ -3813,6 +4713,12 @@ $obj | ConvertTo-Json -Compress
         if mode_norm == "kill_high_cpu":
             kill_threshold = float(threshold) if threshold is not None else 50.0
             kill_threshold = max(5.0, min(100.0, kill_threshold))
+            kill_limit = 9999
+            if max_kill is not None:
+                try:
+                    kill_limit = max(0, int(max_kill))
+                except Exception:
+                    kill_limit = 9999
             warm = {}
             for p in psutil.process_iter(["pid", "name"]):
                 try:
@@ -3823,6 +4729,8 @@ $obj | ConvertTo-Json -Compress
             killed: list[dict[str, Any]] = []
             for p in psutil.process_iter(["pid", "name"]):
                 try:
+                    if len(killed) >= kill_limit:
+                        break
                     cpu_val = float(p.cpu_percent(interval=None))
                     if cpu_val >= kill_threshold:
                         killed.append(
@@ -3832,13 +4740,16 @@ $obj | ConvertTo-Json -Compress
                                 "cpu": round(cpu_val, 2),
                             }
                         )
-                        p.kill()
+                        if not dry_run:
+                            p.kill()
                 except Exception:
                     continue
             return _json(
                 {
                     "ok": True,
                     "mode": mode_norm,
+                    "dry_run": bool(dry_run),
+                    "max_kill": int(kill_limit),
                     "threshold": kill_threshold,
                     "killed": killed,
                     "count": len(killed),
@@ -5420,7 +6331,7 @@ $obj | ConvertTo-Json -Compress
                 return self._error(f"anti idle failed: {exc}")
         return self._error(f"unsupported automation_tools mode: {mode_norm}")
 
-    def _app_tools(self, mode: str, app: str = "") -> str:
+    def _app_tools(self, mode: str, app: str = "", dry_run: bool = False, max_kill: Any = None) -> str:
         mode_norm = (mode or "").strip().lower()
         if mode_norm == "open_default_browser":
             ok, out = _run_powershell("Start-Process 'https://www.bing.com'", timeout=10)
@@ -5469,12 +6380,24 @@ $obj | ConvertTo-Json -Compress
             ok, out = _run_powershell(f"Start-Process '{target}'", timeout=12)
             return _json({"ok": True, "mode": mode_norm, "target": target}) if ok else self._error(out or f"{mode_norm} failed")
         if mode_norm == "close_all_apps":
+            limit = 9999
+            if max_kill is not None:
+                try:
+                    limit = max(0, int(max_kill))
+                except Exception:
+                    limit = 9999
+            stop_cmd = "  try { Stop-Process -Id $p.Id -Force -ErrorAction Stop } catch {} " if not dry_run else ""
             ps = (
-                "Get-Process | Where-Object {$_.MainWindowTitle -ne '' -and $_.ProcessName -notin @('explorer','ShellExperienceHost','StartMenuExperienceHost')} "
-                "| Stop-Process -Force -ErrorAction SilentlyContinue; "
-                "@{ok=$true; mode='close_all_apps'} | ConvertTo-Json -Compress"
+                "$items=Get-Process | Where-Object {$_.MainWindowTitle -ne '' -and $_.ProcessName -notin @('explorer','ShellExperienceHost','StartMenuExperienceHost')}; "
+                "$items=$items | Sort-Object WorkingSet -Descending | Select-Object -First " + str(limit) + "; "
+                "$affected=@(); "
+                "foreach($p in $items){ "
+                "  $affected += [pscustomobject]@{pid=$p.Id;name=$p.ProcessName;title=$p.MainWindowTitle}; "
+                + stop_cmd
+                + "}; "
+                "@{ok=$true; mode='close_all_apps'; dry_run=" + ("$true" if dry_run else "$false") + "; max_kill=" + str(limit) + "; count=$affected.Count; affected=$affected} | ConvertTo-Json -Compress -Depth 5"
             )
-            ok, out = _run_powershell(ps, timeout=20)
+            ok, out = _run_powershell(ps, timeout=25)
             return out if ok and out else self._error(out or "close all apps failed")
         if mode_norm == "open_app":
             q = (app or "").strip()
