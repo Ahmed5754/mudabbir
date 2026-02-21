@@ -334,6 +334,7 @@ class AgentLoop:
         session_state = self._windows_session_state.setdefault(session_key, {})
         resolved_initial = resolve_windows_intent(text)
         repeat_count = 1
+        repeat_interval_seconds = 0
         if bool(getattr(resolved_initial, "matched", False)) and str(getattr(resolved_initial, "capability_id", "") or "") == "session.repeat_last":
             try:
                 repeat_count = int(getattr(resolved_initial, "params", {}).get("repeat_count", 1))
@@ -344,6 +345,29 @@ class AgentLoop:
             if isinstance(last_resolution, dict) and str(last_resolution.get("action", "")).strip():
                 resolution = {
                     "capability_id": str(last_resolution.get("capability_id", "repeat.last") or "repeat.last"),
+                    "action": str(last_resolution.get("action", "")).strip(),
+                    "params": dict(last_resolution.get("params", {}) or {}),
+                    "risk_level": str(last_resolution.get("risk_level", "safe") or "safe"),
+                    "unsupported": False,
+                    "unsupported_reason": "",
+                }
+            else:
+                return True, ("ما في أمر سابق أكرره حالياً." if arabic else "No previous command to repeat yet.")
+        elif bool(getattr(resolved_initial, "matched", False)) and str(getattr(resolved_initial, "capability_id", "") or "") == "session.repeat_last_interval":
+            try:
+                repeat_count = int(getattr(resolved_initial, "params", {}).get("repeat_count", 2))
+            except Exception:
+                repeat_count = 2
+            try:
+                repeat_interval_seconds = int(getattr(resolved_initial, "params", {}).get("seconds", 2))
+            except Exception:
+                repeat_interval_seconds = 2
+            repeat_count = max(1, min(10, repeat_count))
+            repeat_interval_seconds = max(1, min(30, repeat_interval_seconds))
+            last_resolution = session_state.get("last_resolution")
+            if isinstance(last_resolution, dict) and str(last_resolution.get("action", "")).strip():
+                resolution = {
+                    "capability_id": str(last_resolution.get("capability_id", "repeat.last.interval") or "repeat.last.interval"),
                     "action": str(last_resolution.get("action", "")).strip(),
                     "params": dict(last_resolution.get("params", {}) or {}),
                     "risk_level": str(last_resolution.get("risk_level", "safe") or "safe"),
@@ -596,7 +620,7 @@ class AgentLoop:
 
         parsed: Any = None
         raw: Any = None
-        for _ in range(repeat_count):
+        for i in range(repeat_count):
             raw = await DesktopTool().execute(action=action, **params)
             raw_text = str(raw or "")
             if raw_text.lower().startswith("error:"):
@@ -613,6 +637,8 @@ class AgentLoop:
                 if arabic:
                     return True, (f"فشل التنفيذ: {err}" if err else "فشل التنفيذ.")
                 return True, (f"Execution failed: {err}" if err else "Execution failed.")
+            if repeat_interval_seconds > 0 and i < (repeat_count - 1):
+                await asyncio.sleep(repeat_interval_seconds)
         if isinstance(parsed, dict):
             remembered_app = str(parsed.get("query") or params.get("name") or "").strip()
             if remembered_app:
@@ -637,6 +663,11 @@ class AgentLoop:
                 "params": dict(params),
                 "risk_level": str(resolution.get("risk_level", "safe") or "safe"),
             }
+
+        if repeat_interval_seconds > 0:
+            if arabic:
+                return True, f"🔁 تم تكرار آخر أمر {repeat_count} مرات كل {repeat_interval_seconds} ثواني."
+            return True, f"🔁 Repeated the last command {repeat_count} times every {repeat_interval_seconds} seconds."
 
         if action == "volume" and str(params.get("mode", "")).lower() == "get" and isinstance(parsed, dict):
             level = parsed.get("level_percent")

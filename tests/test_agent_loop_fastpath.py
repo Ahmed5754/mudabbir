@@ -1583,3 +1583,36 @@ async def test_global_fastpath_popup_message_human_reply(
     )
     assert handled is True
     assert "رسالة" in str(reply) or "popup" in str(reply).lower()
+
+
+@pytest.mark.asyncio
+async def test_global_fastpath_repeat_last_interval_replays_multiple_times(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    calls: list[tuple[str, dict]] = []
+
+    class DummyDesktopTool:
+        async def execute(self, action: str, **kwargs):
+            calls.append((action, dict(kwargs)))
+            return '{"ok": true}'
+
+    async def _fake_sleep(_seconds: float) -> None:
+        return None
+
+    monkeypatch.setattr("Mudabbir.tools.builtin.desktop.DesktopTool", DummyDesktopTool)
+    monkeypatch.setattr("Mudabbir.agents.loop.asyncio.sleep", _fake_sleep)
+    loop = AgentLoop()
+
+    handled1, _reply1 = await loop._try_global_windows_fastpath(
+        text="اكتم الصوت", session_key="s39ri1"
+    )
+    handled2, reply2 = await loop._try_global_windows_fastpath(
+        text="كرر آخر أمر كل 2 ثواني 3 مرات", session_key="s39ri1"
+    )
+
+    assert handled1 is True
+    assert handled2 is True
+    assert "🔁" in str(reply2) or "repeated" in str(reply2).lower()
+    assert len(calls) == 4
+    assert all(call[0] == "volume" for call in calls)
+    assert all(call[1].get("mode") == "mute" for call in calls)

@@ -815,6 +815,7 @@ RULES: tuple[IntentRule, ...] = (
     IntentRule("keyboard.type_time", "type_text", "", "safe", ("type current time", "كتابة الوقت الحالي")),
     IntentRule("keyboard.repeat_key", "automation_tools", "repeat_key", "safe", ("repeat key", "تكرار ضغطة زر", "تكرار ضغطة مفتاح"), params=("key", "repeat_count")),
     IntentRule("automation.delay", "automation_tools", "delay", "safe", ("delay", "wait", "sleep seconds", "انتظر", "تأخير", "مهلة"), params=("seconds",)),
+    IntentRule("session.repeat_last_interval", "automation_tools", "repeat_last_interval", "safe", ("repeat last every", "repeat every", "كرر اخر امر كل", "كرر آخر أمر كل", "كرر الامر كل", "كل ثواني كرر اخر امر"), params=("seconds", "repeat_count")),
     IntentRule("automation.popup_message", "automation_tools", "popup", "safe", ("popup message", "show popup", "show message", "اظهر رسالة", "اعرض رسالة", "رسالة منبثقة", "تنبيه منبثق"), params=("text",)),
     IntentRule("automation.tts", "automation_tools", "tts", "safe", ("text to speech", "speak text", "نطق نص", "اقرأ النص", "حول النص لصوت"), params=("text",)),
     IntentRule("session.repeat_last", "automation_tools", "repeat_last", "safe", ("repeat last command", "repeat last", "كرر", "عيد", "كرر آخر أمر", "كرر اخر امر", "كرر الامر الاخير", "عيد اخر امر"), params=("repeat_count",)),
@@ -1193,6 +1194,14 @@ def _build_params(rule: IntentRule, raw_text: str, normalized: str) -> dict[str,
             params["key"] = _extract_key_name(raw_text) or "enter"
         if "repeat_count" not in params:
             params["repeat_count"] = 3
+    if rule.capability_id == "session.repeat_last_interval":
+        nums = _extract_ints(raw_text, limit=2)
+        if nums:
+            params["seconds"] = max(1, min(120, abs(nums[0])))
+        if len(nums) >= 2:
+            params["repeat_count"] = max(1, min(200, abs(nums[1])))
+        else:
+            params["repeat_count"] = max(1, min(200, int(params.get("repeat_count", 3) or 3)))
     if rule.capability_id == "network.connect_named":
         named = _extract_app_query(raw_text)
         if named and not params.get("host"):

@@ -149,6 +149,16 @@ def test_resolve_repeat_last_with_count_phrase() -> None:
     assert result.params.get("repeat_count") == 3
 
 
+def test_resolve_repeat_last_interval_phrase() -> None:
+    result = resolve_windows_intent("كرر آخر أمر كل 5 ثواني 3 مرات")
+    assert result.matched is True
+    assert result.action == "automation_tools"
+    assert result.capability_id == "session.repeat_last_interval"
+    assert result.params.get("mode") == "repeat_last_interval"
+    assert result.params.get("seconds") == 5
+    assert result.params.get("repeat_count") == 3
+
+
 def test_resolve_mouse_lock_window_phrase() -> None:
     result = resolve_windows_intent("حجز الماوس داخل النافذة")
     assert result.matched is True
