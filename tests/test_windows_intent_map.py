@@ -222,6 +222,22 @@ def test_resolve_vision_move_target_phrase() -> None:
     assert "شريط البحث" in str(result.params.get("target") or "")
 
 
+def test_resolve_vision_double_click_target_phrase() -> None:
+    result = resolve_windows_intent("دبل كليك على أيقونة كروم")
+    assert result.matched is True
+    assert result.action == "vision_tools"
+    assert result.params.get("mode") == "locate_ui_target"
+    assert result.params.get("interaction") == "double_click"
+
+
+def test_resolve_vision_right_click_target_phrase() -> None:
+    result = resolve_windows_intent("كليك يمين على ملف التقرير")
+    assert result.matched is True
+    assert result.action == "vision_tools"
+    assert result.params.get("mode") == "locate_ui_target"
+    assert result.params.get("interaction") == "right_click"
+
+
 def test_resolve_popup_message_phrase() -> None:
     result = resolve_windows_intent('اظهر رسالة "تم النسخ بنجاح"')
     assert result.matched is True

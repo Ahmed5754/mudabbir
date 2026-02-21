@@ -8267,11 +8267,25 @@ $obj | ConvertTo-Json -Compress
 
                     pyautogui.FAILSAFE = False
                     interaction_norm = str(interaction or "").strip().lower()
+                    interaction_aliases = {
+                        "left_click": "click",
+                        "double": "double_click",
+                        "double-click": "double_click",
+                        "right": "right_click",
+                        "context": "right_click",
+                    }
+                    interaction_norm = interaction_aliases.get(interaction_norm, interaction_norm)
                     pyautogui.moveTo(tx, ty, duration=0.2)
                     action_done = "move"
-                    if interaction_norm in {"click", "left_click"}:
+                    if interaction_norm == "click":
                         pyautogui.click(tx, ty, button="left")
                         action_done = "click"
+                    elif interaction_norm == "double_click":
+                        pyautogui.doubleClick(tx, ty, button="left")
+                        action_done = "double_click"
+                    elif interaction_norm == "right_click":
+                        pyautogui.click(tx, ty, button="right")
+                        action_done = "right_click"
                 except Exception as exc:
                     return self._error(f"vision target located but action failed: {exc}")
 

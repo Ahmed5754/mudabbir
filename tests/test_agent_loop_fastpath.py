@@ -1628,6 +1628,46 @@ async def test_global_fastpath_vision_click_target_human_reply(
 
 
 @pytest.mark.asyncio
+async def test_global_fastpath_vision_double_click_target_human_reply(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class DummyDesktopTool:
+        async def execute(self, action: str, **kwargs):
+            assert action == "vision_tools"
+            assert kwargs.get("mode") == "locate_ui_target"
+            assert kwargs.get("interaction") == "double_click"
+            return '{"ok": true, "mode": "locate_ui_target", "matched_label": "أيقونة كروم", "action_done": "double_click"}'
+
+    monkeypatch.setattr("Mudabbir.tools.builtin.desktop.DesktopTool", DummyDesktopTool)
+    loop = AgentLoop()
+    handled, reply = await loop._try_global_windows_fastpath(
+        text="دبل كليك على أيقونة كروم", session_key="s39visiondc"
+    )
+    assert handled is True
+    assert "دبل كليك" in str(reply) or "double-clicked" in str(reply).lower()
+
+
+@pytest.mark.asyncio
+async def test_global_fastpath_vision_right_click_target_human_reply(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class DummyDesktopTool:
+        async def execute(self, action: str, **kwargs):
+            assert action == "vision_tools"
+            assert kwargs.get("mode") == "locate_ui_target"
+            assert kwargs.get("interaction") == "right_click"
+            return '{"ok": true, "mode": "locate_ui_target", "matched_label": "ملف التقرير", "action_done": "right_click"}'
+
+    monkeypatch.setattr("Mudabbir.tools.builtin.desktop.DesktopTool", DummyDesktopTool)
+    loop = AgentLoop()
+    handled, reply = await loop._try_global_windows_fastpath(
+        text="كليك يمين على ملف التقرير", session_key="s39visionrc"
+    )
+    assert handled is True
+    assert "يمين" in str(reply) or "right-clicked" in str(reply).lower()
+
+
+@pytest.mark.asyncio
 async def test_global_fastpath_repeat_last_interval_replays_multiple_times(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

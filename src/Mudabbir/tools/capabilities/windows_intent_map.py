@@ -1634,6 +1634,42 @@ def resolve_windows_intent(message: str) -> IntentResolution:
             params=params,
             risk_level="safe",
         )
+    if _contains_any(normalized, ("دبل كليك على", "دبل كليك علي", "دبل كلك على", "دبل كلك علي", "double click on", "double-click on")):
+        target_hint = _extract_named_value(
+            raw,
+            (
+                r"(?:دبل كليك على|دبل كليك علي|دبل كلك على|دبل كلك علي)\s+(.+)$",
+                r"(?:double click on|double-click on)\s+(.+)$",
+            ),
+        )
+        params = {"mode": "locate_ui_target", "interaction": "double_click"}
+        if target_hint:
+            params["target"] = target_hint.strip(" .")
+        return IntentResolution(
+            matched=True,
+            capability_id="vision.double_click_target",
+            action="vision_tools",
+            params=params,
+            risk_level="safe",
+        )
+    if _contains_any(normalized, ("كليك يمين على", "كليك يمين علي", "ضغطه يمين على", "ضغطه يمين علي", "right click on", "right-click on")):
+        target_hint = _extract_named_value(
+            raw,
+            (
+                r"(?:كليك يمين على|كليك يمين علي|ضغطه يمين على|ضغطه يمين علي)\s+(.+)$",
+                r"(?:right click on|right-click on)\s+(.+)$",
+            ),
+        )
+        params = {"mode": "locate_ui_target", "interaction": "right_click"}
+        if target_hint:
+            params["target"] = target_hint.strip(" .")
+        return IntentResolution(
+            matched=True,
+            capability_id="vision.right_click_target",
+            action="vision_tools",
+            params=params,
+            risk_level="safe",
+        )
     if _contains_any(normalized, ("انقر على", "انقر علي", "اضغط على", "اضغط علي", "اكبس على", "اكبس علي", "click on", "click the")):
         target_hint = _extract_named_value(
             raw,

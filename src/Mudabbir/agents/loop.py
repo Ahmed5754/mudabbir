@@ -1431,11 +1431,19 @@ class AgentLoop:
                     if ok_locate:
                         if action_done == "click":
                             return True, f"🖱️ تم العثور على {target or 'العنصر'} والنقر عليه."
+                        if action_done == "double_click":
+                            return True, f"🖱️ تم العثور على {target or 'العنصر'} وعمل دبل كليك."
+                        if action_done == "right_click":
+                            return True, f"🖱️ تم العثور على {target or 'العنصر'} وعمل كليك يمين."
                         return True, f"🖱️ تم العثور على {target or 'العنصر'} وتحريك الماوس إليه."
                     return True, f"ما لقيت {target or 'العنصر'} على الشاشة حالياً."
                 if ok_locate:
                     if action_done == "click":
                         return True, f"🖱️ Found {target or 'target'} and clicked it."
+                    if action_done == "double_click":
+                        return True, f"🖱️ Found {target or 'target'} and double-clicked it."
+                    if action_done == "right_click":
+                        return True, f"🖱️ Found {target or 'target'} and right-clicked it."
                     return True, f"🖱️ Found {target or 'target'} and moved the mouse to it."
                 return True, f"Couldn't find {target or 'the target'} on screen right now."
 
