@@ -352,6 +352,9 @@ class AgentLoop:
                 last_app = str(session_state.get("last_app", "")).strip()
                 last_window = str(session_state.get("last_window", "")).strip()
                 last_service = str(session_state.get("last_service", "")).strip()
+                last_topic = str(session_state.get("last_topic", "")).strip().lower()
+                number_match = re.search(r"-?\d+", text or "")
+                number_value = int(number_match.group(0)) if number_match else None
                 # Handle short pronoun follow-ups when intent map has no explicit match.
                 if last_app and normalized in {"سكره", "اغلقه", "اقفله", "close it", "close app"}:
                     resolution = {
@@ -430,6 +433,52 @@ class AgentLoop:
                         "capability_id": "network.wifi_off",
                         "action": "network_tools",
                         "params": {"mode": "wifi_off"},
+                        "risk_level": "safe",
+                        "unsupported": False,
+                        "unsupported_reason": "",
+                    }
+                elif last_topic in {"volume", "brightness"} and normalized in {
+                    "ارفعه",
+                    "عليه",
+                    "عليه شوي",
+                    "زوده",
+                    "زيده",
+                    "up it",
+                    "increase it",
+                }:
+                    resolution = {
+                        "capability_id": f"{last_topic}.up_implicit",
+                        "action": last_topic,
+                        "params": {"mode": "up", "delta": 8},
+                        "risk_level": "safe",
+                        "unsupported": False,
+                        "unsupported_reason": "",
+                    }
+                elif last_topic in {"volume", "brightness"} and normalized in {
+                    "نزله",
+                    "وطيه",
+                    "قلله",
+                    "خفضه",
+                    "down it",
+                    "decrease it",
+                }:
+                    resolution = {
+                        "capability_id": f"{last_topic}.down_implicit",
+                        "action": last_topic,
+                        "params": {"mode": "down", "delta": 8},
+                        "risk_level": "safe",
+                        "unsupported": False,
+                        "unsupported_reason": "",
+                    }
+                elif (
+                    last_topic in {"volume", "brightness"}
+                    and number_value is not None
+                    and normalized in {"خليه", "خلّي", "اعمله", "اضبطه", "set it", "make it"}
+                ):
+                    resolution = {
+                        "capability_id": f"{last_topic}.set_implicit",
+                        "action": last_topic,
+                        "params": {"mode": "set", "level": max(0, min(100, int(number_value)))},
                         "risk_level": "safe",
                         "unsupported": False,
                         "unsupported_reason": "",
@@ -532,6 +581,8 @@ class AgentLoop:
             top_app = str(parsed.get("top_app") or "").strip()
             if top_app:
                 session_state["last_app"] = top_app
+            if action in {"volume", "brightness"}:
+                session_state["last_topic"] = action
 
         if action == "volume" and str(params.get("mode", "")).lower() == "get" and isinstance(parsed, dict):
             level = parsed.get("level_percent")
