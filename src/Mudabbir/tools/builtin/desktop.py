@@ -643,6 +643,7 @@ class DesktopTool(BaseTool):
                     seconds=params.get("seconds"),
                     monitor_seconds=params.get("monitor_seconds"),
                     text=str(params.get("text", "") or ""),
+                    path=str(params.get("path", "") or ""),
                     key=str(params.get("key", "") or ""),
                     repeat_count=params.get("repeat_count"),
                     x=params.get("x"),
@@ -6351,6 +6352,7 @@ $obj | ConvertTo-Json -Compress
         seconds: Any = None,
         monitor_seconds: Any = None,
         text: str = "",
+        path: str = "",
         key: str = "",
         repeat_count: Any = None,
         x: Any = None,
@@ -6386,6 +6388,26 @@ $obj | ConvertTo-Json -Compress
             )
             ok, out = _run_powershell(ps, timeout=30)
             return out if ok and out else self._error(out or "tts failed")
+        if mode_norm == "tts_to_file":
+            msg = text.strip()
+            if not msg:
+                return self._error("text is required")
+            out_path = Path(path).expanduser() if path else (Path.home() / "Music" / f"tts_{_timestamp_id()}.wav")
+            if out_path.suffix.lower() != ".wav":
+                out_path = out_path.with_suffix(".wav")
+            out_path.parent.mkdir(parents=True, exist_ok=True)
+            escaped_msg = msg.replace("'", "''")
+            escaped_path = str(out_path).replace("'", "''")
+            ps = (
+                "Add-Type -AssemblyName System.Speech; "
+                "$s=New-Object System.Speech.Synthesis.SpeechSynthesizer; "
+                f"$s.SetOutputToWaveFile('{escaped_path}'); "
+                f"$s.Speak('{escaped_msg}'); "
+                "$s.Dispose(); "
+                f"@{{ok=$true; mode='tts_to_file'; path='{escaped_path}'; format='wav'}} | ConvertTo-Json -Compress"
+            )
+            ok, out = _run_powershell(ps, timeout=45)
+            return out if ok and out else self._error(out or "tts_to_file failed")
         if mode_norm == "repeat_key":
             k = (key or "").strip().lower()
             if not k:

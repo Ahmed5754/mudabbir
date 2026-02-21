@@ -855,6 +855,14 @@ RULES: tuple[IntentRule, ...] = (
     IntentRule("session.repeat_last_interval", "automation_tools", "repeat_last_interval", "safe", ("repeat last every", "repeat every", "كرر اخر امر كل", "كرر آخر أمر كل", "كرر الامر كل", "كل ثواني كرر اخر امر"), params=("seconds", "repeat_count")),
     IntentRule("automation.popup_message", "automation_tools", "popup", "safe", ("popup message", "show popup", "show message", "اظهر رسالة", "اعرض رسالة", "رسالة منبثقة", "تنبيه منبثق"), params=("text",)),
     IntentRule("automation.tts", "automation_tools", "tts", "safe", ("text to speech", "speak text", "نطق نص", "اقرأ النص", "حول النص لصوت"), params=("text",)),
+    IntentRule(
+        "automation.tts_to_file",
+        "automation_tools",
+        "tts_to_file",
+        "safe",
+        ("tts to file", "text to audio file", "convert text to audio", "تحويل نص الى ملف صوتي", "تحويل النص الى ملف صوتي"),
+        params=("text", "path"),
+    ),
     IntentRule("session.repeat_last", "automation_tools", "repeat_last", "safe", ("repeat last command", "repeat last", "كرر", "عيد", "كرر آخر أمر", "كرر اخر امر", "كرر الامر الاخير", "عيد اخر امر"), params=("repeat_count",)),
     IntentRule("keyboard.mouse_keys", "automation_tools", "mouse_keys_toggle", "safe", ("mouse keys", "الماوس بالكيبورد")),
     IntentRule("keyboard.emoji_panel", "shell_tools", "emoji_panel", "safe", ("emoji panel", "لوحه الايموجي")),
@@ -1235,6 +1243,7 @@ def _build_params(rule: IntentRule, raw_text: str, normalized: str) -> dict[str,
                     r"(?:text to file|تحويل نص)\s*(?:الى|to)?\s*(.+)$",
                     r"(?:popup message|show popup|show message|اظهر رسالة|اعرض رسالة|رسالة منبثقة|تنبيه منبثق)\s*(?:[:：]|to|:)?\s*(.+)$",
                     r"(?:text to speech|speak text|نطق نص|اقرأ النص|حول النص لصوت)\s*(?:[:：]|to|:)?\s*(.+)$",
+                    r"(?:tts to file|text to audio file|convert text to audio|تحويل نص الى ملف صوتي|تحويل النص الى ملف صوتي)\s*(?:[:：]|to|:)?\s*(.+)$",
                 ),
             )
             if q:

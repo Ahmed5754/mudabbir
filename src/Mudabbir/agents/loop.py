@@ -2173,6 +2173,11 @@ class AgentLoop:
 
         if action == "automation_tools":
             mode = str(params.get("mode", "")).lower()
+            if mode == "tts_to_file" and isinstance(parsed, dict):
+                out_path = str(parsed.get("path") or "").strip()
+                if arabic:
+                    return True, ("🔊 تم إنشاء ملف صوتي." + (f"\n{out_path}" if out_path else ""))
+                return True, ("🔊 Audio file created." + (f"\n{out_path}" if out_path else ""))
             auto_msgs_ar = {
                 "popup": "🪟 ظهرت رسالة التنبيه.",
                 "tts": "🔊 تم نطق النص.",

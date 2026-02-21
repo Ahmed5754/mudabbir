@@ -286,6 +286,14 @@ def test_resolve_tts_phrase() -> None:
     assert "أهلا" in str(result.params.get("text") or "")
 
 
+def test_resolve_tts_to_file_phrase() -> None:
+    result = resolve_windows_intent('تحويل النص الى ملف صوتي "مرحبا"')
+    assert result.matched is True
+    assert result.action == "automation_tools"
+    assert result.params.get("mode") == "tts_to_file"
+    assert "مرحبا" in str(result.params.get("text") or "")
+
+
 def test_resolve_type_current_date_and_time() -> None:
     date_result = resolve_windows_intent("type current date")
     time_result = resolve_windows_intent("type current time")

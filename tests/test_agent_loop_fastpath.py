@@ -1613,6 +1613,26 @@ async def test_global_fastpath_popup_message_human_reply(
 
 
 @pytest.mark.asyncio
+async def test_global_fastpath_tts_to_file_human_reply(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class DummyDesktopTool:
+        async def execute(self, action: str, **kwargs):
+            assert action == "automation_tools"
+            assert kwargs.get("mode") == "tts_to_file"
+            assert "مرحبا" in str(kwargs.get("text") or "")
+            return '{"ok": true, "mode": "tts_to_file", "path": "C:/Users/Admin/Music/tts_test.wav", "format": "wav"}'
+
+    monkeypatch.setattr("Mudabbir.tools.builtin.desktop.DesktopTool", DummyDesktopTool)
+    loop = AgentLoop()
+    handled, reply = await loop._try_global_windows_fastpath(
+        text='تحويل النص الى ملف صوتي "مرحبا"', session_key="s39ttsfile"
+    )
+    assert handled is True
+    assert "tts_test.wav" in str(reply).lower()
+
+
+@pytest.mark.asyncio
 async def test_global_fastpath_set_app_volume_human_reply(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
